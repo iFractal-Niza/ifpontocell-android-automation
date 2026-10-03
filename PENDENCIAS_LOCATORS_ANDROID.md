@@ -79,8 +79,9 @@ Também ajudariam (não bloqueiam):
 | Informações importantes | contêiner `relative_information`; `btn_confirmar_informacao` ("Iniciar configuração") |
 | Configurar Aplicativo (sistema) | contêiner `relative_system_access`; `editTextSistema`; `btn_confirmar` |
 | Configurar Aplicativo (login) | contêiner `relative_login_access`; `editTextLogin`; `editTextSenha`; `btn_senha_ver`; `btn_confirmar` ("Entrar") |
+| Popup de lembrete (Home, primeiro acesso) | diálogo genérico; `mensagem` ("O ifPontoCell oferece lembretes…"); DEPOIS = `btnEsquerdo`; ATIVAR = `btnDireito` (botões pelo texto: os ids são genéricos) |
 | Criação do PIN | contêiner `relative_first_access` (o mesmo do boas-vindas); `text_instrucao` ("Crie uma senha de 4 digitos para…"); `number0`…`number9` |
-| Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.") | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
+| Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.", lembrete) | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
 
 O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo título "Configurar Aplicativo" nas telas de sistema, login e PIN: as pages reconhecem cada tela pelo contêiner — menos o boas-vindas (pelo título "bem-vindo") e o PIN (pela instrução), que dividem o `relative_first_access`.
 
@@ -89,7 +90,6 @@ O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo
 O projeto Android de referência não continha IDs técnicos para estes componentes. A refatoração deixou fallback por texto:
 
 - mensagem dos popups do diálogo genérico (o texto diz qual popup apareceu; título e OK já são por id);
-- popup de lembrete (`ATIVAR` / `DEPOIS`);
 - popup de opinião (`Opinião` / `NÃO`);
 - popup de atualização (`Tem novidade pra você` / `Cancelar`);
 - popup de melhoria (`O que podemos melhorar` / `DEPOIS`);

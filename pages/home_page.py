@@ -54,14 +54,20 @@ class HomePage(BasePage):
     BOTAO_DIA_ANTERIOR = android_id("carregarDadosMenos")
     BOTAO_PROXIMO_DIA = android_id("carregarDadosMais")
 
-    # === Popups Android ===
-    # O projeto de referência não possui resource-id destes popups.
-    # Mantidos por texto até confirmação no Appium Inspector.
+    # === Popup de lembrete (confirmado no Inspector) ===
+    # Diálogo genérico do app: mensagem no id "mensagem", DEPOIS no
+    # btnEsquerdo e ATIVAR no btnDireito. Os botões ficam pelo texto: os
+    # ids são genéricos (OK dos erros, SIM/NÃO da confirmação do ponto),
+    # e ATIVAR é o que identifica este popup.
     POPUP_LEMBRETE_MENSAGEM = android_text_contains(
         "oferece lembretes para suas marcações de ponto"
     )
     BOTAO_LEMBRETE_ATIVAR = android_text("ATIVAR")
     BOTAO_LEMBRETE_DEPOIS = android_text("DEPOIS")
+
+    # === Demais popups ===
+    # Sem resource-id no projeto de referência; por texto até
+    # confirmação no Appium Inspector.
     POPUP_OPINIAO_TITULO = android_text("Opinião")
     POPUP_OPINIAO_BOTAO_NAO = android_text("NÃO")
     POPUP_ATUALIZACAO_ALERTA = android_text_contains("Tem novidade pra você")
