@@ -80,6 +80,8 @@ Também ajudariam (não bloqueiam):
 | Configurar Aplicativo (sistema) | contêiner `relative_system_access`; `editTextSistema`; `btn_confirmar` |
 | Configurar Aplicativo (login) | contêiner `relative_login_access`; `editTextLogin`; `editTextSenha`; `btn_senha_ver`; `btn_confirmar` ("Entrar") |
 | Popup de lembrete (Home, primeiro acesso) | diálogo genérico; `mensagem` ("O ifPontoCell oferece lembretes…"); DEPOIS = `btnEsquerdo`; ATIVAR = `btnDireito` (botões pelo texto: os ids são genéricos) |
+| Home (aba PONTO) | `linearPonto`; `bt_init` (texto = hora corrente, "Registrar" no content-desc); `carregarDadosMenos` / `carregarDadosMais`; data do dia `data`; jornada `mc1`…`mc4`; totais `textViewTituloTotais` / `textViewPeriodoTotais` / `abrirFecharTotalizador` (o clicável é o pai, `topTotalizador`) |
+| Barra de cima e de baixo | `menu_esquerdo`; `menu_direito`; abas `ponto`, `espelho`, `status`, `alertas` (content-desc com o nome) |
 | Criação do PIN | contêiner `relative_first_access` (o mesmo do boas-vindas); `text_instrucao` ("Crie uma senha de 4 digitos para…"); `number0`…`number9` |
 | Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.", lembrete) | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
 

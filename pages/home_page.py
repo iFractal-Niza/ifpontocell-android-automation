@@ -44,7 +44,7 @@ class HomePage(BasePage):
     # fechar) antes do próximo aparecer.
     POPUP_RESOLUTION_TIMEOUT = 20.0
 
-    # === Home Android (locators confirmados no projeto de referência) ===
+    # === Home Android (confirmado no Inspector, 2026-10-03) ===
     BOTAO_ABRIR_MENU = android_id("menu_esquerdo")
     MARCADOR_HOME = android_id("linearPonto")
     ABA_PONTO = android_id("ponto")
