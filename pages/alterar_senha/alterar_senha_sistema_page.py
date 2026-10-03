@@ -7,7 +7,7 @@ from selenium.common.exceptions import (
 )
 
 from pages.alterar_senha.alterar_senha_base_page import AlterarSenhaBasePage
-from pages.android_locators import android_pendente, android_text_matches
+from pages.android_locators import android_id, android_text_matches
 from utils.texto import normalizar_texto
 
 
@@ -30,29 +30,23 @@ class AlterarSenhaSistemaPage(AlterarSenhaBasePage):
     SCREEN_NAME = "alterar_senha_sistema"
     ABA = "SENHA SISTEMA"
 
-    # PENDENTE: ids da aba no Android (iOS: alterarSenhaSistema.*).
-    CAMPO_SENHA_ATUAL = android_pendente("alterarSenhaSistema_campoSenhaAtual")
-    CAMPO_NOVA_SENHA = android_pendente("alterarSenhaSistema_campoNovaSenha")
-    CAMPO_CONFIRMAR_SENHA = android_pendente(
-        "alterarSenhaSistema_campoConfirmarSenha"
-    )
-    ERRO_NOVA_SENHA = android_pendente("alterarSenhaSistema_lblErroNovaSenha")
-    ERRO_CONFIRMAR_SENHA = android_pendente(
-        "alterarSenhaSistema_lblErroConfirmarSenha"
-    )
-    BOTAO_SALVAR = android_pendente("alterarSenhaSistema_btnSalvar")
+    # Confirmado no Inspector (iOS: alterarSenhaSistema.*).
+    CAMPO_SENHA_ATUAL = android_id("senhaAtual")
+    CAMPO_NOVA_SENHA = android_id("senhaNova")
+    CAMPO_CONFIRMAR_SENHA = android_id("senhaNovaConfirmacao")
+
+    # Regras que faltam ("Faltam: Maiúscula, Minúscula, Número"), abaixo
+    # dos campos. No Android aparecem desde a abertura da tela.
+    ERRO_NOVA_SENHA = android_id("paramsSenhaNova")
+    ERRO_CONFIRMAR_SENHA = android_id("paramsSenhaNovaConfirma")
+
+    BOTAO_SALVAR = android_id("btnSalvarAtualizacaoCadastro")
 
     # Campo -> botão "mostrar ou ocultar senha".
     BOTOES_MOSTRAR_SENHA = {
-        CAMPO_SENHA_ATUAL: android_pendente(
-            "alterarSenhaSistema_btnVerSenhaAtual"
-        ),
-        CAMPO_NOVA_SENHA: android_pendente(
-            "alterarSenhaSistema_btnVerNovaSenha"
-        ),
-        CAMPO_CONFIRMAR_SENHA: android_pendente(
-            "alterarSenhaSistema_btnVerConfirmarSenha"
-        ),
+        CAMPO_SENHA_ATUAL: android_id("btn_ver_senha_atual"),
+        CAMPO_NOVA_SENHA: android_id("btn_ver_senha_nova"),
+        CAMPO_CONFIRMAR_SENHA: android_id("btn_ver_senha_confirm"),
     }
 
     MENSAGEM_NOVA_IGUAL_A_ATUAL = (
