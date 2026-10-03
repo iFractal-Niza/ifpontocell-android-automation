@@ -277,8 +277,8 @@ else
   APP_SOURCE_VALUE="$(yaml_value "APP_SOURCE")"
 
   case "$APP_SOURCE_VALUE" in
-    apk|"")
-      ok "APP_SOURCE: apk${APP_SOURCE_VALUE:+}${APP_SOURCE_VALUE:- (padrão)}"
+    apk)
+      ok "APP_SOURCE: apk"
 
       APP_PATH_VALUE="$(yaml_value "APP_PATH")"
 
@@ -296,8 +296,8 @@ else
       fi
       ;;
 
-    package)
-      ok "APP_SOURCE: package"
+    package|"")
+      ok "APP_SOURCE: package${APP_SOURCE_VALUE:- (padrão)}"
 
       APP_PACKAGE_VALUE="$(yaml_value "ANDROID_APP_PACKAGE")"
       APP_PACKAGE_VALUE="${APP_PACKAGE_VALUE:-br.com.ifractal.Stou}"

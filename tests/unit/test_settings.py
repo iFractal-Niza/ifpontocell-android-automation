@@ -39,7 +39,7 @@ def test_ambiente_vazio_usa_defaults_de_emulador():
 
     assert settings.android_target == "emulator"
     assert settings.is_emulator
-    assert settings.app_source == "apk"
+    assert settings.app_source == "package"
     assert settings.apk_path == PROJECT_ROOT / "app" / "ifPontoCell.apk"
     assert settings.app.package == APP_PACKAGE_PADRAO
     assert settings.app.wait_activity == "*"
@@ -118,7 +118,7 @@ def test_app_source_invalido():
 
 
 def test_apk_exige_arquivo_apk():
-    erros = _erros({"APP_PATH": "/tmp/ifPontoCell.app"})
+    erros = _erros({"APP_SOURCE": "apk", "APP_PATH": "/tmp/ifPontoCell.app"})
 
     assert any(
         "APP_PATH deve apontar para um arquivo .apk" in e for e in erros

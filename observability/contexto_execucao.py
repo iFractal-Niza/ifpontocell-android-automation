@@ -90,19 +90,53 @@ def ler_versao_curta_app(apk_path: Path) -> str:
 
 def ler_versao_app(apk_path: Path) -> str:
     """
-    Versão do APK instalado pelos testes, lida pelo aapt: "2.4.1 (87)"
-    (versionName e versionCode). Vazio sem aapt ou sem APK local (ex.:
-    APP_SOURCE=package).
+    Versão do APK (APP_SOURCE=apk), lida pelo aapt: "2.4.1 (87)"
+    (versionName e versionCode). Vazio sem aapt ou sem APK local.
     """
     badging = _ler_badging(apk_path)
 
-    versao = _campo_badging(badging, "versionName")
-    build = _campo_badging(badging, "versionCode")
+    return _formatar_versao(
+        _campo_badging(badging, "versionName"),
+        _campo_badging(badging, "versionCode"),
+    )
 
+
+def _formatar_versao(versao: str, build: str) -> str:
     if versao and build and build != versao:
         return f"{versao} ({build})"
 
     return versao or build
+
+
+def versao_do_dumpsys(saida: str) -> str:
+    """'versionName=2.4.1' e 'versionCode=87 ...' -> "2.4.1 (87)"."""
+    nome = re.search(r"versionName=(\S+)", saida)
+    codigo = re.search(r"versionCode=(\d+)", saida)
+
+    return _formatar_versao(
+        nome.group(1) if nome else "", codigo.group(1) if codigo else ""
+    )
+
+
+def ler_versao_instalada(app_package: str, udid: str = "") -> str:
+    """
+    Versão do app instalado no device (APP_SOURCE=package), pelo
+    'adb shell dumpsys package'. Vazio sem adb ou sem device.
+    """
+    comando = ["adb"] + (["-s", udid] if udid else [])
+    comando += ["shell", "dumpsys", "package", app_package]
+
+    try:
+        resultado = subprocess.run(
+            comando, capture_output=True, text=True, check=False, timeout=10
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+    if resultado.returncode != 0:
+        return ""
+
+    return versao_do_dumpsys(resultado.stdout)
 
 
 def descrever_dispositivo(settings: Settings) -> str:
@@ -147,7 +181,11 @@ def coletar_contexto(
 
     contexto.append(("Dispositivo", descrever_dispositivo(settings)))
 
-    versao_app = ler_versao_app(settings.apk_path)
+    versao_app = (
+        ler_versao_app(settings.apk_path)
+        if settings.app_source == "apk"
+        else ler_versao_instalada(settings.app.package, settings.device.udid)
+    )
 
     if versao_app:
         contexto.append(("App", versao_app))

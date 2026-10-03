@@ -149,6 +149,34 @@ a exibi-la, religar as checagens (ver `garantir_tela_login` no iOS).
 
 ---
 
+## App já instalado (`APP_SOURCE=package`) por padrão
+
+**Data:** 2026-10-03
+
+No Android a suíte não instala APK: usa o app já instalado no device
+(`APP_SOURCE=package`, padrão do `Settings` e dos templates). O primeiro
+acesso parte do app limpo pelo `noReset=false` (o Appium faz `pm clear`),
+sem desinstalar. `APP_SOURCE=apk` continua disponível (desinstala pelo
+`adb` e o Appium instala o APK de `APP_PATH`).
+
+A versão do app no cabeçalho do report vem do device
+(`adb shell dumpsys package`) com `package`, e do APK (`aapt`) com `apk`.
+
+---
+
+## Apagar dados: um diálogo para os dois caminhos
+
+**Data:** 2026-10-03
+
+O ZERAR DADOS do menu do perfil e o APAGAR DADOS DO APLICATIVO dos
+Ajustes abrem o mesmo diálogo (`linearApagarDadosDoApp`); no iOS são
+componentes diferentes. O `test_zerar_dados.py` mantém o par NÃO/SIM
+dos dois caminhos, como no iOS (o SIM pode estar ligado a outra rotina),
+como CT010–CT013 (`make zerar-dados`); o teste de API foi renumerado de
+CT038 para CT014.
+
+---
+
 ## Plataforma: equivalentes Android
 
 **Data:** 2026-10-03

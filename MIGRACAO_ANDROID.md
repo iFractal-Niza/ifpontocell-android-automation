@@ -31,7 +31,7 @@
 
 1. criar `config/env.emulator.yaml` a partir de `config/env.emulator.example.yaml` (celular: `config/env.real.yaml`);
 2. informar credenciais/API;
-3. adicionar `app/ifPontoCell.apk` ou usar `APP_SOURCE=package`;
+3. instalar o app no device (`APP_SOURCE=package`, o padrão) ou usar `APP_SOURCE=apk` com `app/ifPontoCell.apk`;
 4. confirmar os locators Prioridade 1 em `PENDENCIAS_LOCATORS_ANDROID.md`;
 5. validar `adb devices`;
 6. executar `make doctor`;

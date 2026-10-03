@@ -10,9 +10,9 @@
       "Read(./config/env.real.yaml)",
       "Grep(./config/env.real.yaml)",
       "Glob(./config/env.real.yaml)",
-      "Read(./app/**)",
-      "Grep(./app/**)",
-      "Glob(./app/**)"
+      "Read(./app/*.apk)",
+      "Grep(./app/*.apk)",
+      "Glob(./app/*.apk)"
     ]
   }
 }

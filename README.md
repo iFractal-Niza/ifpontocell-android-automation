@@ -35,7 +35,7 @@ Arquivos da máquina, credenciais, massa de teste e o APK ficam dentro do reposi
 ifpontocell-android-automation/
 │
 ├── app/
-│   └── ifPontoCell.apk
+│   └── ifPontoCell.apk                # opcional: só com APP_SOURCE=apk
 │
 ├── config/
 │   ├── env.emulator.yaml
@@ -112,7 +112,7 @@ ifpontocell-android-automation/
 
 ### `core/`
 
-`driver_factory.py` cria a sessão Appium; no cold start com `APP_SOURCE=apk`, desinstala o app pelo `adb` antes. `app_session.py` relança o app pelo `appPackage`. `localizacao.py` aplica a localização simulada (emulador e celular).
+`driver_factory.py` cria a sessão Appium. No cold start, com o app já instalado (`APP_SOURCE=package`, o padrão), o `noReset=false` limpa os dados dele; com `APP_SOURCE=apk`, desinstala pelo `adb` e o Appium reinstala o APK. `app_session.py` relança o app pelo `appPackage`. `localizacao.py` aplica a localização simulada (emulador e celular).
 
 ### `pages/`
 
@@ -146,7 +146,7 @@ Fixtures por assunto, registradas pelo `conftest.py` via `pytest_plugins` (o `co
 
 ```bash
 make setup     # venv, dependências, Appium + UiAutomator2, hooks do git
-make doctor    # diagnóstico (Python, adb, devices, Appium, env, APK)
+make doctor    # diagnóstico (Python, adb, devices, Appium, env, app instalado)
 ```
 
 Requisitos fora do projeto: Node.js/npm (Appium) e o Android SDK com `platform-tools` e `emulator` no `PATH` (`ANDROID_HOME`).
@@ -167,8 +167,8 @@ cp config/env.real.example.yaml     config/env.real.yaml       # DEVICE=real
 Principais chaves:
 
 ```yaml
-APP_SOURCE: "apk"                 # apk | package (app já instalado)
-APP_PATH: "app/ifPontoCell.apk"
+APP_SOURCE: "package"             # package (app já instalado, padrão) | apk
+APP_PATH: ""                      # só com apk (padrão: app/ifPontoCell.apk)
 ANDROID_TARGET: "emulator"        # emulator | real
 ANDROID_APP_PACKAGE: "br.com.ifractal.Stou"
 ANDROID_UDID: ""                  # obrigatório no celular (adb devices)

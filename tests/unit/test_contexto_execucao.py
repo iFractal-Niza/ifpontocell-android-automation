@@ -78,6 +78,7 @@ def test_contexto_de_execucao_com_app(aapt, tmp_path):
         usa_app=True,
         env={
             "ENV": "homologacao",
+            "APP_SOURCE": "apk",
             "APP_PATH": str(tmp_path / "ifPontoCell.apk"),
             "ANDROID_DEVICE_NAME": "Pixel 7",
             "ANDROID_PLATFORM_VERSION": "14",
@@ -93,8 +94,10 @@ def test_contexto_de_execucao_com_app(aapt, tmp_path):
     ]
 
 
-def test_celular_aparece_como_device_fisico(aapt):
-    aapt("")
+def test_celular_aparece_como_device_fisico(monkeypatch):
+    monkeypatch.setattr(
+        contexto_execucao, "ler_versao_instalada", lambda *_: ""
+    )
 
     contexto = dict(
         coletar_contexto(
@@ -112,6 +115,38 @@ def test_celular_aparece_como_device_fisico(aapt):
 
     assert contexto["Dispositivo"] == "Galaxy A54 (device físico)"
     assert "App" not in contexto
+
+
+def test_app_instalado_mostra_a_versao_do_device(monkeypatch):
+    # APP_SOURCE=package (padrão): a versão vem do app instalado.
+    chamadas = []
+
+    def instalada(pacote, udid):
+        chamadas.append((pacote, udid))
+        return "2.4.1 (87)"
+
+    monkeypatch.setattr(contexto_execucao, "ler_versao_instalada", instalada)
+
+    contexto = dict(
+        coletar_contexto(
+            INICIO, FIM, usa_app=True, env={"ANDROID_UDID": "emulator-5554"}
+        )
+    )
+
+    assert contexto["App"] == "2.4.1 (87)"
+    assert chamadas == [("br.com.ifractal.Stou", "emulator-5554")]
+
+
+def test_versao_lida_do_dumpsys():
+    saida = (
+        "Packages:\n"
+        "  Package [br.com.ifractal.Stou] (abc):\n"
+        "    versionCode=87 minSdk=24 targetSdk=34\n"
+        "    versionName=2.4.1\n"
+    )
+
+    assert contexto_execucao.versao_do_dumpsys(saida) == "2.4.1 (87)"
+    assert contexto_execucao.versao_do_dumpsys("") == ""
 
 
 def test_execucao_sem_app_omite_dispositivo_e_versao():

@@ -309,7 +309,8 @@ class Settings:
         android_target = leitor.escolha(
             "ANDROID_TARGET", "emulator", ANDROID_TARGETS
         )
-        app_source = leitor.escolha("APP_SOURCE", "apk", APP_SOURCES)
+        # Padrão: o app já instalado no device. O APK (apk) é opcional.
+        app_source = leitor.escolha("APP_SOURCE", "package", APP_SOURCES)
 
         app = AppConfig(
             package=leitor.texto("ANDROID_APP_PACKAGE", APP_PACKAGE_PADRAO),

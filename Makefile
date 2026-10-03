@@ -36,6 +36,7 @@ TEST_LOGIN := $(APP_TESTS)/test_login.py
 TEST_UNLOCK := $(APP_TESTS)/test_unlock.py
 TEST_E2E := $(APP_TESTS)/test_e2e.py
 TEST_REGISTRO_PONTO := $(APP_TESTS)/test_registro_sem_foto.py
+TEST_ZERAR_DADOS := $(APP_TESTS)/test_zerar_dados.py
 
 # Suíte principal de app em ordem controlada
 APP_SUITE := \
@@ -43,7 +44,8 @@ APP_SUITE := \
 	$(TEST_LOGIN) \
 	$(TEST_UNLOCK) \
 	$(TEST_E2E) \
-	$(TEST_REGISTRO_PONTO)
+	$(TEST_REGISTRO_PONTO) \
+	$(TEST_ZERAR_DADOS)
 
 # Suíte completa em ordem controlada
 FULL_SUITE := \
@@ -133,7 +135,7 @@ DEBUG_TARGET = $(if $(test),$(test),$(FULL_SUITE))
         check-appium check-mobile \
         doctor impact appium appium-servers lint format \
         run debug unit smoke regression \
-        ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto jornada \
+        ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto jornada zerar-dados \
         api \
         clear limpar-historico report report-pdf renumerar-ct \
         git-status commit push update-dev update-feature start-feature \
@@ -177,6 +179,7 @@ help:
 	@echo "  make e2e-debug             Roda testes end-to-end em modo debug"
 	@echo "  make registro-ponto        Roda testes de registro de ponto"
 	@echo "  make jornada               Roda e2e + registro de ponto"
+	@echo "  make zerar-dados           Apagar dados (Ajustes e menu do perfil: NÃO e SIM; o SIM refaz o primeiro acesso)"
 	@echo "  make api                   Roda testes de API"
 	@echo ""
 	@echo "=== Reports ==="
@@ -453,6 +456,11 @@ registro-ponto: check-mobile
 	$(call run_pytest_with_report,$(TEST_REGISTRO_PONTO),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 
 # Jornada: e2e + registro de ponto
+# Apaga os dados do app no aparelho (Ajustes e menu do perfil) e refaz o
+# primeiro acesso a cada SIM.
+zerar-dados: check-mobile
+	$(call run_pytest_with_report,$(TEST_ZERAR_DADOS),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
 jornada: check-mobile
 	$(call run_pytest_with_report,$(TEST_E2E) $(TEST_REGISTRO_PONTO),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 

@@ -24,7 +24,7 @@ def _garantir_reativacao(celular_api, codigo: int) -> None:
         )
 
 
-@pytest.mark.ct("CT038")
+@pytest.mark.ct("CT014")
 @pytest.mark.api
 def test_deve_alternar_status_celular(
     celular_api,
