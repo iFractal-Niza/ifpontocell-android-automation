@@ -5,6 +5,7 @@ from pages.android_locators import android_id
 from pages.autenticacao.onboarding_page import OnboardingPage
 from pages.base_page import BasePage
 from pages.menu_page import MenuPerfilPage
+from utils.texto import normalizar_texto
 
 
 class ZerarDadosPage(BasePage):
@@ -16,13 +17,13 @@ class ZerarDadosPage(BasePage):
 
     SCREEN_NAME = "zerar_dados"
 
-    # PENDENTE: provisório pelo diálogo genérico do app (o mesmo da
-    # confirmação do registro de ponto no projeto de referência).
-    # Título e mensagem (titulo()/mensagem() no iOS) entram com o
-    # test_zerar_dados (PENDENCIAS_LOCATORS_ANDROID.md).
-    DIALOGO = android_id("linear_dialog_geral", "relativeDialogPopUp")
-    BOTAO_NAO = android_id("btnEsquerdo")
-    BOTAO_SIM = android_id("btnDireito")
+    # Confirmado no Inspector: layout próprio, não o diálogo genérico do
+    # app (linear_dialog_geral).
+    DIALOGO = android_id("linearApagarDadosDoApp")
+    TITULO = android_id("tituloApagarDados")
+    MENSAGEM = android_id("textViewApagarDados")
+    BOTAO_NAO = android_id("btnNoApagarDados")
+    BOTAO_SIM = android_id("btnYesApagarDados")
 
     # === Composição ===
     @cached_property
@@ -36,6 +37,16 @@ class ZerarDadosPage(BasePage):
         assert self._is_visible(self.DIALOGO, timeout=self.LONG_TIMEOUT), (
             "O diálogo 'Apagar dados do aplicativo' não foi exibido após "
             "tocar em ZERAR DADOS no menu do perfil."
+        )
+
+    def titulo(self) -> str:
+        return normalizar_texto(
+            self._find(self.TITULO, element_name="titulo_zerar_dados").text
+        )
+
+    def mensagem(self) -> str:
+        return normalizar_texto(
+            self._find(self.MENSAGEM, element_name="mensagem_zerar_dados").text
         )
 
     def _responder(self, botao: tuple[str, str], nome: str) -> None:
