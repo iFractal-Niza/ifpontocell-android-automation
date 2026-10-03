@@ -15,6 +15,7 @@ from config.timeouts import (
     OPTIONAL_POPUP_TIMEOUT,
 )
 from pages.android_locators import (
+    android_description,
     android_id,
     android_text,
     android_text_contains,
@@ -49,7 +50,9 @@ class HomePage(BasePage):
     ABA_PONTO = android_id("ponto")
     ABA_PONTO_FALLBACK = android_text("PONTO")
     BOTAO_REGISTRAR = android_id("bt_init")
-    BOTAO_REGISTRAR_FALLBACK = android_text_contains("Registrar")
+    # O texto do botão é a hora corrente ("00:56:38"); "Registrar" está
+    # no content-desc (confirmado no Inspector).
+    BOTAO_REGISTRAR_FALLBACK = android_description("Registrar")
     BOTAO_ABRIR_TOTALIZADOR = android_id("abrirFecharTotalizador")
     BOTAO_DIA_ANTERIOR = android_id("carregarDadosMenos")
     BOTAO_PROXIMO_DIA = android_id("carregarDadosMais")
