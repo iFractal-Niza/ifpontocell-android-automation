@@ -55,8 +55,8 @@ def _marcar_sem_foto_antes_de_abrir(
     para ele já ler a configuração no launch (sem relançar depois).
 
     Sem celular cadastrado ainda (emulador limpo), não há o que marcar:
-    o primeiro acesso da home_autenticada ativa o celular novo e marca
-    sem_foto nele (flows._ativar_celular_antes_unlock).
+    o primeiro acesso da home_autenticada marca sem_foto no celular que
+    logar (flows._marcar_sem_foto_antes_unlock).
     """
     try:
         codigo = celular_api.obter_codigo_celular_por_nome_pessoa(
@@ -107,8 +107,8 @@ def app_session_e2e_registro_ponto(
             request.node.get_closest_marker("primeiro_acesso") is not None
         )
 
-        # No primeiro acesso, o sem_foto é marcado junto com a ativação
-        # do celular (flows._ativar_celular_antes_unlock).
+        # No primeiro acesso, o sem_foto é marcado antes do PIN
+        # (flows._marcar_sem_foto_antes_unlock).
         if not primeiro_acesso:
             _marcar_sem_foto_antes_de_abrir(celular_api, monitor_nome_pessoa)
 
@@ -240,14 +240,14 @@ def estado_primeiro_acesso() -> dict:
     """
     O que a corrente do primeiro acesso (Onboarding -> Login -> Unlock ->
     E2E) sabe entre um teste e outro (ver flows, "Primeiro acesso em
-    corrente"):
+    corrente").
 
-    - codigos_anteriores: códigos de celular que existiam antes do login
-      (a ativação pela API procura o novo);
-    - reaproveita_celular: o app foi zerado pelo próprio app, e o login
-      reaproveita o registro de celular (não surge código novo).
+    No iOS guarda os códigos de celular de antes do login, para a
+    ativação pela API. No Android o celular sobe ativo e o estado fica
+    vazio; a fixture continua para a corrente ter a mesma assinatura do
+    iOS (telas portadas de lá funcionam sem mudança).
     """
-    return {"codigos_anteriores": None, "reaproveita_celular": False}
+    return {}
 
 
 @pytest.fixture(scope="session")

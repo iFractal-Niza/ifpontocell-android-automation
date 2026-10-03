@@ -73,20 +73,21 @@ opção mais limpa, depende do time de dev.
 
 ---
 
-## Ativação do celular: emulador como o simulador
+## Celular sobe ativo: sem ativação pela API
 
 **Data:** 2026-10-03
 
-`flows._ativar_celular_antes_unlock` segue a regra do iOS trocando
-simulador por emulador: no emulador, espera o registro de celular novo e
-o ativa pela API; no celular real, não espera nem ativa, só marca
-`sem_foto` no registro mais recente. A ativação é idempotente (registro
-já ativo não é reativado).
+No iOS, o celular do simulador sobe desativado e o primeiro acesso o
+ativa pela API antes do PIN (`_ativar_celular_antes_unlock`, que espera
+o registro novo ignorando os códigos de antes do login). No Android o
+celular sobe **ativo**, no emulador e no celular (confirmado pelo
+Alessandro).
 
-**A confirmar na primeira execução:** no iOS, só o simulador sobe com o
-celular desativado. Se no Android o celular real também subir desativado,
-ou se o emulador reaproveitar o registro (mesmo `ANDROID_ID` depois de
-reinstalar), ajustar essa regra.
+`flows._marcar_sem_foto_antes_unlock` só marca `sem_foto` no registro de
+comunicação mais recente — o mesmo que o iOS faz no iPhone. Sem a
+ativação, saíram os `codigos_anteriores` e o `reaproveita_celular` da
+corrente do primeiro acesso; o `estado_primeiro_acesso` continua (vazio)
+para as funções da corrente terem a mesma assinatura do iOS.
 
 ---
 

@@ -1,11 +1,12 @@
 """
 Tela de autorização do aparelho (após criar o PIN, no fluxo original).
 
-O projeto Android de referência não tem essa tela: o primeiro acesso
-ativa o celular pela API (flows._ativar_celular_antes_unlock), e os
-fluxos não a sondam (garantir_tela_login, no iOS, sim: cada sondagem
-custaria 2s à toa). Mantida, com a mesma API do iOS, para quando a
-build Android voltar a exibi-la.
+O projeto Android de referência não tem essa tela: o celular sobe
+ativo (o primeiro acesso só marca sem_foto pela API,
+flows._marcar_sem_foto_antes_unlock), e os fluxos não a sondam
+(garantir_tela_login, no iOS, sim: cada sondagem custaria 2s à toa).
+Mantida, com a mesma API do iOS, para quando a build Android voltar a
+exibi-la.
 """
 
 from selenium.common.exceptions import TimeoutException

@@ -3,7 +3,6 @@ from time import monotonic, sleep
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from config.capabilities import is_emulator
 from config.timeouts import FLOW_TIMEOUT
 from pages.autenticacao.login_page import LoginPage
 from pages.autenticacao.onboarding_page import OnboardingPage
@@ -114,26 +113,22 @@ def _aguardar_tela_login(
     return login_page
 
 
-def _ativar_celular_antes_unlock(
+def _marcar_sem_foto_antes_unlock(
     celular_api,
     monitor_nome_pessoa: str | None,
-    codigos_anteriores: set[int] | None,
 ) -> int:
     """
-    Ativa pela API o celular criado no login atual
-    antes da criação e confirmação do PIN (paliativo do iOS, mantido no
-    Android pela mesma estrutura de fluxo).
+    Marca sem_foto=True no celular que acabou de logar (registro de
+    comunicação mais recente), antes da criação e confirmação do PIN.
 
-    Marca também sem_foto=True no mesmo celular: feito aqui, antes do
-    PIN, o app já encontra a configuração no backend ao chegar à Home e
-    o registro de ponto não precisa relançar o app para aplicá-la (ver
-    DECISOES.md). Não afeta os testes que não registram ponto.
+    No Android o celular sobe ativo (emulador e celular): não há a
+    ativação pela API que o iOS faz no simulador
+    (_ativar_celular_antes_unlock), nem a espera por um registro novo.
 
-    Celular real: como no iPhone, não espera um registro novo nem ativa
-    (no iOS, só o do simulador sobe desativado; a ativação é idempotente
-    se o do emulador já vier ativo). Só marca sem_foto no registro de
-    comunicação mais recente, o do aparelho que acabou de logar; sem
-    isso, o registro de ponto pediria foto e reconhecimento facial.
+    Feito aqui, antes do PIN, o app já encontra a configuração no
+    backend ao chegar à Home e o registro de ponto não precisa relançar
+    o app para aplicá-la; sem ela, o registro pediria foto e
+    reconhecimento facial. Não afeta os testes que não registram ponto.
     """
     if celular_api is None:
         raise AssertionError(
@@ -149,17 +144,7 @@ def _ativar_celular_antes_unlock(
             "Preencha a variável em config/env.<device>.yaml."
         )
 
-    if not is_emulator():
-        codigo = celular_api.obter_codigo_celular_por_nome_pessoa(nome_pessoa)
-        celular_api.definir_sem_foto(codigo, sem_foto=True)
-        return codigo
-
-    codigo = celular_api.aguardar_e_ativar_celular_mais_recente(
-        nome_pessoa=nome_pessoa,
-        codigos_anteriores=codigos_anteriores,
-        timeout=60,
-        poll_interval=2,
-    )
+    codigo = celular_api.obter_codigo_celular_por_nome_pessoa(nome_pessoa)
 
     celular_api.definir_sem_foto(codigo, sem_foto=True)
 
@@ -408,34 +393,29 @@ def realizar_unlock(
     *,
     celular_api=None,
     monitor_nome_pessoa: str | None = None,
-    codigos_anteriores: set[int] | None = None,
 ) -> HomePage:
     """
     Finaliza o primeiro acesso a partir da criação do PIN.
 
     Fluxo Android:
-    1. Localiza e ativa pela API o celular criado no login atual.
+    1. Marca sem_foto pela API no celular que acabou de logar (ele já
+       sobe ativo: sem a ativação do iOS).
     2. Cria e confirma o PIN pelo teclado numberN.
     3. Aguarda a Home.
     4. Trata os popups conhecidos do primeiro acesso.
-
-    O fluxo original de autorização pós-unlock foi removido; ver
-    DECISOES.md para recuperá-lo quando o paliativo deixar de valer.
 
     Pré-condição:
     - Driver posicionado na tela de criação do PIN.
 
     Fronteira:
-    ativação pela API -> criação do PIN -> confirmação do PIN -> Home.
+    sem_foto pela API -> criação do PIN -> confirmação do PIN -> Home.
     """
     unlock_page = UnlockPage(driver)
     home_page = HomePage(driver)
 
-    # === Ativação do celular criado pela execução ===
-    _ativar_celular_antes_unlock(
+    _marcar_sem_foto_antes_unlock(
         celular_api=celular_api,
         monitor_nome_pessoa=monitor_nome_pessoa,
-        codigos_anteriores=codigos_anteriores,
     )
 
     unlock_page.configurar_pin(pin)
@@ -477,19 +457,10 @@ def realizar_primeiro_acesso(
     *,
     celular_api=None,
     monitor_nome_pessoa: str | None = None,
-    reaproveita_celular: bool = False,
 ) -> HomePage:
     """
-    Executa a jornada de primeiro acesso até a Home.
-
-    Captura os códigos existentes antes do login e ativa o novo
-    celular pela API antes da criação e confirmação do PIN.
-
-    reaproveita_celular: depois de Zerar Dados, o app continua instalado
-    com o mesmo identificador de aparelho e o login reaproveita o
-    registro de celular que já existia — não surge código novo. Com
-    True, ativa o registro de comunicação mais recente, sem ignorar os
-    que já existiam.
+    Executa a jornada de primeiro acesso até a Home: login, sem_foto
+    pela API no celular que logou, criação e confirmação do PIN.
     """
     if celular_api is None:
         raise AssertionError(
@@ -506,14 +477,6 @@ def realizar_primeiro_acesso(
             "Preencha a variável em config/env.<device>.yaml."
         )
 
-    # Só o emulador precisa saber os códigos de antes: é nele que um
-    # celular novo surge desativado e é ativado pela API.
-    codigos_anteriores = (
-        None
-        if reaproveita_celular or not is_emulator()
-        else celular_api.obter_codigos_celular_por_nome_pessoa(nome_pessoa)
-    )
-
     realizar_login(
         driver=driver,
         nome_sistema=nome_sistema,
@@ -527,7 +490,6 @@ def realizar_primeiro_acesso(
         tratar_popups_home=tratar_popups_home,
         celular_api=celular_api,
         monitor_nome_pessoa=nome_pessoa,
-        codigos_anteriores=codigos_anteriores,
     )
 
 
@@ -694,9 +656,7 @@ def levar_ao_onboarding(
 ) -> None:
     """
     Deixa o app no onboarding. Na tela de login ou de criação do PIN,
-    conclui o primeiro acesso antes; logado, zera os dados pelo app
-    (o próximo login reaproveita o registro de celular: estado
-    "reaproveita_celular").
+    conclui o primeiro acesso antes; logado, zera os dados pelo app.
     """
     etapa = etapa_do_primeiro_acesso(driver)
 
@@ -727,8 +687,6 @@ def levar_ao_onboarding(
         )
 
     zerar_dados_pelo_app(driver, credenciais["pin"])
-    estado["reaproveita_celular"] = True
-    estado["codigos_anteriores"] = None
 
 
 def levar_a_tela_login(
@@ -760,21 +718,10 @@ def fazer_login_ate_criar_pin(
     """
     Da tela de login, login válido até a criação do PIN.
 
-    Antes do login, guarda no estado os códigos de celular que já
-    existiam: a ativação pela API (só no emulador) procura o código
-    novo. Depois de zerar pelo app, ou no celular real, não há código
-    novo a procurar.
+    No iOS, guarda no estado os códigos de celular de antes do login
+    para a ativação pela API; no Android o celular sobe ativo e não há
+    o que guardar.
     """
-    reaproveita = estado.get("reaproveita_celular") or not is_emulator()
-
-    estado["codigos_anteriores"] = (
-        None
-        if reaproveita
-        else celular_api.obter_codigos_celular_por_nome_pessoa(
-            monitor_nome_pessoa
-        )
-    )
-
     return realizar_login(
         driver=driver,
         nome_sistema=credenciais["sistema"],
@@ -812,20 +759,14 @@ def concluir_primeiro_acesso(
     tratar_popups_home: bool,
 ) -> HomePage:
     """
-    Da criação do PIN até a Home: ativação do celular (emulador), PIN
-    e confirmação. Com tratar_popups_home=False, o lembrete do primeiro
-    acesso fica na tela (o E2E o valida).
+    Da criação do PIN até a Home: sem_foto pela API, PIN e confirmação.
+    Com tratar_popups_home=False, o lembrete do primeiro acesso fica na
+    tela (o E2E o valida).
     """
-    home_page = realizar_unlock(
+    return realizar_unlock(
         driver=driver,
         pin=credenciais["pin"],
         tratar_popups_home=tratar_popups_home,
         celular_api=celular_api,
         monitor_nome_pessoa=monitor_nome_pessoa,
-        codigos_anteriores=estado.get("codigos_anteriores"),
     )
-
-    estado["reaproveita_celular"] = False
-    estado["codigos_anteriores"] = None
-
-    return home_page
