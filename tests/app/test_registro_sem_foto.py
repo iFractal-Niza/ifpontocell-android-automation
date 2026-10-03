@@ -28,7 +28,7 @@ def test_registro_ponto_confirmar(home_para_marcacao, marcacoes_registradas):
     )
 
     # Lida antes de a tela de sucesso voltar sozinha para a Home: a aba
-    # STATUS (CT010) confere esta marcação.
+    # STATUS (CT012) confere esta marcação.
     marcacoes_registradas.append(
         f"{home_page.obter_data_hora_registro():%H:%M}"
     )

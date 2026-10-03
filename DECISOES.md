@@ -172,8 +172,9 @@ O ZERAR DADOS do menu do perfil e o APAGAR DADOS DO APLICATIVO dos
 Ajustes abrem o mesmo diálogo (`linearApagarDadosDoApp`); no iOS são
 componentes diferentes. O `test_zerar_dados.py` mantém o par NÃO/SIM
 dos dois caminhos, como no iOS (o SIM pode estar ligado a outra rotina),
-como CT010–CT013 (`make zerar-dados`); o teste de API foi renumerado de
-CT038 para CT014.
+como CT012–CT015 (`make zerar-dados`), depois de Dados Pessoais (CT010)
+e Privacidade (CT011); o teste de API foi renumerado de CT038 para
+CT016.
 
 ---
 

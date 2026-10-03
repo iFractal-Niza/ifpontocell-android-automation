@@ -52,6 +52,8 @@ Locators que vieram com a lógica nova do iOS e não existem no projeto Android 
 |---|---|---|
 | `HomePage.POPUP_ESPELHO_PENDENTE_*` | texto `Assinatura do espelho` / `DEPOIS` / `ASSINAR` | popups ao abrir o app (Home) |
 | `HomePage.POPUP_FORA_GEO_*` | texto `Você está fora da geo localização` / `NÃO` / `SIM` | registro de ponto fora da geo |
+| `DadosPessoaisPage` (menu do perfil → DADOS PESSOAIS) | título e rótulo por texto; valores lidos dos TextViews da área de conteúdo (`nav_host_fragment`), rótulo em caixa alta + valor seguinte | CT010 |
+| `PrivacidadePage` (menu do perfil → PRIVACIDADE) | "Índice" e títulos das seções pelos TextViews (`textMatches`); se a política for uma WebView, a leitura muda | CT011 |
 | `VoltarParaHomeMixin.BOTAO_VOLTAR_TEXTO` | texto `VOLTAR`, senão `driver.back()` | telas abertas pelo menu |
 | `AutorizacaoPage.MODAL_APARELHO_INATIVO` / `BOTAO_OK_MODAL` | texto `Aparelho inativo` / `OK` | só se a tela de autorização existir |
 
