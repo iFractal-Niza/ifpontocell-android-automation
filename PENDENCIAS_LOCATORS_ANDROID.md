@@ -78,7 +78,7 @@ Também ajudariam (não bloqueiam):
 | Zerar Dados (diálogo; o mesmo pelo menu do perfil e pelos Ajustes) | layout próprio `linearApagarDadosDoApp`; `tituloApagarDados` ("Apagar dados do aplicativo"); `textViewApagarDados`; NÃO = `btnNoApagarDados`; SIM = `btnYesApagarDados` |
 | Menu lateral | `menu_esquerdo`; lista `recyclerviewMenuEsquerdo`; `menuItemEsquerdo{Ajuda,Ajustes,AssinaturaEspelho,Comunicado,EstadoHumor}`; textos "COMUNICADO" e "ESTADO DE HUMOR" (no iOS: "COMUNICADOS", "ESTADO DO HUMOR") |
 | Ajustes do Aplicativo | cabeçalho `header_ajustes` (o `linearAjustes` antigo não existe); `scroll_ajuste`; botão `btn_apagar_dados` |
-| Dados Pessoais | `header_dados_pessoais` ("DADOS PESSOAIS"); `linear_dados_pessoais` → `recyclerview`; rótulos sem id (EMPRESA, COLABORADOR, DEPARTAMENTO, MATRÍCULA — no iOS "DEPTO.:", "MATRICULA"); valor do colaborador `nome` |
+| Dados Pessoais | `header_dados_pessoais` ("DADOS PESSOAIS"); `linear_dados_pessoais` → `recyclerview`; rótulos sem id (EMPRESA, COLABORADOR, DEPARTAMENTO, MATRÍCULA — no iOS "DEPTO.:", "MATRICULA"); valor do colaborador `nome` (a suíte lê pelo par COLABORADOR, como no iOS) |
 | Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.", lembrete) | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
 
 O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo título "Configurar Aplicativo" nas telas de sistema, login e PIN: as pages reconhecem cada tela pelo contêiner — menos o boas-vindas (pelo título "bem-vindo") e o PIN (pela instrução), que dividem o `relative_first_access`.

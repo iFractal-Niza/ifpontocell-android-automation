@@ -2,18 +2,18 @@ from functools import cached_property
 
 from pages.android_locators import android_id, android_text
 from pages.base_page import BasePage
+from pages.compartilhado.tabela_rotulo_valor import TabelaRotuloValorMixin
 from pages.menu_page import MenuPerfilPage
 from pages.navegacao import VoltarParaHomeMixin
-from utils.texto import normalizar_texto
 
 
-class DadosPessoaisPage(VoltarParaHomeMixin, BasePage):
+class DadosPessoaisPage(TabelaRotuloValorMixin, VoltarParaHomeMixin, BasePage):
     """
     Page: tela "Dados Pessoais" (menu do perfil -> DADOS PESSOAIS).
 
-    Como no iOS, só o nome do colaborador interessa ao teste. No Android
-    o valor do COLABORADOR tem id próprio (nome) e é lido direto; os
-    demais rótulos (EMPRESA, DEPARTAMENTO, MATRÍCULA) não são lidos.
+    Foto do colaborador, logo da empresa e os pares rótulo/valor EMPRESA,
+    COLABORADOR, DEPARTAMENTO e MATRÍCULA (ler_conteudo, do mixin; no iOS
+    "DEPTO.:" e "MATRICULA"). Mesma leitura do iOS.
     """
 
     SCREEN_NAME = "dados_pessoais"
@@ -21,10 +21,13 @@ class DadosPessoaisPage(VoltarParaHomeMixin, BasePage):
 
     ROTULO_COLABORADOR = "COLABORADOR"
 
+    # A tela cabe inteira: lê uma vez, sem rolar.
+    MAX_ROLAGENS = 0
+
     # Confirmado no Inspector.
     CABECALHO = android_id("header_dados_pessoais")
+    TITULO = android_text("DADOS PESSOAIS")
     ROTULO_COLABORADOR_LOCATOR = android_text(ROTULO_COLABORADOR)
-    VALOR_COLABORADOR = android_id("nome")
 
     # === Composição ===
     @cached_property
@@ -52,11 +55,4 @@ class DadosPessoaisPage(VoltarParaHomeMixin, BasePage):
 
     def colaborador(self) -> str:
         """Nome exibido em COLABORADOR ("" se não aparecer)."""
-        elemento = self._obter_elemento_visivel_imediatamente(
-            self.VALOR_COLABORADOR
-        )
-
-        if elemento is None:
-            return ""
-
-        return normalizar_texto(elemento.text)
+        return self.ler_conteudo().campos.get(self.ROTULO_COLABORADOR, "")
