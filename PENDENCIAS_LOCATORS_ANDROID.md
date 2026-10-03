@@ -52,7 +52,6 @@ Locators que vieram com a lógica nova do iOS e não existem no projeto Android 
 |---|---|---|
 | `HomePage.POPUP_ESPELHO_PENDENTE_*` | texto `Assinatura do espelho` / `DEPOIS` / `ASSINAR` | popups ao abrir o app (Home) |
 | `HomePage.POPUP_FORA_GEO_*` | texto `Você está fora da geo localização` / `NÃO` / `SIM` | registro de ponto fora da geo |
-| `ApagarDadosAjustesPage` (Ajustes → APAGAR DADOS DO APLICATIVO) | diálogo por texto (`Apagar dados do aplicativo`, `Ao confirmar…`, `NÃO` / `SIM`) | apagar dados pelos Ajustes (CT034–035 no iOS) |
 | `VoltarParaHomeMixin.BOTAO_VOLTAR_TEXTO` | texto `VOLTAR`, senão `driver.back()` | telas abertas pelo menu |
 | `AutorizacaoPage.MODAL_APARELHO_INATIVO` / `BOTAO_OK_MODAL` | texto `Aparelho inativo` / `OK` | só se a tela de autorização existir |
 
@@ -75,7 +74,7 @@ Também ajudariam (não bloqueiam):
 | Confirmação do PIN | contêiner `relative_first_access`; `text_instrucao` ("Entre novamente para confirmar\na senha de acesso rápido criada.") — diferente do iOS ("Repita a senha") |
 | Desbloqueio por PIN | contêiner `relative_first_access` (o mesmo); `text_titulo` ("Senha de Acesso Rápido"); `text_instrucao` ("Entre com sua senha"); `esqueci_senha`; `clear` |
 | Menu do perfil | `menu_direito`; lista `recyclerviewMenuDireito`; opções `menuItemDireito{AcessoSistema,Idioma,AlterarSenha,DadosPessoais,Permissoes,Privacidade,Sobre,ZerarDados}` (texto em `text_view`) |
-| Zerar Dados (diálogo) | layout próprio `linearApagarDadosDoApp`; `tituloApagarDados` ("Apagar dados do aplicativo"); `textViewApagarDados`; NÃO = `btnNoApagarDados`; SIM = `btnYesApagarDados` |
+| Zerar Dados (diálogo; o mesmo pelo menu do perfil e pelos Ajustes) | layout próprio `linearApagarDadosDoApp`; `tituloApagarDados` ("Apagar dados do aplicativo"); `textViewApagarDados`; NÃO = `btnNoApagarDados`; SIM = `btnYesApagarDados` |
 | Menu lateral | `menu_esquerdo`; lista `recyclerviewMenuEsquerdo`; `menuItemEsquerdo{Ajuda,Ajustes,AssinaturaEspelho,Comunicado,EstadoHumor}`; textos "COMUNICADO" e "ESTADO DE HUMOR" (no iOS: "COMUNICADOS", "ESTADO DO HUMOR") |
 | Ajustes do Aplicativo | cabeçalho `header_ajustes` (o `linearAjustes` antigo não existe); `scroll_ajuste`; botão `btn_apagar_dados` |
 | Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.", lembrete) | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |

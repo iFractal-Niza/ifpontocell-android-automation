@@ -5,11 +5,7 @@ from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import WebDriverException
 
 from pages.ajustes.settings_page import SettingsPage
-from pages.android_locators import (
-    android_id,
-    android_text,
-    android_text_contains,
-)
+from pages.android_locators import android_id
 from pages.base_page import BasePage
 from pages.zerar_dados.zerar_dados_page import ZerarDadosPage
 from utils.texto import normalizar_texto
@@ -20,10 +16,10 @@ class ApagarDadosAjustesPage(BasePage):
     Page: botão APAGAR DADOS DO APLICATIVO dos Ajustes do aplicativo e o
     diálogo que ele abre.
 
-    Mesmo texto e mesma ação do ZERAR DADOS do menu do perfil
-    (ZerarDadosPage). No iOS o diálogo dos Ajustes é outro componente;
-    no Android, ainda não confirmado: os locators vão pelo texto, que
-    serve aos dois casos.
+    Mesmo texto e mesma ação do ZERAR DADOS do menu do perfil. No iOS o
+    diálogo dos Ajustes é outro componente; no Android é o mesmo
+    (linearApagarDadosDoApp, confirmado no Inspector): os locators vêm
+    da ZerarDadosPage.
     """
 
     SCREEN_NAME = "apagar_dados_ajustes"
@@ -33,12 +29,10 @@ class ApagarDadosAjustesPage(BasePage):
     # Confirmado no Inspector.
     BOTAO_APAGAR = android_id("btn_apagar_dados")
 
-    # PENDENTE: diálogo por texto até o XML dele aberto pelos Ajustes
-    # (PENDENCIAS_LOCATORS_ANDROID.md).
-    TITULO = android_text("Apagar dados do aplicativo")
-    MENSAGEM = android_text_contains("Ao confirmar esta operação")
-    BOTAO_NAO = android_text("NÃO")
-    BOTAO_SIM = android_text("SIM")
+    TITULO = ZerarDadosPage.TITULO
+    MENSAGEM = ZerarDadosPage.MENSAGEM
+    BOTAO_NAO = ZerarDadosPage.BOTAO_NAO
+    BOTAO_SIM = ZerarDadosPage.BOTAO_SIM
 
     # === Composição ===
     @cached_property
