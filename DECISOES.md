@@ -97,16 +97,19 @@ para as funções da corrente terem a mesma assinatura do iOS.
 
 O projeto Android de referência não tem marcador exclusivo de cada etapa
 do PIN: o teclado `numberN` aparece na criação, na confirmação e no
-desbloqueio. O marcador do desbloqueio herdado do Android antigo
-(`relative_first_access`) é, na verdade, o contêiner do boas-vindas
-(Inspector, 2026-10-03): falta capturar o do desbloqueio.
+desbloqueio. A criação tem instrução própria (`text_instrucao`, "Crie uma
+senha de 4 digitos"); a confirmação e o desbloqueio ainda não foram
+capturados. O marcador do desbloqueio herdado do Android antigo
+(`relative_first_access`) é dividido pelo boas-vindas e pela criação do
+PIN (Inspector, 2026-10-03).
 
 - `UnlockPage` usa a digitação robusta do iOS (toca o mesmo dígito até a
   tela mudar, até 6 toques), com o teclado como marcador: a criação
   termina com o teclado ainda na tela; a confirmação, quando ele some.
   Por isso o `APP_PIN` precisa ser um dígito repetido (ex.: `1111`).
-- Em `flows.etapa_do_primeiro_acesso`, a etapa "logado" é sondada antes
-  de "criar PIN": senão a tela de desbloqueio seria lida como criação.
+- Em `flows.etapa_do_primeiro_acesso`, onboarding e criação do PIN (pela
+  instrução) são sondados antes de "logado", cujo marcador hoje casa
+  também com essas telas.
 
 Textos ou ids próprios de cada etapa devolveriam a conferência que o iOS
 faz (PENDENCIAS_LOCATORS_ANDROID.md).
@@ -120,10 +123,12 @@ faz (PENDENCIAS_LOCATORS_ANDROID.md).
 O botão de avançar é o mesmo resource-id no boas-vindas e nas
 informações importantes (`btn_confirmar_informacao`), e o título
 "Configurar Aplicativo" é o mesmo nas telas de sistema e de login. Cada
-tela tem, porém, um contêiner próprio (`relative_first_access`,
-`relative_information`, `relative_system_access`, `relative_login_access`),
-e é por ele que a `OnboardingPage` e o `flows.etapa_do_primeiro_acesso`
-reconhecem a tela. Com isso, o `_passar_pelo_boas_vindas` do iOS (toca
+tela tem, porém, um contêiner próprio (`relative_information`,
+`relative_system_access`, `relative_login_access`), e é por ele que a
+`OnboardingPage` e o `flows.etapa_do_primeiro_acesso` reconhecem a tela.
+Exceção: o `relative_first_access` é dividido pelo boas-vindas e pela
+criação do PIN — o boas-vindas vai pelo título ("bem-vindo") e a criação
+pela instrução ("Crie uma senha de 4 digitos"). Com isso, o `_passar_pelo_boas_vindas` do iOS (toca
 PRÓXIMO até a tela seguinte, até 4 vezes) funciona igual.
 
 O diálogo genérico do app (`linear_dialog_geral`: `titulo`, `mensagem`,

@@ -12,11 +12,13 @@ from pages.base_page import BasePage
 class OnboardingPage(BasePage):
     SCREEN_NAME = "onboarding"
 
-    # === Telas (contêiner de cada uma; confirmado no Inspector) ===
+    # === Telas (confirmado no Inspector) ===
     # O botão de avançar é o mesmo resource-id no boas-vindas e nas
     # informações importantes: quem diz em qual tela o app está é o
-    # contêiner.
-    TELA_BOAS_VINDAS = android_id("relative_first_access")
+    # contêiner. Exceção: o do boas-vindas (relative_first_access) é
+    # reaproveitado na criação do PIN, então o boas-vindas vai pelo
+    # título.
+    TELA_BOAS_VINDAS = android_text_contains("bem-vindo")
     TELA_INFORMACOES_IMPORTANTES = android_id("relative_information")
     TELA_CONFIGURAR_APLICATIVO = android_id("relative_system_access")
 

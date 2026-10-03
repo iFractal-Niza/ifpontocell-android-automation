@@ -4,14 +4,12 @@ A refatoração reutilizou os `resource-id` disponíveis no projeto Android de r
 
 ## Prioridade 0 — desbloqueio por PIN (bloqueia a sessão morna)
 
-`UnlockPage.TEXTO_TELA_UNLOCK` usa `relative_first_access`, mas o Inspector mostrou (2026-10-03) que esse é o contêiner do **boas-vindas** do onboarding. Com o app no onboarding, `esta_na_tela_unlock()` dá verdadeiro, e a `home_autenticada` tentaria desbloquear em vez de fazer o primeiro acesso.
+`UnlockPage.TEXTO_TELA_UNLOCK` usa `relative_first_access`, mas o Inspector mostrou (2026-10-03) que esse contêiner é reaproveitado pelo **boas-vindas** e pela **criação do PIN**. Com o app numa dessas telas, `esta_na_tela_unlock()` dá verdadeiro, e a `home_autenticada` tentaria desbloquear em vez de fazer o primeiro acesso. (A detecção de etapa da corrente já contorna: sonda onboarding e criação antes.)
 
 Falta o XML de duas telas:
 
-- **criação do PIN** (depois do login), e da confirmação ("repita a senha");
-- **desbloqueio por PIN** (reabrir o app já logado).
-
-Do desbloqueio, preciso de um contêiner ou texto que só exista nele, para substituir o `relative_first_access`.
+- **confirmação do PIN** (depois de digitar os 4 dígitos na criação): o texto da `text_instrucao`;
+- **desbloqueio por PIN** (reabrir o app já logado): um texto ou id que só exista nele (provavelmente a `text_instrucao` também).
 
 ## Prioridade 1 — necessários para a suíte atual
 
@@ -81,9 +79,10 @@ Também ajudariam (não bloqueiam):
 | Informações importantes | contêiner `relative_information`; `btn_confirmar_informacao` ("Iniciar configuração") |
 | Configurar Aplicativo (sistema) | contêiner `relative_system_access`; `editTextSistema`; `btn_confirmar` |
 | Configurar Aplicativo (login) | contêiner `relative_login_access`; `editTextLogin`; `editTextSenha`; `btn_senha_ver`; `btn_confirmar` ("Entrar") |
+| Criação do PIN | contêiner `relative_first_access` (o mesmo do boas-vindas); `text_instrucao` ("Crie uma senha de 4 digitos para…"); `number0`…`number9` |
 | Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.") | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
 
-O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo título "Configurar Aplicativo" nas telas de sistema e de login: as pages reconhecem cada tela pelo contêiner.
+O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo título "Configurar Aplicativo" nas telas de sistema, login e PIN: as pages reconhecem cada tela pelo contêiner — menos o boas-vindas (pelo título "bem-vindo") e o PIN (pela instrução), que dividem o `relative_first_access`.
 
 ## Fallbacks por texto — funcionais, mas vale trocar por resource-id
 

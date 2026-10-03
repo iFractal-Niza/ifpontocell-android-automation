@@ -29,21 +29,22 @@ class UnlockPage(BasePage):
     BOTAO_AGORA_NAO = android_text_contains("Agora não")
 
     # === Criação e confirmação do PIN ===
-    # O projeto Android de referência não expõe um marcador exclusivo de
-    # cada etapa: o teclado numberN é o mesmo na criação e na
-    # confirmação. A criação termina quando o teclado continua na tela
-    # (confirmação) e a confirmação, quando ele some. Textos próprios
-    # ("Crie uma senha..." / "Repita a senha...") devolveriam a
-    # conferência que o iOS faz (PENDENCIAS_LOCATORS_ANDROID.md).
+    # Confirmado no Inspector: teclado numberN; a instrução (text_instrucao)
+    # diz a etapa. "digitos" sem acento, como o app exibe.
     BOTAO_DIGITO_1 = android_id("number1")
-    TELA_CRIAR_PIN = BOTAO_DIGITO_1
-    TEXTO_CRIAR_PIN = BOTAO_DIGITO_1
+    TEXTO_CRIAR_PIN = android_text_contains("Crie uma senha de 4 digitos")
+    TELA_CRIAR_PIN = TEXTO_CRIAR_PIN
+
+    # PENDENTE: o texto da confirmação ("Repita a senha..." no iOS) ainda
+    # não foi capturado. Até lá, o teclado: a criação termina com ele
+    # ainda na tela e a confirmação, quando ele some
+    # (PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0).
     TEXTO_CONFIRMAR_PIN = BOTAO_DIGITO_1
 
     # === Desbloqueio ===
-    # ERRADO, a corrigir: o Inspector mostrou que relative_first_access é
-    # o contêiner do boas-vindas do onboarding, não do desbloqueio.
-    # Falta o XML da tela de PIN de desbloqueio
+    # ERRADO, a corrigir: relative_first_access é o contêiner reaproveitado
+    # pelo boas-vindas e pela criação do PIN (Inspector), não exclusivo do
+    # desbloqueio. Falta o XML da tela de PIN de desbloqueio
     # (PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0).
     TEXTO_TELA_UNLOCK = android_id("relative_first_access")
 
