@@ -52,7 +52,6 @@ Locators que vieram com a lógica nova do iOS e não existem no projeto Android 
 |---|---|---|
 | `HomePage.POPUP_ESPELHO_PENDENTE_*` | texto `Assinatura do espelho` / `DEPOIS` / `ASSINAR` | popups ao abrir o app (Home) |
 | `HomePage.POPUP_FORA_GEO_*` | texto `Você está fora da geo localização` / `NÃO` / `SIM` | registro de ponto fora da geo |
-| `DadosPessoaisPage` (menu do perfil → DADOS PESSOAIS) | título e rótulo por texto; valores lidos dos TextViews da área de conteúdo (`nav_host_fragment`), rótulo em caixa alta + valor seguinte | CT010 |
 | `PrivacidadePage` (menu do perfil → PRIVACIDADE) | "Índice" e títulos das seções pelos TextViews (`textMatches`); se a política for uma WebView, a leitura muda | CT011 |
 | `VoltarParaHomeMixin.BOTAO_VOLTAR_TEXTO` | texto `VOLTAR`, senão `driver.back()` | telas abertas pelo menu |
 | `AutorizacaoPage.MODAL_APARELHO_INATIVO` / `BOTAO_OK_MODAL` | texto `Aparelho inativo` / `OK` | só se a tela de autorização existir |
@@ -79,6 +78,7 @@ Também ajudariam (não bloqueiam):
 | Zerar Dados (diálogo; o mesmo pelo menu do perfil e pelos Ajustes) | layout próprio `linearApagarDadosDoApp`; `tituloApagarDados` ("Apagar dados do aplicativo"); `textViewApagarDados`; NÃO = `btnNoApagarDados`; SIM = `btnYesApagarDados` |
 | Menu lateral | `menu_esquerdo`; lista `recyclerviewMenuEsquerdo`; `menuItemEsquerdo{Ajuda,Ajustes,AssinaturaEspelho,Comunicado,EstadoHumor}`; textos "COMUNICADO" e "ESTADO DE HUMOR" (no iOS: "COMUNICADOS", "ESTADO DO HUMOR") |
 | Ajustes do Aplicativo | cabeçalho `header_ajustes` (o `linearAjustes` antigo não existe); `scroll_ajuste`; botão `btn_apagar_dados` |
+| Dados Pessoais | `header_dados_pessoais` ("DADOS PESSOAIS"); `linear_dados_pessoais` → `recyclerview`; rótulos sem id (EMPRESA, COLABORADOR, DEPARTAMENTO, MATRÍCULA — no iOS "DEPTO.:", "MATRICULA"); valor do colaborador `nome` |
 | Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.", lembrete) | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
 
 O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo título "Configurar Aplicativo" nas telas de sistema, login e PIN: as pages reconhecem cada tela pelo contêiner — menos o boas-vindas (pelo título "bem-vindo") e o PIN (pela instrução), que dividem o `relative_first_access`.

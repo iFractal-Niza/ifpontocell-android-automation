@@ -76,15 +76,14 @@ def test_monta_campos_e_junta_o_que_aparece_ao_rolar(monkeypatch):
     assert conteudo.textos.count("COLABORADOR") == 1
 
 
-def test_dados_pessoais_le_o_colaborador(monkeypatch):
+def test_dados_pessoais_le_os_campos(monkeypatch):
     pagina = _pagina(
         monkeypatch,
-        [[["COLABORADOR", "TesterN95"], ["DEPTO.:", "2 - Depto_NR1"]]],
+        [[["COLABORADOR", "Tester QA"], ["DEPARTAMENTO", "Depto_Tester_QA"]]],
         max_rolagens=0,
     )
 
-    assert pagina.colaborador() == "TesterN95"
-    assert pagina.ler_conteudo().campos["DEPTO.:"] == "2 - Depto_NR1"
+    assert pagina.ler_conteudo().campos["DEPARTAMENTO"] == "Depto_Tester_QA"
 
 
 def test_tela_sem_rolagem_le_uma_vez_e_nao_rola(monkeypatch):
@@ -94,7 +93,7 @@ def test_tela_sem_rolagem_le_uma_vez_e_nao_rola(monkeypatch):
 
     def ler():
         leituras.append(1)
-        return [["COLABORADOR", "TesterN95"]]
+        return [["COLABORADOR", "Tester QA"]]
 
     monkeypatch.setattr(pagina, "_textos_das_celulas", ler)
     monkeypatch.setattr(
@@ -102,5 +101,34 @@ def test_tela_sem_rolagem_le_uma_vez_e_nao_rola(monkeypatch):
     )
     monkeypatch.setattr(pagina, "_log_info", lambda *a, **k: None)
 
-    assert pagina.colaborador() == "TesterN95"
+    pagina.ler_conteudo()
+
     assert (len(leituras), len(rolagens)) == (1, 0)
+
+
+def test_colaborador_lido_pelo_id_nome(monkeypatch):
+    # Confirmado no Inspector: o valor do COLABORADOR tem id próprio.
+    pagina = DadosPessoaisPage(Mock())
+    elemento = Mock()
+    elemento.text = " Tester  QA "
+    vistos = []
+
+    def visivel(locator):
+        vistos.append(locator)
+        return elemento
+
+    monkeypatch.setattr(
+        pagina, "_obter_elemento_visivel_imediatamente", visivel
+    )
+
+    assert pagina.colaborador() == "Tester QA"
+    assert vistos == [DadosPessoaisPage.VALOR_COLABORADOR]
+
+
+def test_sem_colaborador_devolve_vazio(monkeypatch):
+    pagina = DadosPessoaisPage(Mock())
+    monkeypatch.setattr(
+        pagina, "_obter_elemento_visivel_imediatamente", lambda _: None
+    )
+
+    assert pagina.colaborador() == ""
