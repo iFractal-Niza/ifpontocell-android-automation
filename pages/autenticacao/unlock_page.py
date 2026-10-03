@@ -35,11 +35,11 @@ class UnlockPage(BasePage):
     TEXTO_CRIAR_PIN = android_text_contains("Crie uma senha de 4 digitos")
     TELA_CRIAR_PIN = TEXTO_CRIAR_PIN
 
-    # PENDENTE: o texto da confirmação ("Repita a senha..." no iOS) ainda
-    # não foi capturado. Até lá, o teclado: a criação termina com ele
-    # ainda na tela e a confirmação, quando ele some
-    # (PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0).
-    TEXTO_CONFIRMAR_PIN = BOTAO_DIGITO_1
+    # Confirmação: mesma tela do iOS ("Repita a senha de 4 dígitos",
+    # confirmado pelo Alessandro). Pelo trecho sem a palavra acentuada: a
+    # criação no Android escreve "digitos" sem acento. Texto exato ainda
+    # não visto no Inspector (PENDENCIAS_LOCATORS_ANDROID.md).
+    TEXTO_CONFIRMAR_PIN = android_text_contains("Repita a senha")
 
     # === Desbloqueio ===
     # Confirmado no Inspector: título "Senha de Acesso Rápido" e

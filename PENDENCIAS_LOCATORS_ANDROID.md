@@ -2,9 +2,9 @@
 
 A refatoração reutilizou os `resource-id` disponíveis no projeto Android de referência. Os itens abaixo **não existem naquele projeto** e precisam ser confirmados na build Android atual pelo Appium Inspector.
 
-## Prioridade 0 — confirmação do PIN
+## Prioridade 0 — texto da confirmação do PIN
 
-Falta o XML da **confirmação do PIN** (a tela depois de digitar os 4 dígitos na criação): o texto da `text_instrucao`. Até lá, `UnlockPage.TEXTO_CONFIRMAR_PIN` é o próprio teclado (`number1`): a criação termina com ele ainda na tela e a confirmação, quando ele some; e a corrente do primeiro acesso não reconhece um teste parado no meio da confirmação.
+A confirmação existe, como no iOS (criação → "repita a senha" → Home com o lembrete). `UnlockPage.TEXTO_CONFIRMAR_PIN` procura o trecho **"Repita a senha"** (texto do iOS, sem a palavra acentuada). Se a criação do PIN falhar com "A tela de confirmação do PIN não foi exibida", é este texto: capturar a `text_instrucao` da confirmação no Inspector.
 
 ## Prioridade 1 — necessários para a suíte atual
 

@@ -601,11 +601,12 @@ def etapa_do_primeiro_acesso(
             ),
         ),
         (ETAPA_LOGIN, (LoginPage.CAMPO_LOGIN,)),
-        # As telas de PIN dividem o contêiner e o teclado: criação e
-        # desbloqueio vão pela instrução (text_instrucao). A confirmação
-        # do PIN fica de fora até ter texto próprio
-        # (PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0).
-        (ETAPA_CRIAR_PIN, (UnlockPage.TEXTO_CRIAR_PIN,)),
+        # As telas de PIN dividem o contêiner e o teclado: criação,
+        # confirmação e desbloqueio vão pela instrução (text_instrucao).
+        (
+            ETAPA_CRIAR_PIN,
+            (UnlockPage.TEXTO_CRIAR_PIN, UnlockPage.TEXTO_CONFIRMAR_PIN),
+        ),
         (
             ETAPA_LOGADO,
             (UnlockPage.TEXTO_TELA_UNLOCK, HomePage.POPUP_LEMBRETE_MENSAGEM),

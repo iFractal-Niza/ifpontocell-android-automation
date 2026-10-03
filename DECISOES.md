@@ -100,15 +100,16 @@ do PIN: o teclado `numberN` aparece na criação, na confirmação e no
 desbloqueio, todos no mesmo contêiner (`relative_first_access`, também
 do boas-vindas). O que separa as telas é a instrução (`text_instrucao`):
 "Crie uma senha de 4 digitos" na criação e "Entre com sua senha" no
-desbloqueio (Inspector, 2026-10-03). A da confirmação ainda não foi
-capturada.
+desbloqueio (Inspector, 2026-10-03). A confirmação é a mesma do iOS
+(confirmado pelo Alessandro) e vai pelo trecho "Repita a senha"; o texto
+exato ainda não foi visto no Inspector.
 
 - `UnlockPage` usa a digitação robusta do iOS (toca o mesmo dígito até a
-  tela mudar, até 6 toques), com o teclado como marcador: a criação
-  termina com o teclado ainda na tela; a confirmação, quando ele some.
-  Por isso o `APP_PIN` precisa ser um dígito repetido (ex.: `1111`).
-- Em `flows.etapa_do_primeiro_acesso`, criação e desbloqueio vão pela
-  instrução; a confirmação fica de fora até ter texto próprio.
+  tela mudar, até 6 toques): a criação termina quando aparece a
+  instrução da confirmação; a confirmação, quando ela some. Por isso o
+  `APP_PIN` precisa ser um dígito repetido (ex.: `1111`).
+- Em `flows.etapa_do_primeiro_acesso`, criação, confirmação e
+  desbloqueio vão pela instrução.
 
 Textos ou ids próprios de cada etapa devolveriam a conferência que o iOS
 faz (PENDENCIAS_LOCATORS_ANDROID.md).
