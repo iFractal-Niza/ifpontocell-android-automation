@@ -178,6 +178,20 @@ CT016.
 
 ---
 
+## Privacidade: a árvore só traz o que está na tela
+
+**Data:** 2026-10-03
+
+A lógica do iOS foi mantida (índice entre "Índice" e o primeiro texto
+repetido; tocar o item e conferir a seção). Particularidade: no Android a
+árvore só traz o que está na tela, e o item do índice que rolou para fora
+some dela; no iOS ficavam as duas ocorrências e a seção era a última.
+`secao_esta_visivel` passa a tomar a última ocorrência que não é item do
+índice (id `indice_*`; a seção tem o id sem o prefixo). O item 2 do
+índice é "Ciclo de vida dos dados" no Android (iOS: "Vida dos Dados").
+
+---
+
 ## Plataforma: equivalentes Android
 
 **Data:** 2026-10-03

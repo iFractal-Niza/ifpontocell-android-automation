@@ -29,9 +29,10 @@ class PrivacidadePage(VoltarParaHomeMixin, BasePage):
     árvore: a primeira ocorrência é o item do índice; a última, o título
     da seção.
 
-    PENDENTE: estrutura deduzida do iOS (TextViews na área de conteúdo);
-    confirmar no Inspector — se a política for uma WebView, a leitura
-    muda (PENDENCIAS_LOCATORS_ANDROID.md).
+    Android (Inspector): TextViews nativos dentro do scrollView; itens
+    do índice com id indice_* e títulos das seções com id próprio. A
+    árvore só traz o que está na tela: depois de rolar até a seção, o
+    item do índice some dela (ver secao_esta_visivel).
     """
 
     SCREEN_NAME = "privacidade"
@@ -39,13 +40,15 @@ class PrivacidadePage(VoltarParaHomeMixin, BasePage):
 
     ROTULO_INDICE = "Índice"
 
-    # PENDENTE: por texto, como no iOS, até o XML da tela.
+    # Confirmado no Inspector.
     TITULO = android_text("PRIVACIDADE")
     CABECALHO_INDICE = android_text(ROTULO_INDICE)
-
-    # Área de conteúdo das telas (confirmado na Home).
-    TABELA = android_id("nav_host_fragment")
+    TABELA = android_id("scrollView")
     TEXTOS = (AppiumBy.CLASS_NAME, "android.widget.TextView")
+
+    # Itens do índice: id indice_* (ex.: indice_os_direitos); o título
+    # da seção tem o id sem o prefixo (os_direitos).
+    PREFIXO_ID_INDICE = ":id/indice_"
 
     # === Composição ===
     @cached_property
@@ -131,20 +134,34 @@ class PrivacidadePage(VoltarParaHomeMixin, BasePage):
             item=titulo,
         )
 
+    def _e_item_do_indice(self, elemento) -> bool:
+        return self.PREFIXO_ID_INDICE in (
+            elemento.get_attribute("resource-id") or ""
+        )
+
     def secao_esta_visivel(self, titulo: str, timeout: float) -> bool:
         """
         O título da seção (a última ocorrência do texto) está visível
         dentro da área de conteúdo.
+
+        Particularidade do Android: a árvore só traz o que está na tela,
+        e o item do índice que rolou para fora some dela. No lugar de
+        exigir as duas ocorrências (como no iOS), a seção é a última
+        ocorrência que não é item do índice (id sem o prefixo indice_).
         """
         limite = monotonic() + timeout
 
         while True:
             try:
                 area = self.driver.find_element(*self.TABELA).rect
-                ocorrencias = self._ocorrencias(titulo)
+                secoes = [
+                    elemento
+                    for elemento in self._ocorrencias(titulo)
+                    if not self._e_item_do_indice(elemento)
+                ]
 
-                if len(ocorrencias) >= 2:
-                    secao = ocorrencias[-1]
+                if secoes:
+                    secao = secoes[-1]
                     topo = secao.rect["y"]
 
                     if (

@@ -14,7 +14,8 @@ INDICE = (
     "1. Introdução",
     "1.1. Objetivo e escopo desta Política",
     "1.2. Responsabilidades das partes",
-    "2. Ciclo de Vida dos Dados",
+    # No Android em minúsculas (no iOS, "Ciclo de Vida dos Dados").
+    "2. Ciclo de vida dos dados",
     "2.1. Coleta de dados",
     "2.2. Uso e acesso aos dados pessoais",
     "2.3. Cancelamento de contrato e eliminação de dados pessoais",
