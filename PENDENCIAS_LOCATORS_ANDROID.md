@@ -17,7 +17,7 @@ falha mostra `PENDENTE_<nome>`. Os demais estão pelo texto do iOS
 | Holerite / Informe (`holerite`, `informe`) | lista de documentos; visualizador aberto | `holerite_lista`/`_item`/`_competencia`, `informe_lista`/`_item`/`_exercicio`, `lista_documentos_btnVisualizar`, `visualizar_btn*`, `visualizar_texto` |
 | Estado de Humor (`humor`) | tela de percentuais; grade de humores; confirmação | `estadoHumor_btnHumor`; humores, CONFIRMAR/CANCELAR por texto |
 | Assinatura do Espelho (`ass-espelho`) | lista; item expandido; Impressão; Assinar; popup de espelho pendente | `assinatura_*`, `assinaturaContent_btnVisualizar`, `impressao_btn*`, `assinar_*`; **período** (no iOS vem do nome da célula) |
-| Senha do sistema (`alterar-senha-sistema`) | alertas depois do SALVAR (senha atual errada, nova igual à atual, sucesso) | mensagens dos alertas pelo texto do iOS |
+| Senha do sistema (`alterar-senha-sistema`) | alertas depois do SALVAR: confirmação diferente ("Senha não confere." + "Confirmação de senha não conferem" no iOS) e sucesso ("Senha alterada com sucesso.") | mensagens pelo texto do iOS ("nova igual à atual" já confirmada) |
 
 ## Prioridade 1 — necessários para a suíte atual
 
