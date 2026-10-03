@@ -4,11 +4,11 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-
 # =========================
 # EXECUÇÃO GLOBAL
 # =========================
-# Identificador único gerado uma vez por execução — compartilhado em todos os logs
+# Identificador único gerado uma vez por execução — compartilhado em
+# todos os logs
 EXECUTION_ID = str(uuid.uuid4())
 
 
@@ -52,7 +52,8 @@ class JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         """
-        Serializa o LogRecord em JSON, com fallback para string em caso de erro.
+        Serializa o LogRecord em JSON, com fallback para string em caso
+        de erro.
         """
         log_data = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -164,7 +165,11 @@ def log_event(project_logger: logging.Logger, message: str, **kwargs) -> None:
     project_logger.info(message, extra=kwargs)
 
 
-def log_warning(project_logger: logging.Logger, message: str, **kwargs) -> None:
+def log_warning(
+    project_logger: logging.Logger,
+    message: str,
+    **kwargs,
+) -> None:
     """
     Registra um aviso com campos extras estruturados.
     """

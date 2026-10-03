@@ -6,7 +6,6 @@ selenium==4.36.0
 pytest==9.1.1
 pytest-html==4.2.0
 pytest-metadata==3.1.1
-pytest-order==1.5.0
 
 # === HTTP e API ===
 requests==2.34.2
@@ -20,3 +19,7 @@ typing_extensions==4.15.0
 
 # === Exportação de relatórios ===
 WeasyPrint==69.0
+
+# === Qualidade de código ===
+# Configuração em pyproject.toml. Uso: make lint / make format.
+ruff==0.16.9

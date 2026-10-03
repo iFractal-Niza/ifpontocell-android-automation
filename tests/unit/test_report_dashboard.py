@@ -1,0 +1,227 @@
+"""
+Status e taxa de sucesso do dashboard do report (utils.report_dashboard).
+Teste pulado não conta como reprovação.
+"""
+
+import pytest
+
+from utils.report_dashboard import (
+    _build_demorados_html,
+    _build_historico_html,
+    _calculate_flow_metrics,
+    _get_status_meta,
+    build_dashboard_html,
+    calcular_taxa_sucesso,
+)
+
+
+def _status(passed=0, failed=0, error=0, skipped=0, criticas=0) -> str:
+    _, rotulo, _ = _get_status_meta(
+        calcular_taxa_sucesso(passed, failed, error),
+        total=passed + failed + error + skipped,
+        failed=failed,
+        error=error,
+        skipped=skipped,
+        criticas=criticas,
+    )
+
+    return rotulo
+
+
+def test_taxa_ignora_os_pulados():
+    assert calcular_taxa_sucesso(passed=15, failed=0, error=0) == 100.0
+
+
+def test_taxa_considera_falhas_e_erros():
+    assert calcular_taxa_sucesso(passed=8, failed=1, error=1) == 80.0
+
+
+def test_taxa_sem_teste_executado_e_zero():
+    assert calcular_taxa_sucesso(passed=0, failed=0, error=0) == 0.0
+
+
+@pytest.mark.parametrize(
+    ("resultados", "esperado"),
+    [
+        ({"passed": 18}, "APROVADO"),
+        # Caso real: 15 aprovados e 3 pulados por massa saíam INSTÁVEL.
+        ({"passed": 15, "skipped": 3}, "APROVADO COM RESSALVAS"),
+        # Muitos pulados não viram CRÍTICO sem nenhuma falha.
+        ({"passed": 6, "skipped": 12}, "APROVADO COM RESSALVAS"),
+        ({"passed": 19, "failed": 1}, "INSTÁVEL"),
+        ({"passed": 19, "failed": 1, "skipped": 5}, "INSTÁVEL"),
+        ({"passed": 6, "failed": 4}, "CRÍTICO"),
+        # Falha fora do smoke chama atenção, mas não é crítica.
+        ({"passed": 19, "error": 1}, "INSTÁVEL"),
+        ({"passed": 19, "failed": 1, "criticas": 1}, "CRÍTICO"),
+        ({"passed": 19, "error": 1, "criticas": 1}, "CRÍTICO"),
+        ({"skipped": 4}, "SEM EXECUÇÃO"),
+        ({}, "SEM EXECUÇÃO"),
+    ],
+)
+def test_status_da_execucao(resultados, esperado):
+    assert _status(**resultados) == esperado
+
+
+def test_fluxo_calcula_a_taxa_sobre_os_executados():
+    metricas = _calculate_flow_metrics({"ok": 7, "skip": 3})
+
+    assert metricas["total"] == 10
+    assert metricas["executed"] == 7
+    assert metricas["success_rate"] == 100.0
+
+
+def test_dashboard_mostra_ressalvas_e_aprovados_sobre_executados():
+    html = build_dashboard_html(
+        {
+            "total": 18,
+            "passed": 15,
+            "failed": 0,
+            "error": 0,
+            "skipped": 3,
+            "success_rate": calcular_taxa_sucesso(15, 0, 0),
+            "por_fluxo": {"holerite": {"ok": 7, "skip": 3}},
+            "contexto": [("Ambiente", "homologacao"), ("App", "")],
+            "pulados": [
+                {
+                    "nodeid": "tests/app/test_h.py::test_segundo",
+                    "titulo": "Abre o segundo holerite",
+                    "fluxo": "holerite",
+                    "motivo": "um documento só <1>",
+                }
+            ],
+        }
+    )
+
+    assert "APROVADO COM RESSALVAS" in html
+    assert "INSTÁVEL" not in html
+    assert "15 de 15 executados" in html
+    # O fluxo conta os pulados no total: 7 aprovados de 10 testes.
+    assert "<strong>7/10</strong>" in html
+    # Ressalvas: fluxo, título e motivo (escapado) de cada pulado.
+    assert "Motivo dos testes pulados" in html
+    assert "Abre o segundo holerite" in html
+    assert "um documento só &lt;1&gt;" in html
+    # Identificação: item sem valor não aparece.
+    assert "homologacao" in html
+    assert ">App<" not in html
+
+
+def test_dashboard_sem_pulados_nao_tem_ressalvas():
+    html = build_dashboard_html(
+        {"total": 1, "passed": 1, "success_rate": 100.0, "pulados": []}
+    )
+
+    assert "Motivo dos testes pulados" not in html
+    assert "qa-context" not in html
+
+
+def test_classe_do_instavel_e_diferente_da_das_ressalvas():
+    instavel, _, _ = _get_status_meta(95.0, total=20, failed=1)
+    ressalvas, _, _ = _get_status_meta(100.0, total=20, skipped=2)
+
+    assert (instavel, ressalvas) == ("unstable", "caveat")
+
+
+def test_dashboard_tem_botao_de_tema_e_aplica_o_tema_salvo_antes():
+    html = build_dashboard_html({"total": 1, "passed": 1, "success_rate": 100})
+
+    assert 'data-qa-theme="light"' in html
+    assert 'data-qa-theme="dark"' in html
+    # O script do tema vem antes do dashboard, para não piscar o claro.
+    assert html.index("qa-report-tema") < html.index('class="qa-dashboard"')
+
+
+# === Histórico ===
+def test_historico_sem_anteriores_avisa_primeira_execucao():
+    html = _build_historico_html({"tem_anteriores": False})
+
+    assert "Primeira execução registrada" in html
+
+
+def test_historico_sem_novidades_e_uma_linha():
+    html = _build_historico_html({"tem_anteriores": True})
+
+    assert "Sem falhas novas e sem testes instáveis" in html
+    assert "qa-caveat-list" not in html
+
+
+def test_historico_lista_novas_recorrentes_e_instaveis():
+    html = _build_historico_html(
+        {
+            "tem_anteriores": True,
+            "falhas_novas": ["CT014 · Holerite"],
+            "falhas_recorrentes": [
+                {"titulo": "CT020 · Assinar", "desde": "01/10"}
+            ],
+            "instaveis": ["CT009 · Registro"],
+        }
+    )
+
+    assert "Falha nova" in html and "CT014 · Holerite" in html
+    assert "Já falhava" in html and "falha desde 01/10" in html
+    assert "Instável" in html and "CT009 · Registro" in html
+
+
+def test_sem_historico_nao_gera_nada():
+    assert _build_historico_html({}) == ""
+
+
+def _duracoes(**segundos) -> dict:
+    return {
+        nome: {"titulo": f"Teste {nome}", "fluxo": "holerite", "segundos": s}
+        for nome, s in segundos.items()
+    }
+
+
+def test_demorados_lista_os_cinco_mais_lentos_em_ordem():
+    html = _build_demorados_html(
+        _duracoes(a=3, b=200, c=0.2, d=45, e=10, f=7, g=1)
+    )
+
+    ordem = [html.index(f"Teste {nome}") for nome in "bdefa"]
+    assert ordem == sorted(ordem)
+    assert "Teste c" not in html and "Teste g" not in html
+    assert "03:20" in html and "45s" in html
+
+
+def test_demorados_com_um_teste_so_nao_aparece():
+    assert _build_demorados_html(_duracoes(a=30)) == ""
+    assert _build_demorados_html({}) == ""
+
+
+def test_demorados_abaixo_de_um_segundo():
+    html = _build_demorados_html(_duracoes(a=0.4, b=0.1))
+
+    assert "&lt;1s" in html or "<1s" in html
+
+
+def _rotulo_do_fluxo(**dados) -> str:
+    from utils.report_dashboard import build_fluxo_html_card
+
+    html = build_fluxo_html_card("privacidade", dados)
+
+    return next(
+        rotulo
+        for rotulo in ("CRÍTICO", "FALHOU", "APROVADO", "SEM EXECUÇÃO")
+        if rotulo in html
+    )
+
+
+def test_fluxo_com_falha_fora_do_smoke_e_falhou_e_nao_critico():
+    # Caso real: Privacidade (regression), 1 teste, falhou -> 0%.
+    assert _rotulo_do_fluxo(fail=1) == "FALHOU"
+
+
+def test_fluxo_com_falha_do_smoke_e_critico():
+    assert _rotulo_do_fluxo(ok=1, fail=1, critico=1) == "CRÍTICO"
+
+
+def test_resumo_diz_se_algum_teste_do_smoke_falhou():
+    sem = build_dashboard_html({"total": 20, "passed": 19, "failed": 1})
+    com = build_dashboard_html(
+        {"total": 20, "passed": 18, "failed": 2, "criticas": 2}
+    )
+
+    assert "Nenhum teste do smoke falhou." in sem
+    assert "2 testes do smoke falharam." in com

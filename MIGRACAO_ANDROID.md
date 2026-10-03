@@ -23,12 +23,13 @@
 - markers;
 - relatórios HTML/PDF;
 - comandos Git do `Makefile`;
-- `make set-simulator` por compatibilidade, agora selecionando `ANDROID_TARGET=emulator`;
-- `make set-real` para device físico Android.
+- ~~`make set-simulator` / `make set-real`~~ — substituídos em 2026-10-03 por um env por aparelho (`DEVICE=real`; ver DECISOES.md).
+
+> Em 2026-10-03 o projeto foi refatorado para a arquitetura atual do iOS (DECISOES.md, "Refatoração para a arquitetura do iOS"). Este arquivo registra a migração original, de agosto.
 
 ## Antes da execução real
 
-1. criar `config/env.yaml` a partir de `config/env.example.yaml`;
+1. criar `config/env.emulator.yaml` a partir de `config/env.emulator.example.yaml` (celular: `config/env.real.yaml`);
 2. informar credenciais/API;
 3. adicionar `app/ifPontoCell.apk` ou usar `APP_SOURCE=package`;
 4. confirmar os locators Prioridade 1 em `PENDENCIAS_LOCATORS_ANDROID.md`;

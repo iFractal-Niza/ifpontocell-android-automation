@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from time import monotonic, sleep
-from typing import Callable, Optional
 
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import (
@@ -21,7 +21,6 @@ from config.timeouts import (
 )
 from utils.logger import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -40,7 +39,7 @@ class BasePage:
     def __init__(
         self,
         driver,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ):
         """
         Inicializa o Page Object com o driver e o timeout padrão.
@@ -49,11 +48,7 @@ class BasePage:
         em DEFAULT_TIMEOUT.
         """
         self.driver = driver
-        self.timeout = (
-            self.DEFAULT_TIMEOUT
-            if timeout is None
-            else timeout
-        )
+        self.timeout = self.DEFAULT_TIMEOUT if timeout is None else timeout
 
         self._log_info(
             "Página inicializada",
@@ -107,7 +102,7 @@ class BasePage:
     # === Timeouts e esperas ===
     def _resolve_timeout(
         self,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> int:
         """
         Resolve o timeout efetivo da operação.
@@ -115,16 +110,10 @@ class BasePage:
         Impede valores negativos e limita o timeout ao máximo
         configurado para evitar esperas excessivas.
         """
-        effective_timeout = (
-            self.timeout
-            if timeout is None
-            else timeout
-        )
+        effective_timeout = self.timeout if timeout is None else timeout
 
         if effective_timeout < 0:
-            raise ValueError(
-                "O timeout não pode ser negativo."
-            )
+            raise ValueError("O timeout não pode ser negativo.")
 
         if effective_timeout > self.MAX_TIMEOUT:
             self._log_warning(
@@ -139,7 +128,7 @@ class BasePage:
 
     def _wait(
         self,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> WebDriverWait:
         """
         Cria uma espera explícita utilizando o timeout resolvido.
@@ -167,7 +156,7 @@ class BasePage:
         except WebDriverException:
             return False
 
-    def _try_accept_ios_alert(self) -> bool:
+    def _try_accept_native_alert(self) -> bool:
         """
         Tenta aceitar um alerta nativo exibido pelo app.
         """
@@ -186,7 +175,7 @@ class BasePage:
         ):
             return False
 
-    def _try_dismiss_ios_alert(self) -> bool:
+    def _try_dismiss_native_alert(self) -> bool:
         """
         Tenta dispensar um alerta nativo exibido pelo app.
         """
@@ -205,13 +194,12 @@ class BasePage:
         ):
             return False
 
-    def _try_resolve_ios_alert(self) -> bool:
+    def _try_resolve_native_alert(self) -> bool:
         """
         Tenta resolver um alerta nativo aceitando-o ou dispensando-o.
         """
         return (
-            self._try_accept_ios_alert()
-            or self._try_dismiss_ios_alert()
+            self._try_accept_native_alert() or self._try_dismiss_native_alert()
         )
 
     def _force_tap_element(
@@ -225,14 +213,8 @@ class BasePage:
         location = element.location
         size = element.size
 
-        x = int(
-            location["x"]
-            + (size["width"] / 2)
-        )
-        y = int(
-            location["y"]
-            + (size["height"] / 2)
-        )
+        x = int(location["x"] + (size["width"] / 2))
+        y = int(location["y"] + (size["height"] / 2))
 
         self._log_warning(
             "Executando tap forçado no elemento",
@@ -257,60 +239,31 @@ class BasePage:
     def _is_visible(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> bool:
         """
         Verifica se o elemento fica visível dentro do timeout.
         """
         try:
             self._wait(timeout).until(
-                EC.visibility_of_element_located(
-                    locator
-                )
+                EC.visibility_of_element_located(locator)
             )
             return True
 
         except TimeoutException:
-            return False
-
-    def _exists(
-        self,
-        locator,
-        timeout: Optional[int] = None,
-        element_name: str = "elemento",
-    ) -> bool:
-        """
-        Verifica se o elemento está presente na hierarquia da tela.
-        """
-        try:
-            self._wait(timeout).until(
-                EC.presence_of_element_located(
-                    locator
-                )
-            )
-            return True
-
-        except TimeoutException:
-            self._log_info(
-                "Elemento não encontrado",
-                event="element_not_present",
-                element=element_name,
-            )
             return False
 
     # === Esperas de elementos ===
     def _wait_for_visible(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         element_name: str = "elemento",
     ):
         """
         Aguarda o elemento ficar visível e retorna sua referência.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
+        effective_timeout = self._resolve_timeout(timeout)
 
         self._log_info(
             "Aguardando visibilidade do elemento",
@@ -320,12 +273,8 @@ class BasePage:
         )
 
         try:
-            element = self._wait(
-                effective_timeout
-            ).until(
-                EC.visibility_of_element_located(
-                    locator
-                ),
+            element = self._wait(effective_timeout).until(
+                EC.visibility_of_element_located(locator),
                 message=(
                     f"{element_name} não ficou visível em "
                     f"{effective_timeout}s. Locator: {locator}"
@@ -353,15 +302,13 @@ class BasePage:
     def _wait_for_clickable(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         element_name: str = "elemento",
     ):
         """
         Aguarda o elemento ficar clicável e retorna sua referência.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
+        effective_timeout = self._resolve_timeout(timeout)
 
         self._log_info(
             "Aguardando disponibilidade do elemento para clique",
@@ -371,12 +318,8 @@ class BasePage:
         )
 
         try:
-            element = self._wait(
-                effective_timeout
-            ).until(
-                EC.element_to_be_clickable(
-                    locator
-                ),
+            element = self._wait(effective_timeout).until(
+                EC.element_to_be_clickable(locator),
                 message=(
                     f"{element_name} não ficou clicável em "
                     f"{effective_timeout}s. Locator: {locator}"
@@ -405,15 +348,13 @@ class BasePage:
     def _find(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         element_name: str = "elemento",
     ):
         """
         Aguarda a presença do elemento e retorna sua referência.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
+        effective_timeout = self._resolve_timeout(timeout)
 
         self._log_info(
             "Buscando elemento",
@@ -423,12 +364,8 @@ class BasePage:
         )
 
         try:
-            element = self._wait(
-                effective_timeout
-            ).until(
-                EC.presence_of_element_located(
-                    locator
-                ),
+            element = self._wait(effective_timeout).until(
+                EC.presence_of_element_located(locator),
                 message=(
                     f"{element_name} não foi encontrado em "
                     f"{effective_timeout}s. Locator: {locator}"
@@ -457,7 +394,7 @@ class BasePage:
     def _click_with_retry(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         element_name: str = "elemento",
     ) -> None:
         """
@@ -469,10 +406,8 @@ class BasePage:
         3. Nova tentativa no elemento visível.
         4. Tap forçado no centro do elemento.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
-        initial_error: Optional[Exception] = None
+        effective_timeout = self._resolve_timeout(timeout)
+        initial_error: Exception | None = None
 
         self._hide_keyboard_if_possible()
 
@@ -497,14 +432,12 @@ class BasePage:
                 element=element_name,
             )
 
-        alert_resolved = (
-            self._try_resolve_ios_alert()
-        )
+        alert_resolved = self._try_resolve_native_alert()
 
         if alert_resolved:
             self._log_info(
                 "Alerta nativo tratado antes da nova tentativa",
-                event="element_click_ios_alert_resolved",
+                event="element_click_native_alert_resolved",
                 element=element_name,
             )
 
@@ -542,15 +475,13 @@ class BasePage:
     def _click(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         element_name: str = "elemento",
     ) -> None:
         """
         Executa o clique utilizando a estratégia de retry da BasePage.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
+        effective_timeout = self._resolve_timeout(timeout)
 
         self._log_info(
             "Iniciando clique no elemento",
@@ -574,7 +505,7 @@ class BasePage:
     def _click_if_visible(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         element_name: str = "elemento",
     ) -> bool:
         """
@@ -583,9 +514,7 @@ class BasePage:
         Retorna False quando o elemento não fica clicável dentro
         do timeout informado.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
+        effective_timeout = self._resolve_timeout(timeout)
 
         try:
             element = self._wait_for_clickable(
@@ -625,15 +554,13 @@ class BasePage:
         fallback_locator,
         primary_name: str = "elemento_principal",
         fallback_name: str = "elemento_fallback",
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
     ) -> None:
         """
         Tenta clicar no locator principal e utiliza o fallback
         quando o primeiro não está disponível.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
+        effective_timeout = self._resolve_timeout(timeout)
 
         if self._click_if_visible(
             primary_locator,
@@ -661,32 +588,17 @@ class BasePage:
         )
 
     # === Inputs e textos ===
-    def _type(
-        self,
-        locator,
-        text: str,
-        field_name: str,
-        timeout: Optional[int] = None,
-        sensitive: bool = False,
-    ) -> None:
+    # Tentativas de digitação em campos não sensíveis. No iOS, o XCUITest
+    # às vezes descartava uma tecla quando digitava rápido ("exemplo" ->
+    # "exeplo") e o teste seguia com o valor errado sem aviso; a
+    # conferência pega o mesmo problema se acontecer no Android.
+    TYPE_ATTEMPTS = 3
+
+    def _limpar_elemento(self, field, field_name: str) -> None:
         """
-        Limpa e preenche um campo de texto.
-
-        Quando send_keys falha, utiliza mobile:type como fallback.
-        Valores sensíveis são ocultados nos logs.
+        Esvazia o campo. Falha ao limpar não interrompe: em campo não
+        sensível, a conferência do valor depois de digitar acusa.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
-
-        field = self._wait_for_clickable(
-            locator,
-            timeout=effective_timeout,
-            element_name=field_name,
-        )
-
-        field.click()
-
         try:
             field.clear()
 
@@ -697,11 +609,63 @@ class BasePage:
                 field=field_name,
             )
 
-        log_value = (
-            "***"
-            if sensitive
-            else text
+    def _digitar(self, field, text: str, field_name: str) -> None:
+        try:
+            field.send_keys(text)
+
+        except WebDriverException:
+            # Sem equivalente ao mobile:type do XCUITest: o UiAutomator2
+            # costuma aceitar o send_keys depois de refocar o campo.
+            self._log_warning(
+                "send_keys falhou; repetindo preenchimento no Android",
+                event="send_keys_failed_android_retry",
+                field=field_name,
+            )
+
+            field.click()
+            field.send_keys(text)
+
+    @staticmethod
+    def _valor_do_campo(field) -> str:
+        try:
+            # UiAutomator2: o conteúdo do EditText vem em "text".
+            return (field.get_attribute("text") or "").strip()
+        except WebDriverException:
+            return ""
+
+    def _type(
+        self,
+        locator,
+        text: str,
+        field_name: str,
+        timeout: int | None = None,
+        sensitive: bool = False,
+        conferir: bool | None = None,
+    ) -> None:
+        """
+        Limpa e preenche um campo de texto, conferindo o valor digitado.
+
+        Lê o valor depois de digitar e redigita (até TYPE_ATTEMPTS) se não
+        bater com o esperado. Por padrão, campo sensível (senha) não é
+        conferido: oculto, o app devolve o texto mascarado. Com a senha
+        visível ("mostrar senha"), passe conferir=True: confere, mas o
+        valor continua oculto nos logs e na mensagem de erro.
+
+        Quando send_keys falha, utiliza mobile:type como fallback.
+        Valores sensíveis são ocultados nos logs.
+        """
+        conferir = (not sensitive) if conferir is None else conferir
+        effective_timeout = self._resolve_timeout(timeout)
+
+        field = self._wait_for_clickable(
+            locator,
+            timeout=effective_timeout,
+            element_name=field_name,
         )
+
+        field.click()
+
+        log_value = "***" if sensitive else text
 
         self._log_info(
             "Preenchendo campo",
@@ -710,17 +674,38 @@ class BasePage:
             value=log_value,
         )
 
-        try:
-            field.send_keys(text)
+        tentativas = self.TYPE_ATTEMPTS if conferir else 1
+        valor_lido = ""
 
-        except WebDriverException:
+        def oculto(valor: str) -> str:
+            return "***" if sensitive else valor
+
+        for tentativa in range(1, tentativas + 1):
+            self._limpar_elemento(field, field_name)
+            self._digitar(field, text, field_name)
+
+            if not conferir:
+                break
+
+            valor_lido = self._valor_do_campo(field)
+
+            if valor_lido == text.strip():
+                break
+
             self._log_warning(
-                "send_keys falhou; repetindo preenchimento no Android",
-                event="send_keys_failed_android_retry",
+                "Valor digitado não confere; redigitando",
+                event="field_value_mismatch",
                 field=field_name,
+                attempt=tentativa,
+                expected=oculto(text),
+                actual=oculto(valor_lido),
             )
-            field.click()
-            field.send_keys(text)
+        else:
+            raise AssertionError(
+                f"O campo '{field_name}' não ficou com o valor esperado "
+                f"após {tentativas} tentativas de digitação. "
+                f"Esperado: {oculto(text)!r} | Obtido: {oculto(valor_lido)!r}."
+            )
 
         self._log_info(
             "Campo preenchido",
@@ -731,15 +716,13 @@ class BasePage:
     def _clear_field(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         field_name: str = "campo",
     ) -> None:
         """
         Tenta limpar o conteúdo de um campo.
         """
-        effective_timeout = self._resolve_timeout(
-            timeout
-        )
+        effective_timeout = self._resolve_timeout(timeout)
 
         field = self._wait_for_clickable(
             locator,
@@ -768,7 +751,7 @@ class BasePage:
     def _get_text(
         self,
         locator,
-        timeout: Optional[int] = None,
+        timeout: int | None = None,
         element_name: str = "elemento",
     ) -> str:
         """
@@ -819,10 +802,7 @@ class BasePage:
         self,
         locator: tuple[str, str],
     ) -> bool:
-        return (
-            self._obter_elemento_visivel_imediatamente(locator)
-            is not None
-        )
+        return self._obter_elemento_visivel_imediatamente(locator) is not None
 
     # === Alertas com mensagem desconhecida ===
     def _obter_texto_desconhecido_do_alerta(
@@ -830,7 +810,7 @@ class BasePage:
         titulo_locator: tuple[str, str],
         botao_ok_locator: tuple[str, str],
         textos_conhecidos: set[str],
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Best-effort: detecta um alerta com título/botão já conhecidos,
         mas cuja mensagem ainda não tem locator específico.
@@ -892,8 +872,8 @@ class BasePage:
         Aguarda o elemento deixar de estar visível na árvore.
 
         Não usa EC.invisibility_of_element_located porque essa
-        condição trata visible=false como sucesso. No iOS isso gera
-        falso positivo: o UiAutomator2 reporta visible=false para modais
+        condição trata visible=false como sucesso. Isso gera falso
+        positivo: o UiAutomator2 reporta visible=false para modais
         ainda montados durante a animação de saída, e o chamador
         seguiria em frente com o popup cobrindo a tela.
         """
@@ -984,7 +964,7 @@ class BasePage:
         Trata um popup opcional sem interromper o fluxo principal.
 
         Retorna True quando o popup é tratado pelo método informado
-        ou por meio de um alerta nativo do iOS.
+        ou por meio de um alerta nativo do sistema.
         """
         self._log_info(
             "Iniciando tratamento do popup opcional",
@@ -1011,10 +991,10 @@ class BasePage:
             return True
 
         except Exception:
-            if self._try_resolve_ios_alert():
+            if self._try_resolve_native_alert():
                 self._log_info(
                     "Popup resolvido por alerta nativo",
-                    event="optional_popup_resolved_by_ios_alert",
+                    event="optional_popup_resolved_by_native_alert",
                     popup=popup_name,
                 )
                 return True

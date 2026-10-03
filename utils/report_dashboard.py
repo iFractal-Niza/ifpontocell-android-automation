@@ -1,9 +1,18 @@
 import html
-from typing import Any, Mapping
-
+from collections.abc import Mapping
+from typing import Any
 
 # === Status da execução ===
 HEALTHY_THRESHOLD = 90
+
+# Aplica o tema escolhido (report.js grava em localStorage) antes do
+# dashboard ser desenhado, para não piscar o tema claro. Só ASCII: o
+# bloco passa por _codificar_ascii_seguro, que não vale dentro de script.
+_SCRIPT_TEMA_INICIAL = (
+    "<script>try{if(localStorage.getItem('qa-report-tema')==='dark')"
+    "{document.documentElement.setAttribute('data-theme','dark');}}"
+    "catch(e){}</script>"
+)
 UNSTABLE_THRESHOLD = 70
 
 
@@ -66,12 +75,9 @@ def _format_rate(
     if rate.is_integer():
         return f"{int(rate)}%"
 
-    return (
-        f"{rate:.2f}%"
-        .replace(
-            ".",
-            ",",
-        )
+    return f"{rate:.2f}%".replace(
+        ".",
+        ",",
     )
 
 
@@ -99,17 +105,13 @@ def _format_duration(
             return stripped_value
 
         try:
-            seconds = float(
-                stripped_value
-            )
+            seconds = float(stripped_value)
 
         except ValueError:
             return stripped_value
 
     else:
-        seconds = _to_float(
-            value
-        )
+        seconds = _to_float(value)
 
     total_seconds = max(
         0,
@@ -126,16 +128,9 @@ def _format_duration(
     )
 
     if hours:
-        return (
-            f"{hours:02d}:"
-            f"{minutes:02d}:"
-            f"{seconds:02d}"
-        )
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-    return (
-        f"{minutes:02d}:"
-        f"{seconds:02d}"
-    )
+    return f"{minutes:02d}:{seconds:02d}"
 
 
 def _pluralize(
@@ -146,30 +141,56 @@ def _pluralize(
     """
     Retorna a palavra adequada para a quantidade informada.
     """
-    return (
-        singular
-        if quantity == 1
-        else plural
-    )
+    return singular if quantity == 1 else plural
 
 
 # === Status e resumo ===
+def calcular_taxa_sucesso(
+    passed: int,
+    failed: int,
+    error: int,
+) -> float:
+    """
+    Taxa de sucesso sobre os testes que rodaram.
+
+    Pulado não entra na conta: é teste que não rodou (em geral por falta
+    de massa), não reprovação. Sem nenhum teste rodado, a taxa é 0.
+    """
+    executados = passed + failed + error
+
+    if not executados:
+        return 0.0
+
+    return round(passed / executados * 100, 2)
+
+
 def _get_status_meta(
     success_rate: float,
     *,
     total: int,
     failed: int = 0,
     error: int = 0,
+    skipped: int = 0,
+    criticas: int = 0,
+    critico_pela_taxa: bool = True,
 ) -> tuple[str, str, str]:
     """
     Retorna classe CSS, rótulo e descrição do status.
 
+    'criticas' são as falhas e erros de testes do smoke (o essencial do
+    app). A falha de um teste fora do smoke (ex.: Privacidade) chama
+    atenção, mas não é crítica.
+
     Prioridade:
-    - Sem testes: sem execução.
-    - Erro técnico: crítico.
-    - Taxa abaixo de 70%: crítico.
-    - Taxa abaixo de 90% ou falhas funcionais: instável.
-    - Demais casos: estável.
+    - Sem testes, ou todos pulados: sem execução.
+    - Falha ou erro em teste do smoke: crítico.
+    - Taxa abaixo de 70%: crítico (só na execução inteira, com
+      critico_pela_taxa; num fluxo de um teste, uma falha já é 0%).
+    - Demais falhas e erros, ou taxa abaixo de 90%: instável.
+    - Sem falhas, mas com pulados: aprovado com ressalvas.
+    - Demais casos: aprovado.
+
+    A taxa é a de calcular_taxa_sucesso (só os testes que rodaram).
     """
     if total == 0:
         return (
@@ -178,9 +199,15 @@ def _get_status_meta(
             "Nenhum teste foi executado.",
         )
 
-    if (
-        error > 0
-        or success_rate < UNSTABLE_THRESHOLD
+    if skipped >= total:
+        return (
+            "neutral",
+            "SEM EXECUÇÃO",
+            "Todos os testes foram pulados.",
+        )
+
+    if criticas > 0 or (
+        critico_pela_taxa and success_rate < UNSTABLE_THRESHOLD
     ):
         return (
             "failed",
@@ -188,20 +215,26 @@ def _get_status_meta(
             "A execução exige análise imediata.",
         )
 
-    if (
-        failed > 0
-        or success_rate < HEALTHY_THRESHOLD
-    ):
+    if failed > 0 or error > 0 or success_rate < HEALTHY_THRESHOLD:
         return (
             "unstable",
             "INSTÁVEL",
             "A execução possui resultados que exigem atenção.",
         )
 
+    if skipped > 0:
+        # Âmbar: o pulado segue chamando atenção, sem a cor de falha
+        # (laranja do instável, vermelho do crítico).
+        return (
+            "caveat",
+            "APROVADO COM RESSALVAS",
+            "Nenhuma falha; há testes que não foram executados.",
+        )
+
     return (
         "healthy",
-        "ESTÁVEL",
-        "A execução foi concluída com estabilidade.",
+        "APROVADO",
+        "A execução foi concluída sem falhas.",
     )
 
 
@@ -211,6 +244,7 @@ def _build_summary_text(
     error: int,
     skipped: int,
     total: int,
+    criticas: int = 0,
 ) -> str:
     """
     Gera o resumo executivo da execução.
@@ -218,10 +252,7 @@ def _build_summary_text(
     if total == 0:
         return "Nenhum teste foi executado."
 
-    if (
-        failed == 0
-        and error == 0
-    ):
+    if failed == 0 and error == 0:
         if skipped:
             skipped_label = _pluralize(
                 skipped,
@@ -234,10 +265,7 @@ def _build_summary_text(
                 f"com {skipped} {skipped_label}."
             )
 
-        return (
-            "Execução concluída sem falhas "
-            "ou erros técnicos."
-        )
+        return "Execução concluída sem falhas ou erros técnicos."
 
     problems = []
 
@@ -247,9 +275,7 @@ def _build_summary_text(
             "falha funcional",
             "falhas funcionais",
         )
-        problems.append(
-            f"{failed} {failed_label}"
-        )
+        problems.append(f"{failed} {failed_label}")
 
     if error:
         error_label = _pluralize(
@@ -257,14 +283,20 @@ def _build_summary_text(
             "erro técnico",
             "erros técnicos",
         )
-        problems.append(
-            f"{error} {error_label}"
-        )
+        problems.append(f"{error} {error_label}")
 
-    return (
+    resumo = (
         f"{' e '.join(problems)} "
         f"{'detectado' if len(problems) == 1 else 'detectados'}."
     )
+
+    if not criticas:
+        return f"{resumo} Nenhum teste do smoke falhou."
+
+    if criticas == 1:
+        return f"{resumo} 1 teste do smoke falhou."
+
+    return f"{resumo} {criticas} testes do smoke falharam."
 
 
 # === Componentes do dashboard ===
@@ -282,9 +314,7 @@ def _build_kpi_card(
 
     if detail:
         detail_html = (
-            "<span class='qa-kpi-detail'>"
-            f"{_safe_text(detail)}"
-            "</span>"
+            f"<span class='qa-kpi-detail'>{_safe_text(detail)}</span>"
         )
 
     return f"""
@@ -308,34 +338,12 @@ def _calculate_flow_metrics(
     """
     Normaliza as métricas de um fluxo.
     """
-    passed = _to_int(
-        data.get("ok")
-    )
-    failed = _to_int(
-        data.get("fail")
-    )
-    error = _to_int(
-        data.get("error")
-    )
-    skipped = _to_int(
-        data.get("skip")
-    )
+    passed = _to_int(data.get("ok"))
+    failed = _to_int(data.get("fail"))
+    error = _to_int(data.get("error"))
+    skipped = _to_int(data.get("skip"))
 
-    total = (
-        passed
-        + failed
-        + error
-        + skipped
-    )
-
-    success_rate = (
-        round(
-            passed / total * 100,
-            2,
-        )
-        if total
-        else 0.0
-    )
+    total = passed + failed + error + skipped
 
     return {
         "passed": passed,
@@ -343,10 +351,9 @@ def _calculate_flow_metrics(
         "error": error,
         "skipped": skipped,
         "total": total,
-        "success_rate": success_rate,
-        "duration": _format_duration(
-            data.get("duration")
-        ),
+        "executed": passed + failed + error,
+        "success_rate": calcular_taxa_sucesso(passed, failed, error),
+        "duration": _format_duration(data.get("duration")),
     }
 
 
@@ -358,28 +365,29 @@ def build_fluxo_html_card(
     """
     Monta uma linha compacta com as métricas de um fluxo.
     """
-    metrics = _calculate_flow_metrics(
-        dados
-    )
+    metrics = _calculate_flow_metrics(dados)
 
     total = metrics["total"]
     passed = metrics["passed"]
     failed = metrics["failed"]
     error = metrics["error"]
     skipped = metrics["skipped"]
-    success_rate = metrics[
-        "success_rate"
-    ]
+    success_rate = metrics["success_rate"]
     duration = metrics["duration"]
 
-    status_class, status_label, _ = (
-        _get_status_meta(
-            success_rate,
-            total=total,
-            failed=failed,
-            error=error,
-        )
+    status_class, status_label, _ = _get_status_meta(
+        success_rate,
+        total=total,
+        failed=failed,
+        error=error,
+        skipped=skipped,
+        criticas=_to_int(dados.get("critico")),
+        critico_pela_taxa=False,
     )
+
+    # Num fluxo, "instável" é sempre falha fora do smoke: diz o que houve.
+    if status_class == "unstable":
+        status_label = "FALHOU"
 
     duration_html = ""
 
@@ -509,6 +517,230 @@ def _build_flows_html(
     """
 
 
+# === Identificação da execução ===
+def _build_contexto_html(
+    contexto: Any,
+) -> str:
+    """
+    Faixa com a identificação da execução (data, duração, ambiente,
+    dispositivo, versão do app). 'contexto' é uma lista de pares
+    (rótulo, valor); vazia, não gera nada.
+    """
+    if not isinstance(contexto, (list, tuple)) or not contexto:
+        return ""
+
+    itens = "".join(
+        f"""
+            <div class="qa-context-item">
+                <div class="qa-context-label">{_safe_text(rotulo)}</div>
+                <strong>{_safe_text(valor)}</strong>
+            </div>
+        """
+        for rotulo, valor in contexto
+        if valor
+    )
+
+    return f"""
+        <div class="qa-context">
+            {itens}
+        </div>
+    """
+
+
+# === Histórico ===
+def _itens_historico(classe: str, rotulo: str, textos: list[str]) -> str:
+    return "".join(
+        f"""
+            <li class="qa-caveat-item qa-historico-item {classe}">
+                <div class="qa-caveat-flow">{_safe_text(rotulo)}</div>
+                <strong>{_safe_text(texto)}</strong>
+            </li>
+        """
+        for texto in textos
+    )
+
+
+def _build_historico_html(historico: Any) -> str:
+    """
+    Comparação com as execuções anteriores: falhas novas, falhas que já
+    vinham de antes e testes instáveis. Sem nada disso, uma linha só.
+    """
+    if not isinstance(historico, Mapping) or not historico:
+        return ""
+
+    novas = list(historico.get("falhas_novas") or [])
+    recorrentes = [
+        f"{item.get('titulo', '')} (falha desde {item.get('desde', '?')})"
+        for item in historico.get("falhas_recorrentes") or []
+        if isinstance(item, Mapping)
+    ]
+    instaveis = list(historico.get("instaveis") or [])
+
+    if not historico.get("tem_anteriores"):
+        corpo = (
+            '<p class="qa-historico-vazio">Primeira execução registrada: '
+            "as próximas mostram falhas novas e testes instáveis.</p>"
+        )
+    elif not (novas or recorrentes or instaveis):
+        corpo = (
+            '<p class="qa-historico-vazio">Sem falhas novas e sem testes '
+            "instáveis nas últimas execuções.</p>"
+        )
+    else:
+        corpo = (
+            '<ul class="qa-caveat-list">'
+            + _itens_historico("nova", "Falha nova", novas)
+            + _itens_historico("recorrente", "Já falhava", recorrentes)
+            + _itens_historico("instavel", "Instável", instaveis)
+            + "</ul>"
+        )
+
+    return f"""
+        <section class="qa-section">
+            <div class="qa-section-header">
+                <div>
+                    <span class="qa-section-eyebrow">
+                        Histórico
+                    </span>
+                    <h3>Comparação com as execuções anteriores</h3>
+                </div>
+            </div>
+
+            {corpo}
+        </section>
+    """
+
+
+# === Testes mais demorados ===
+MAIS_DEMORADOS = 5
+
+
+def _formatar_tempo_do_teste(segundos: Any) -> str:
+    """Ex.: "<1s", "42s", "02:15"."""
+    valor = _to_float(segundos)
+
+    if valor < 1:
+        return "<1s"
+
+    if valor < 60:
+        return f"{round(valor)}s"
+
+    return _format_duration(valor)
+
+
+def _build_demorados_html(duracoes: Any) -> str:
+    """
+    Os testes mais demorados da execução, para saber onde vale otimizar.
+    O tempo inclui a preparação do teste (ex.: relançar o app). Com menos
+    de dois testes, não há o que comparar e não gera nada.
+    """
+    if not isinstance(duracoes, Mapping) or len(duracoes) < 2:
+        return ""
+
+    demorados = sorted(
+        (item for item in duracoes.values() if isinstance(item, Mapping)),
+        key=lambda item: _to_float(item.get("segundos")),
+        reverse=True,
+    )[:MAIS_DEMORADOS]
+
+    itens = "".join(
+        f"""
+            <li class="qa-caveat-item qa-demorado-item">
+                <div class="qa-caveat-test">
+                    <div class="qa-caveat-flow">
+                        {_safe_text(str(item.get("fluxo", "")).upper())}
+                    </div>
+
+                    <strong>{_safe_text(item.get("titulo", ""))}</strong>
+                </div>
+
+                <p class="qa-demorado-tempo">
+                    {_formatar_tempo_do_teste(item.get("segundos"))}
+                </p>
+            </li>
+        """
+        for item in demorados
+    )
+
+    return f"""
+        <section class="qa-section">
+            <div class="qa-section-header">
+                <div>
+                    <span class="qa-section-eyebrow">
+                        Desempenho
+                    </span>
+                    <h3>Testes mais demorados</h3>
+                </div>
+            </div>
+
+            <ul class="qa-caveat-list">
+                {itens}
+            </ul>
+
+            <p class="qa-demorado-nota">
+                O tempo inclui a preparação de cada teste (ex.: abrir o app
+                ou refazer o primeiro acesso).
+            </p>
+        </section>
+    """
+
+
+# === Ressalvas ===
+def _build_ressalvas_html(
+    pulados: Any,
+) -> str:
+    """
+    Lista os testes pulados com o motivo de cada um.
+
+    Responde, no próprio dashboard, quais são as ressalvas do status
+    APROVADO COM RESSALVAS. Sem pulados, não gera nada.
+    """
+    if not isinstance(pulados, list) or not pulados:
+        return ""
+
+    itens = "".join(
+        f"""
+            <li class="qa-caveat-item">
+                <div class="qa-caveat-test">
+                    <div class="qa-caveat-flow">
+                        {_safe_text(str(pulado.get("fluxo", "")).upper())}
+                    </div>
+
+                    <strong>
+                        {
+            _safe_text(
+                pulado.get("titulo")
+                or str(pulado.get("nodeid", "")).split("::")[-1]
+            )
+        }
+                    </strong>
+                </div>
+
+                <p>{_safe_text(pulado.get("motivo", ""))}</p>
+            </li>
+        """
+        for pulado in pulados
+        if isinstance(pulado, Mapping)
+    )
+
+    return f"""
+        <section class="qa-section">
+            <div class="qa-section-header">
+                <div>
+                    <span class="qa-section-eyebrow">
+                        Ressalvas
+                    </span>
+                    <h3>Motivo dos testes pulados</h3>
+                </div>
+            </div>
+
+            <ul class="qa-caveat-list">
+                {itens}
+            </ul>
+        </section>
+    """
+
+
 # === Dashboard principal ===
 def build_dashboard_html(
     dashboard_stats: Mapping[str, Any],
@@ -516,26 +748,13 @@ def build_dashboard_html(
     """
     Monta o dashboard principal do relatório HTML.
     """
-    total = _to_int(
-        dashboard_stats.get("total")
-    )
-    passed = _to_int(
-        dashboard_stats.get("passed")
-    )
-    failed = _to_int(
-        dashboard_stats.get("failed")
-    )
-    error = _to_int(
-        dashboard_stats.get("error")
-    )
-    skipped = _to_int(
-        dashboard_stats.get("skipped")
-    )
-    success_rate = _to_float(
-        dashboard_stats.get(
-            "success_rate"
-        )
-    )
+    total = _to_int(dashboard_stats.get("total"))
+    passed = _to_int(dashboard_stats.get("passed"))
+    failed = _to_int(dashboard_stats.get("failed"))
+    error = _to_int(dashboard_stats.get("error"))
+    skipped = _to_int(dashboard_stats.get("skipped"))
+    success_rate = _to_float(dashboard_stats.get("success_rate"))
+    criticas = _to_int(dashboard_stats.get("criticas"))
 
     fluxos = dashboard_stats.get(
         "por_fluxo",
@@ -557,6 +776,8 @@ def build_dashboard_html(
         total=total,
         failed=failed,
         error=error,
+        skipped=skipped,
+        criticas=criticas,
     )
 
     summary = _build_summary_text(
@@ -564,31 +785,28 @@ def build_dashboard_html(
         error=error,
         skipped=skipped,
         total=total,
+        criticas=criticas,
     )
 
+    executed = passed + failed + error
+
     success_detail = (
-        f"{passed} de {total} aprovados"
-        if total
-        else "Sem resultados"
+        f"{passed} de {executed} executados" if executed else "Sem resultados"
     )
 
     kpi_cards = "".join(
         (
             _build_kpi_card(
-                css_class=(
-                    f"success {status_class}"
-                ),
+                css_class=(f"success {status_class}"),
                 label="Taxa de sucesso",
-                value=_format_rate(
-                    success_rate
-                ),
+                value=_format_rate(success_rate),
                 detail=success_detail,
             ),
             _build_kpi_card(
                 css_class="total",
                 label="Total",
                 value=total,
-                detail="Testes executados",
+                detail="Testes na execução",
             ),
             _build_kpi_card(
                 css_class="passed",
@@ -597,31 +815,19 @@ def build_dashboard_html(
                 detail="Cenários aprovados",
             ),
             _build_kpi_card(
-                css_class=(
-                    "failed active"
-                    if failed
-                    else "failed muted"
-                ),
+                css_class=("failed active" if failed else "failed muted"),
                 label="Falhou",
                 value=failed,
                 detail="Falhas funcionais",
             ),
             _build_kpi_card(
-                css_class=(
-                    "error active"
-                    if error
-                    else "error muted"
-                ),
+                css_class=("error active" if error else "error muted"),
                 label="Execução",
                 value=error,
                 detail="Erros técnicos",
             ),
             _build_kpi_card(
-                css_class=(
-                    "skipped active"
-                    if skipped
-                    else "skipped muted"
-                ),
+                css_class=("skipped active" if skipped else "skipped muted"),
                 label="Pulados",
                 value=skipped,
                 detail="Testes não executados",
@@ -629,11 +835,14 @@ def build_dashboard_html(
         )
     )
 
-    flows_html = _build_flows_html(
-        fluxos
-    )
+    flows_html = _build_flows_html(fluxos)
+    ressalvas_html = _build_ressalvas_html(dashboard_stats.get("pulados"))
+    historico_html = _build_historico_html(dashboard_stats.get("historico"))
+    demorados_html = _build_demorados_html(dashboard_stats.get("duracoes"))
+    contexto_html = _build_contexto_html(dashboard_stats.get("contexto"))
 
     return f"""
+        {_SCRIPT_TEMA_INICIAL}
         <div class="qa-dashboard">
             <header class="qa-dashboard-header">
                 <div class="qa-dashboard-title">
@@ -647,6 +856,27 @@ def build_dashboard_html(
                         Visão consolidada da qualidade da suíte
                         automatizada.
                     </p>
+
+                    <div
+                        class="qa-theme-toggle"
+                        role="group"
+                        aria-label="Tema do report"
+                    >
+                        <button
+                            type="button"
+                            data-qa-theme="light"
+                            aria-pressed="true"
+                        >
+                            Light
+                        </button>
+                        <button
+                            type="button"
+                            data-qa-theme="dark"
+                            aria-pressed="false"
+                        >
+                            Dark
+                        </button>
+                    </div>
                 </div>
 
                 <div class="qa-dashboard-status">
@@ -663,6 +893,8 @@ def build_dashboard_html(
                     </div>
                 </div>
             </header>
+
+            {contexto_html}
 
             <section
                 class="qa-execution-alert {status_class}"
@@ -694,7 +926,13 @@ def build_dashboard_html(
                 {kpi_cards}
             </section>
 
+            {ressalvas_html}
+
+            {historico_html}
+
             {flows_html}
+
+            {demorados_html}
 
             <footer class="qa-footer">
                 <div class="qa-footer-brand">

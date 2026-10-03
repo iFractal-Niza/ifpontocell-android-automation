@@ -1,11 +1,20 @@
+import base64
 import html
 import os
+import re
+from datetime import datetime
 
 import pytest
 from pytest_html import extras
 
-from observability import execution_metrics
-from observability.dashboard import build_results_summary_html
+from observability import execution_metrics, historico, pastas
+from observability.contexto_execucao import coletar_contexto
+from observability.dashboard import (
+    build_results_summary_html,
+    load_inline_js,
+)
+from observability.evidencias import retirar_evidencias
+from observability.video import ATRIBUTO_VIDEO
 from utils.file_utils import (
     build_screenshot_path,
 )
@@ -15,21 +24,14 @@ from utils.helpers import (
 )
 from utils.logger import get_logger
 
-
 logger = get_logger("pytest_report")
 
 
 # === Diretórios e arquivos ===
-PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(
-        os.path.abspath(__file__)
-    )
-)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-REPORTS_DIR = os.path.join(
-    PROJECT_ROOT,
-    "reports",
-)
+# A pasta pode ser por aparelho (DEVICE=... no make): observability.pastas.
+REPORTS_DIR = pastas.REPORTS_DIR
 
 SCREENSHOTS_DIR = os.path.join(
     REPORTS_DIR,
@@ -42,13 +44,27 @@ MAX_REPORTS = 10
 
 _DRIVER_FIXTURES = (
     "driver",
-    "driver_onboarding",
-    "driver_login",
-    "driver_unlock",
     "driver_e2e",
     "driver_registro_ponto",
     "home_para_marcacao",
 )
+
+# Atributo do report com o título legível do teste (primeira frase do
+# docstring), gravado no makereport e usado na tabela e nas ressalvas.
+ATRIBUTO_TITULO = "titulo_legivel"
+
+# Marker com o ID do caso de teste (ver observability.casos_teste).
+MARKER_CT = "ct"
+
+# Início da execução, para a data e a duração do cabeçalho do dashboard.
+_inicio_execucao = datetime.now()
+
+# Legendas das imagens anexadas a cada teste (print de falha e
+# evidências), por nodeid e somando todas as fases, para a coluna
+# Evidências da tabela.
+_legendas_por_teste: dict[str, list[str]] = {}
+
+LEGENDA_PRINT_FALHA = "Print da falha"
 
 # Controla a contabilização única por teste na fase de erro.
 # Evita que uma falha em setup e outra em teardown do mesmo
@@ -74,9 +90,7 @@ def limpar_reports_antigos(
                 diretorio,
                 nome_arquivo,
             )
-            for nome_arquivo in os.listdir(
-                diretorio
-            )
+            for nome_arquivo in os.listdir(diretorio)
             if (
                 nome_arquivo.startswith("report_")
                 and nome_arquivo.endswith(".html")
@@ -117,32 +131,117 @@ def garantir_estrutura_reports() -> None:
     ensure_dir(SCREENSHOTS_DIR)
 
 
-def obter_driver_ativo(item):
+def _driver_de(valor):
     """
-    Retorna a instância ativa do driver entre as fixtures conhecidas.
-
-    Aceita fixtures que retornam o driver diretamente e fixtures que
-    retornam uma Page (que expõe o driver em .driver), como a
-    home_para_marcacao dos testes de registro de ponto.
+    O driver contido em um valor de fixture: o próprio driver, ou o
+    .driver de uma Page/AppSession. None se não houver.
     """
-    for fixture_name in _DRIVER_FIXTURES:
-        valor = item.funcargs.get(fixture_name)
+    if hasattr(valor, "save_screenshot"):
+        return valor
 
-        if valor is None:
-            continue
+    driver_interno = getattr(valor, "driver", None)
 
-        if hasattr(valor, "save_screenshot"):
-            return valor
-
-        driver_interno = getattr(valor, "driver", None)
-
-        if driver_interno is not None:
-            return driver_interno
+    if hasattr(driver_interno, "save_screenshot"):
+        return driver_interno
 
     return None
 
 
+def _fixtures_montadas(item) -> list:
+    """
+    Valores das fixtures que o pytest já montou para o item, inclusive
+    as pedidas só por outras fixtures (dependências).
+
+    Usa o cache interno do pytest (item._request._fixture_defs, com
+    cached_result = (valor, chave, erro)); se a estrutura mudar numa
+    versão futura, devolve vazio em vez de quebrar o report.
+    """
+    try:
+        definicoes = item._request._fixture_defs.values()
+
+        return [
+            definicao.cached_result[0]
+            for definicao in definicoes
+            if definicao.cached_result is not None
+            and definicao.cached_result[2] is None
+        ]
+    except (AttributeError, IndexError, TypeError):
+        return []
+
+
+def obter_driver_ativo(item):
+    """
+    Retorna a instância ativa do driver usada pelo teste.
+
+    Procura primeiro nas fixtures conhecidas (ordem de preferência) e
+    depois em qualquer fixture do teste: assim uma fixture nova (ex.:
+    home_autenticada) não fica sem screenshot por não estar na lista.
+
+    Por último, nas fixtures já montadas mas fora do item.funcargs: numa
+    falha de setup, a sessão (que tem o driver) já subiu, mas só entra
+    em funcargs quem o teste pede direto — se a home_autenticada falha,
+    a app_session_... que ela usa não está lá.
+    """
+    conhecidas = [item.funcargs.get(nome) for nome in _DRIVER_FIXTURES]
+    demais = [
+        valor
+        for nome, valor in item.funcargs.items()
+        if nome not in _DRIVER_FIXTURES
+    ]
+
+    for valor in (*conhecidas, *demais, *_fixtures_montadas(item)):
+        if valor is None:
+            continue
+
+        driver = _driver_de(valor)
+
+        if driver is not None:
+            return driver
+
+    return None
+
+
+def titulo_do_item(item) -> str:
+    """
+    Título legível do teste, com o ID do caso de teste na frente quando
+    ele tem o marker ct: "CT011 · Valida a abertura...".
+    """
+    titulo = execution_metrics.extract_titulo(
+        item.nodeid,
+        getattr(getattr(item, "function", None), "__doc__", None),
+    )
+
+    marker = item.get_closest_marker(MARKER_CT)
+
+    if marker is None or not marker.args:
+        return titulo
+
+    return f"{marker.args[0]} · {titulo}"
+
+
 # === Configuração do Pytest ===
+# Criado ao fim da execução quando há teste pulado: o Makefile abre o
+# report também nesse caso (pulado não muda o código de saída do pytest,
+# que só abre o report sozinho quando algo falha).
+ARQUIVO_PULADOS = os.path.join(REPORTS_DIR, ".pulados")
+
+
+def marcar_pulados(quantidade: int, arquivo: str = ARQUIVO_PULADOS) -> None:
+    """Grava a quantidade de pulados, ou apaga o aviso se não houve."""
+    try:
+        if quantidade > 0:
+            with open(arquivo, "w", encoding="utf-8") as saida:
+                saida.write(str(quantidade))
+        elif os.path.exists(arquivo):
+            os.remove(arquivo)
+    except OSError:
+        logger.warning("Não foi possível atualizar o aviso de pulados.")
+
+
+def pytest_sessionfinish(session, exitstatus) -> None:
+    marcar_pulados(execution_metrics.DASHBOARD_STATS.get("skipped", 0))
+
+
 def pytest_configure(
     config,
 ) -> None:
@@ -153,6 +252,7 @@ def pytest_configure(
     timestamp = current_timestamp()
 
     garantir_estrutura_reports()
+    marcar_pulados(0)
 
     config.option.htmlpath = os.path.join(
         REPORTS_DIR,
@@ -177,7 +277,11 @@ def pytest_configure(
         },
     )
 
+    global _inicio_execucao
+    _inicio_execucao = datetime.now()
+
     _nodeids_com_erro_contabilizado.clear()
+    _legendas_por_teste.clear()
     execution_metrics.reset_dashboard_stats()
 
 
@@ -206,6 +310,11 @@ def pytest_html_report_title(
 
 
 # === Métricas da execução ===
+def _e_smoke(report) -> bool:
+    """O teste é do smoke (o essencial do app): a falha dele é crítica."""
+    return "smoke" in getattr(report, "keywords", {})
+
+
 def pytest_runtest_logreport(
     report,
 ) -> None:
@@ -228,10 +337,24 @@ def pytest_runtest_logreport(
         },
     )
 
+    motivo_pulo = (
+        execution_metrics.extract_skip_reason(report) if report.skipped else ""
+    )
+
+    if report.when in ("setup", "call", "teardown"):
+        execution_metrics.registrar_duracao(
+            report.nodeid,
+            getattr(report, "duration", 0.0),
+            titulo=getattr(report, ATRIBUTO_TITULO, ""),
+        )
+
     if report.when == "call":
         execution_metrics.update_dashboard_stats(
             report.nodeid,
             report.outcome,
+            motivo=motivo_pulo,
+            titulo=getattr(report, ATRIBUTO_TITULO, ""),
+            smoke=_e_smoke(report),
         )
         return
 
@@ -253,19 +376,21 @@ def pytest_runtest_logreport(
             )
             return
 
-        _nodeids_com_erro_contabilizado.add(
-            report.nodeid
-        )
+        _nodeids_com_erro_contabilizado.add(report.nodeid)
 
         execution_metrics.update_dashboard_stats(
             report.nodeid,
             "error",
+            titulo=getattr(report, ATRIBUTO_TITULO, ""),
+            smoke=_e_smoke(report),
         )
 
     elif report.skipped:
         execution_metrics.update_dashboard_stats(
             report.nodeid,
             "skipped",
+            motivo=motivo_pulo,
+            titulo=getattr(report, ATRIBUTO_TITULO, ""),
         )
 
 
@@ -276,11 +401,14 @@ def pytest_runtest_makereport(
     call,
 ):
     """
-    Adiciona screenshot e resumo do erro ao relatório HTML
-    quando ocorre uma falha.
+    Adiciona screenshot e resumo do erro ao relatório HTML quando ocorre
+    uma falha, e as evidências registradas pelo teste em qualquer
+    resultado.
     """
     outcome = yield
     report = outcome.get_result()
+
+    setattr(report, ATRIBUTO_TITULO, titulo_do_item(item))
 
     report_extras = getattr(
         report,
@@ -299,15 +427,9 @@ def pytest_runtest_makereport(
     )
 
     if etapa_com_falha:
-        driver_instance = obter_driver_ativo(
-            item
-        )
+        driver_instance = obter_driver_ativo(item)
 
-        error_message = (
-            execution_metrics.extract_error_message(
-                report
-            )
-        )
+        error_message = execution_metrics.extract_error_message(report)
 
         escaped_error = html.escape(
             error_message,
@@ -330,32 +452,18 @@ def pytest_runtest_makereport(
                     item.name,
                 )
 
-                screenshot_saved = (
-                    driver_instance.save_screenshot(
-                        path
-                    )
-                )
+                screenshot_saved = driver_instance.save_screenshot(path)
 
-                if (
-                    screenshot_saved
-                    and os.path.exists(path)
+                if screenshot_saved and anexar_imagem(
+                    report_extras,
+                    report.nodeid,
+                    path,
+                    LEGENDA_PRINT_FALHA,
                 ):
-                    report_extras.append(
-                        extras.image(path)
-                    )
-                    report_extras.append(
-                        extras.url(
-                            path,
-                            name="Abrir screenshot",
-                        )
-                    )
-
                     logger.info(
                         "Screenshot anexado ao relatório",
                         extra={
-                            "event": (
-                                "report_screenshot_attached"
-                            ),
+                            "event": ("report_screenshot_attached"),
                             "test_name": item.name,
                             "screenshot_path": path,
                             "when": report.when,
@@ -366,9 +474,7 @@ def pytest_runtest_makereport(
                     logger.warning(
                         "O driver não retornou um screenshot válido",
                         extra={
-                            "event": (
-                                "report_screenshot_not_saved"
-                            ),
+                            "event": ("report_screenshot_not_saved"),
                             "test_name": item.name,
                             "when": report.when,
                             "screenshot_path": path,
@@ -377,16 +483,15 @@ def pytest_runtest_makereport(
 
             except Exception:
                 logger.exception(
-                    "Não foi possível salvar o screenshot "
-                    "no relatório",
+                    "Não foi possível salvar o screenshot no relatório",
                     extra={
-                        "event": (
-                            "report_screenshot_failed"
-                        ),
+                        "event": ("report_screenshot_failed"),
                         "test_name": item.name,
                         "when": report.when,
                     },
                 )
+
+            anexar_arvore_da_tela(report_extras, driver_instance, item.name)
 
         else:
             logger.warning(
@@ -396,9 +501,7 @@ def pytest_runtest_makereport(
                     "event": "report_driver_not_found",
                     "test_name": item.name,
                     "when": report.when,
-                    "available_funcargs": list(
-                        item.funcargs.keys()
-                    ),
+                    "available_funcargs": list(item.funcargs.keys()),
                 },
             )
 
@@ -423,7 +526,204 @@ def pytest_runtest_makereport(
             )
         )
 
+    # Vídeo do teste (opção --video), gravado durante a chamada.
+    caminho_video = getattr(item, ATRIBUTO_VIDEO, None)
+
+    if report.when == "call" and caminho_video:
+        anexar_video(report_extras, report.nodeid, caminho_video)
+
+    # Evidências registradas pelo próprio teste (capturar_evidencia),
+    # qualquer que seja o resultado — inclusive skip por falta de massa.
+    for caminho, descricao in retirar_evidencias(report.nodeid):
+        anexar_imagem(
+            report_extras,
+            report.nodeid,
+            caminho,
+            f"Evidência: {descricao}",
+        )
+
     report.extras = report_extras
+
+
+# === Imagens no report ===
+def anexar_imagem(
+    report_extras: list,
+    nodeid: str,
+    caminho: str,
+    legenda: str,
+) -> bool:
+    """
+    Anexa o PNG ao report **embutido** (base64), não pelo caminho.
+
+    Pelo caminho, a imagem só abre na máquina que rodou os testes: no
+    HTML enviado ao time (Drive, e-mail) ela aparecia quebrada. O arquivo
+    continua salvo em reports/screenshots/. Retorna False se não houver
+    arquivo para anexar.
+    """
+    try:
+        with open(caminho, "rb") as arquivo:
+            conteudo = base64.b64encode(arquivo.read()).decode("ascii")
+    except OSError:
+        return False
+
+    report_extras.append(extras.png(conteudo, name=legenda))
+    _legendas_por_teste.setdefault(nodeid, []).append(legenda)
+
+    return True
+
+
+LEGENDA_VIDEO = "Vídeo do teste"
+LEGENDA_ARVORE = "Árvore da tela"
+
+
+def anexar_arvore_da_tela(
+    report_extras: list, driver, nome_teste: str
+) -> bool:
+    """
+    Anexa a árvore de acessibilidade da tela no momento da falha (o mesmo
+    XML do Appium Inspector), para investigar locator sem reproduzir a
+    falha. Salva também o .xml ao lado dos prints. False se o driver não
+    devolver a árvore (ex.: sessão perdida).
+    """
+    try:
+        arvore = driver.page_source
+    except Exception:
+        logger.warning(
+            "Não foi possível capturar a árvore da tela na falha",
+            extra={
+                "event": "report_page_source_failed",
+                "test_name": nome_teste,
+            },
+        )
+        return False
+
+    if not arvore:
+        return False
+
+    caminho = build_screenshot_path(SCREENSHOTS_DIR, nome_teste).rsplit(
+        ".", 1
+    )[0]
+    caminho = f"{caminho}_arvore.xml"
+
+    try:
+        with open(caminho, "w", encoding="utf-8") as arquivo:
+            arquivo.write(arvore)
+    except OSError:
+        pass
+
+    report_extras.append(extras.text(arvore, name=LEGENDA_ARVORE))
+
+    return True
+
+
+def anexar_video(report_extras: list, nodeid: str, caminho: str) -> bool:
+    """
+    Anexa o vídeo do teste ao report, embutido (base64), como as
+    imagens, e o nomeia na coluna Evidências. False se não houver
+    arquivo.
+    """
+    try:
+        with open(caminho, "rb") as arquivo:
+            conteudo = base64.b64encode(arquivo.read()).decode("ascii")
+    except OSError:
+        return False
+
+    report_extras.append(extras.video(conteudo, name=LEGENDA_VIDEO))
+    _legendas_por_teste.setdefault(nodeid, []).append(LEGENDA_VIDEO)
+
+    return True
+
+
+def montar_celula_links(
+    celula_original: str,
+    legendas: list[str],
+) -> str:
+    """
+    Acrescenta à coluna Evidências o nome de cada imagem anexada. Só o
+    nome, sem link: a imagem está embutida e aparece ao expandir a linha
+    (e no PDF). Em uma linha só, como a célula do teste.
+    """
+    if not legendas or not celula_original.endswith("</td>"):
+        return celula_original
+
+    etiquetas = "".join(
+        f'<span class="qa-evidence-tag">{html.escape(legenda)}</span>'
+        for legenda in legendas
+    )
+
+    return celula_original[: -len("</td>")] + etiquetas + "</td>"
+
+
+# === Coluna Teste ===
+def montar_celula_teste(
+    celula_original: str,
+    titulo: str,
+) -> str:
+    """
+    Célula da coluna Teste com o título legível em destaque e o caminho
+    técnico (nodeid) abaixo.
+
+    Fica em uma linha só: o pytest-html extrai o conteúdo da célula com
+    uma regex que não atravessa quebras de linha.
+    """
+    encontrado = re.search(r"<td[^>]*>(.*?)</td>", celula_original)
+
+    if not titulo or encontrado is None:
+        return celula_original
+
+    return (
+        '<td class="col-testId">'
+        f'<div class="qa-test-title">{html.escape(titulo)}</div>'
+        f'<div class="qa-test-path">{encontrado.group(1)}</div>'
+        "</td>"
+    )
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_html_results_table_row(
+    report,
+    cells,
+) -> None:
+    """
+    Troca o nodeid da coluna Teste pelo título legível do teste e lista,
+    na coluna Evidências, as imagens anexadas.
+    """
+    if len(cells) < 2:
+        return
+
+    cells[1] = montar_celula_teste(
+        str(cells[1]),
+        getattr(report, ATRIBUTO_TITULO, ""),
+    )
+
+    if len(cells) >= 4:
+        cells[3] = montar_celula_links(
+            str(cells[3]),
+            _legendas_por_teste.get(report.nodeid, []),
+        )
+
+
+# === Histórico ===
+def registrar_no_historico(stats: dict) -> None:
+    """
+    Compara esta execução com as anteriores (falhas novas, recorrentes e
+    testes instáveis) e a grava no histórico. Não pode derrubar o report.
+    """
+    if not stats.get("por_teste"):
+        return
+
+    anteriores = historico.carregar()
+    atual = historico.montar_execucao(datetime.now(), stats["por_teste"])
+
+    stats["historico"] = historico.resumir(anteriores, atual).para_dashboard()
+
+    try:
+        historico.salvar(anteriores + [atual])
+    except OSError:
+        logger.exception(
+            "Não foi possível gravar o histórico de execuções",
+            extra={"event": "history_save_failed"},
+        )
 
 
 # === Dashboard HTML ===
@@ -453,6 +753,23 @@ def _codificar_ascii_seguro(
     ).decode("ascii")
 
 
+def _codificar_js_ascii_seguro(
+    texto: str,
+) -> str:
+    """
+    Converte caracteres não-ASCII em escapes do JavaScript
+    (ex.: "ç" -> "\\u00e7").
+
+    Mesmo motivo do _codificar_ascii_seguro, mas dentro de <script> a
+    referência HTML não é interpretada; o escape \\uXXXX é. Os textos
+    do script usam só caracteres do plano básico (acentos do português).
+    """
+    return "".join(
+        caractere if ord(caractere) < 128 else f"\\u{ord(caractere):04x}"
+        for caractere in texto
+    )
+
+
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_results_summary(
     prefix,
@@ -467,39 +784,34 @@ def pytest_html_results_summary(
         "Enviando métricas para o dashboard HTML",
         extra={
             "event": "html_results_summary",
-            "stats": (
-                execution_metrics.DASHBOARD_STATS
-            ),
+            "stats": (execution_metrics.DASHBOARD_STATS),
         },
     )
 
-    inline_css, html_block = (
-        build_results_summary_html(
-            PROJECT_ROOT,
-            execution_metrics.DASHBOARD_STATS,
-        )
+    execution_metrics.DASHBOARD_STATS["contexto"] = coletar_contexto(
+        inicio=_inicio_execucao,
+        fim=datetime.now(),
+        usa_app=execution_metrics.execucao_usa_app(),
     )
 
-    inline_css = _codificar_ascii_seguro(
-        inline_css
+    registrar_no_historico(execution_metrics.DASHBOARD_STATS)
+
+    inline_css, html_block = build_results_summary_html(
+        PROJECT_ROOT,
+        execution_metrics.DASHBOARD_STATS,
     )
-    html_block = _codificar_ascii_seguro(
-        html_block
-    )
+
+    inline_css = _codificar_ascii_seguro(inline_css)
+    html_block = _codificar_ascii_seguro(html_block)
 
     if inline_css:
-        prefix.append(
-            f"<style>{inline_css}</style>"
-        )
+        prefix.append(f"<style>{inline_css}</style>")
 
         logger.info(
             "CSS customizado injetado no relatório HTML",
             extra={
                 "event": "html_css_injected",
-                "stats": (
-                    execution_metrics
-                    .DASHBOARD_STATS
-                ),
+                "stats": (execution_metrics.DASHBOARD_STATS),
             },
         )
 
@@ -512,6 +824,12 @@ def pytest_html_results_summary(
         )
 
     prefix.append(html_block)
+
+    # No postfix: o script precisa vir depois dos filtros no HTML.
+    inline_js = _codificar_js_ascii_seguro(load_inline_js(PROJECT_ROOT))
+
+    if inline_js:
+        postfix.append(f"<script>{inline_js}</script>")
 
 
 # === Resumo da execução ===
@@ -540,28 +858,13 @@ def pytest_terminal_summary(
         "=",
         "RESUMO",
     )
-    terminalreporter.write_line(
-        f"Total:             {stats['total']}"
-    )
-    terminalreporter.write_line(
-        f"Passou:            {stats['passed']}"
-    )
-    terminalreporter.write_line(
-        f"Falhou:            {stats['failed']}"
-    )
-    terminalreporter.write_line(
-        f"Falha na execução: {stats['error']}"
-    )
-    terminalreporter.write_line(
-        f"Pulados:           {stats['skipped']}"
-    )
-    terminalreporter.write_line(
-        f"Sucesso:           "
-        f"{stats['success_rate']}%"
-    )
-    terminalreporter.write_line(
-        f"Relatório:         {report_path}"
-    )
+    terminalreporter.write_line(f"Total:             {stats['total']}")
+    terminalreporter.write_line(f"Passou:            {stats['passed']}")
+    terminalreporter.write_line(f"Falhou:            {stats['failed']}")
+    terminalreporter.write_line(f"Falha na execução: {stats['error']}")
+    terminalreporter.write_line(f"Pulados:           {stats['skipped']}")
+    terminalreporter.write_line(f"Sucesso:           {stats['success_rate']}%")
+    terminalreporter.write_line(f"Relatório:         {report_path}")
 
     logger.info(
         "Resumo final do dashboard",

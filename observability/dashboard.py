@@ -4,31 +4,49 @@ from utils.report_dashboard import build_dashboard_html
 
 
 # === Dashboard e relatório HTML ===
+def _load_inline_asset(
+    project_root: str,
+    nome: str,
+) -> str:
+    """
+    Lê um arquivo de reports/assets para embutir no relatório.
+
+    Retorna uma string vazia quando o arquivo não está disponível.
+    """
+    caminho = os.path.join(
+        project_root,
+        "reports",
+        "assets",
+        nome,
+    )
+
+    if not os.path.exists(caminho):
+        return ""
+
+    with open(
+        caminho,
+        encoding="utf-8",
+    ) as arquivo:
+        return arquivo.read()
+
+
 def load_inline_css(
     project_root: str,
 ) -> str:
     """
     Carrega o CSS utilizado no dashboard do relatório HTML.
-
-    Retorna uma string vazia quando o arquivo de estilos
-    não está disponível.
     """
-    css_path = os.path.join(
-        project_root,
-        "reports",
-        "assets",
-        "style.css",
-    )
+    return _load_inline_asset(project_root, "style.css")
 
-    if not os.path.exists(css_path):
-        return ""
 
-    with open(
-        css_path,
-        "r",
-        encoding="utf-8",
-    ) as css_file:
-        return css_file.read()
+def load_inline_js(
+    project_root: str,
+) -> str:
+    """
+    Carrega o script embutido no report: traduz e enxuga os filtros
+    nativos do pytest-html e amplia as imagens na própria página.
+    """
+    return _load_inline_asset(project_root, "report.js")
 
 
 def build_results_summary_html(
@@ -52,9 +70,7 @@ def build_results_summary_html(
         "success_rate": 0.0,
     }
 
-    inline_css = load_inline_css(
-        project_root
-    )
+    inline_css = load_inline_css(project_root)
     dashboard_html = build_dashboard_html(
         stats,
     )

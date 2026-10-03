@@ -1,39 +1,56 @@
-import os
-from collections.abc import Iterator
+"""
+Onboarding: sistema inválido e a correção até o login.
+
+Primeiro elo da corrente do primeiro acesso (Onboarding -> Login ->
+Unlock -> E2E), na sessão compartilhada da suíte: quem cria a sessão
+sobe o app limpo (primeiro_acesso) e com o lembrete do primeiro acesso
+liberado para o E2E (exibir_lembrete). Rodando sozinho, ou com o app
+logado (APP_SOURCE=package, que não reinstala), o teste leva o app de volta ao
+onboarding zerando os dados pelo próprio app.
+"""
 
 import pytest
 
-from pages.onboarding_page import OnboardingPage
+from pages.autenticacao.onboarding_page import OnboardingPage
 from tests.support.assertions import (
     validar_avanco_para_login_apos_correcao,
     validar_popup_sistema_nao_encontrado,
 )
 from tests.support.flows import (
-    acessar_tela_login,
     abrir_tela_configurar_aplicativo,
+    levar_ao_onboarding,
 )
 
+pytestmark = [pytest.mark.primeiro_acesso, pytest.mark.exibir_lembrete]
 
-# === Ciclo de vida do app no módulo ===
-@pytest.fixture(autouse=True)
-def reiniciar_app_entre_cenarios(driver_onboarding) -> Iterator[None]:
-    """Reabre o app Android antes do cenário e encerra ao final."""
-    app_package = os.getenv(
-        "ANDROID_APP_PACKAGE",
-        "br.com.ifractal.Stou",
-    ).strip()
 
-    try:
-        driver_onboarding.activate_app(app_package)
-    except Exception:
-        pass
+# === Encadeamento ===
+# O CT001 termina na tela "Configurar Aplicativo" com o popup fechado, e
+# a correção continua dali. Sozinha (make smoke, --ct), ou se o CT001
+# parou no meio, a correção refaz o passo inválido por conta própria.
+@pytest.fixture(scope="module")
+def estado_onboarding() -> dict:
+    return {"configurar_aberta": False}
 
-    yield
 
-    try:
-        driver_onboarding.terminate_app(app_package)
-    except Exception:
-        pass
+@pytest.fixture
+def ir_ao_onboarding(
+    app_session_e2e_registro_ponto,
+    _credenciais_app,
+    celular_api,
+    monitor_nome_pessoa,
+    estado_primeiro_acesso,
+):
+    def ir() -> None:
+        levar_ao_onboarding(
+            app_session_e2e_registro_ponto.driver,
+            _credenciais_app,
+            celular_api,
+            monitor_nome_pessoa,
+            estado_primeiro_acesso,
+        )
+
+    return ir
 
 
 # === Helpers dos cenários ===
@@ -59,69 +76,71 @@ def _informar_sistema_invalido(
     return onboarding_page
 
 
+@pytest.mark.ct("CT001")
 # === Onboarding: sistema inválido ===
 @pytest.mark.regression
 def test_sistema_invalido(
-    driver_onboarding,
+    app_session_e2e_registro_ponto,
+    ir_ao_onboarding,
+    estado_onboarding,
     test_data,
 ):
     """
-    Valida a exibição do popup ao informar um sistema inválido.
+    Valida a exibição do popup de erro ao informar um sistema inválido.
 
     Fronteira: Onboarding -> permanece em Onboarding.
     """
+    ir_ao_onboarding()
+
     _informar_sistema_invalido(
-        driver=driver_onboarding,
+        driver=app_session_e2e_registro_ponto.driver,
         sistema_invalido=test_data["APP_SISTEMA_INVALIDO"],
         mensagem_esperada=test_data["MSG_SISTEMA_INVALIDO"],
     )
 
-
-# === Onboarding: sistema válido ===
-@pytest.mark.smoke
-def test_sistema_valido(
-    driver_login,
-    app_system,
-):
-    """
-    Valida o avanço para o login ao informar um sistema válido.
-
-    Fronteira: Onboarding -> Login.
-    """
-    login_page = acessar_tela_login(
-        driver=driver_login,
-        nome_sistema=app_system,
-    )
-
-    assert login_page.validar_tela_login(), (
-        "A tela de login não foi exibida após informar "
-        "um sistema válido."
-    )
+    estado_onboarding["configurar_aberta"] = True
 
 
+@pytest.mark.ct("CT002")
 # === Onboarding: correção do sistema ===
 @pytest.mark.smoke
 def test_sistema_corrigido(
-    driver_login,
+    app_session_e2e_registro_ponto,
+    ir_ao_onboarding,
+    estado_onboarding,
     app_system,
     test_data,
 ):
     """
-    Valida a correção do sistema após uma tentativa inválida.
+    Valida a correção do sistema após uma tentativa inválida e o avanço
+    para o login.
+
+    Continua da tela em que o CT001 parou; sozinho, faz antes o passo
+    inválido. Também cobre o sistema válido: a correção é informar o
+    sistema certo e avançar. Termina no login (o CT003 continua dali).
 
     Fronteira: Onboarding -> Login.
     """
-    onboarding_page = _informar_sistema_invalido(
-        driver=driver_login,
-        sistema_invalido=test_data["APP_SISTEMA_INVALIDO"],
-        mensagem_esperada=test_data["MSG_SISTEMA_INVALIDO"],
-    )
+    driver = app_session_e2e_registro_ponto.driver
+
+    if estado_onboarding["configurar_aberta"]:
+        onboarding_page = OnboardingPage(driver)
+    else:
+        ir_ao_onboarding()
+
+        onboarding_page = _informar_sistema_invalido(
+            driver=driver,
+            sistema_invalido=test_data["APP_SISTEMA_INVALIDO"],
+            mensagem_esperada=test_data["MSG_SISTEMA_INVALIDO"],
+        )
+
+    estado_onboarding["configurar_aberta"] = False
 
     onboarding_page.corrigir_nome_sistema_e_avancar(
         app_system,
     )
 
     validar_avanco_para_login_apos_correcao(
-        driver=driver_login,
+        driver=driver,
         onboarding_page=onboarding_page,
     )

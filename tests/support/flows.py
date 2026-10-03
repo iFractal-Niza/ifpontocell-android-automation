@@ -1,13 +1,15 @@
-from time import monotonic
+from time import monotonic, sleep
 
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from config.capabilities import is_emulator
 from config.timeouts import FLOW_TIMEOUT
+from pages.autenticacao.login_page import LoginPage
+from pages.autenticacao.onboarding_page import OnboardingPage
+from pages.autenticacao.unlock_page import UnlockPage
 from pages.home_page import HomePage
-from pages.login_page import LoginPage
-from pages.onboarding_page import OnboardingPage
-from pages.unlock_page import UnlockPage
+from pages.zerar_dados.zerar_dados_page import ZerarDadosPage
 from utils.exceptions import (
     AlertaInesperado,
     ConexaoIndisponivel,
@@ -27,9 +29,7 @@ def _elemento_presente(
     Usado somente para sondagens de estado conhecidas, evitando
     consumir LONG_TIMEOUT em verificações negativas.
     """
-    return bool(
-        driver.find_elements(*locator)
-    )
+    return bool(driver.find_elements(*locator))
 
 
 def _verificar_sistema_nao_rejeitado(
@@ -45,9 +45,7 @@ def _verificar_sistema_nao_rejeitado(
     TimeoutException genérico ao esperar a tela de login.
     """
     if onboarding_page.popup_sem_conexao_esta_visivel():
-        mensagem_popup = (
-            onboarding_page.obter_mensagem_popup_sem_conexao()
-        )
+        mensagem_popup = onboarding_page.obter_mensagem_popup_sem_conexao()
 
         raise ConexaoIndisponivel(
             "O app exibiu o alerta de conexão indisponível ao "
@@ -68,7 +66,7 @@ def _verificar_sistema_nao_rejeitado(
         raise SistemaRejeitadoInesperado(
             "O app rejeitou um nome de sistema que deveria ser válido "
             f"(sistema={nome_sistema!r}, popup={mensagem_popup!r}). "
-            "Verifique: (1) o nome do sistema em config/env.yaml, "
+            "Verifique: (1) o nome do sistema em config/env.<device>.yaml, "
             "(2) se o backend de homologação está no ar, "
             "(3) se há um bug de validação de sistema no app.",
             tela="OnboardingPage",
@@ -76,9 +74,7 @@ def _verificar_sistema_nao_rejeitado(
             acao="informar_nome_sistema_e_avancar",
         )
 
-    mensagem_desconhecida = (
-        onboarding_page.obter_mensagem_alerta_inesperado()
-    )
+    mensagem_desconhecida = onboarding_page.obter_mensagem_alerta_inesperado()
 
     if mensagem_desconhecida is not None:
         raise AlertaInesperado(
@@ -118,39 +114,56 @@ def _aguardar_tela_login(
     return login_page
 
 
-def _ativar_celular_primeiro_acesso(
+def _ativar_celular_antes_unlock(
     celular_api,
     monitor_nome_pessoa: str | None,
     codigos_anteriores: set[int] | None,
 ) -> int:
-    """Ativa pela API o celular criado no primeiro acesso atual."""
+    """
+    Ativa pela API o celular criado no login atual
+    antes da criação e confirmação do PIN (paliativo do iOS, mantido no
+    Android pela mesma estrutura de fluxo).
+
+    Marca também sem_foto=True no mesmo celular: feito aqui, antes do
+    PIN, o app já encontra a configuração no backend ao chegar à Home e
+    o registro de ponto não precisa relançar o app para aplicá-la (ver
+    DECISOES.md). Não afeta os testes que não registram ponto.
+
+    Celular real: como no iPhone, não espera um registro novo nem ativa
+    (no iOS, só o do simulador sobe desativado; a ativação é idempotente
+    se o do emulador já vier ativo). Só marca sem_foto no registro de
+    comunicação mais recente, o do aparelho que acabou de logar; sem
+    isso, o registro de ponto pediria foto e reconhecimento facial.
+    """
     if celular_api is None:
         raise AssertionError(
             "O cliente MonitorCelularClient não foi informado. "
             "Passe a fixture celular_api para realizar_unlock()."
         )
 
-    nome_pessoa = (
-        monitor_nome_pessoa or ""
-    ).strip()
+    nome_pessoa = (monitor_nome_pessoa or "").strip()
 
     if not nome_pessoa:
         raise AssertionError(
             "MONITOR_NOME_PESSOA não foi configurado. "
-            "Preencha a variável em config/env.yaml."
+            "Preencha a variável em config/env.<device>.yaml."
         )
 
-    return (
-        celular_api
-        .aguardar_e_ativar_celular_mais_recente(
-            nome_pessoa=nome_pessoa,
-            codigos_anteriores=codigos_anteriores,
-            timeout=60,
-            poll_interval=2,
-        )
+    if not is_emulator():
+        codigo = celular_api.obter_codigo_celular_por_nome_pessoa(nome_pessoa)
+        celular_api.definir_sem_foto(codigo, sem_foto=True)
+        return codigo
+
+    codigo = celular_api.aguardar_e_ativar_celular_mais_recente(
+        nome_pessoa=nome_pessoa,
+        codigos_anteriores=codigos_anteriores,
+        timeout=60,
+        poll_interval=2,
     )
 
+    celular_api.definir_sem_foto(codigo, sem_foto=True)
 
+    return codigo
 
 
 # === Estado inicial ===
@@ -205,15 +218,10 @@ def garantir_tela_login(
             login_page=login_page,
         )
 
-    if (
-        app_pin
-        and unlock_page.esta_na_tela_unlock(
-            timeout=unlock_page.SHORT_TIMEOUT,
-        )
+    if app_pin and unlock_page.esta_na_tela_unlock(
+        timeout=unlock_page.SHORT_TIMEOUT,
     ):
-        unlock_page.desbloquear_com_pin(
-            app_pin
-        )
+        unlock_page.desbloquear_com_pin(app_pin)
 
         if home_page.esta_na_home(
             timeout=home_page.SHORT_TIMEOUT,
@@ -349,7 +357,7 @@ def realizar_login(
         raise LoginRejeitadoInesperado(
             "O app rejeitou um login que deveria ser válido "
             f"(usuário={usuario!r}, popup={mensagem_popup!r}). "
-            "Verifique: (1) a credencial em config/env.yaml, "
+            "Verifique: (1) a credencial em config/env.<device>.yaml, "
             "(2) se o backend de homologação está no ar, "
             "(3) se há um bug de validação de login no app.",
             tela="LoginPage",
@@ -411,6 +419,9 @@ def realizar_unlock(
     3. Aguarda a Home.
     4. Trata os popups conhecidos do primeiro acesso.
 
+    O fluxo original de autorização pós-unlock foi removido; ver
+    DECISOES.md para recuperá-lo quando o paliativo deixar de valer.
+
     Pré-condição:
     - Driver posicionado na tela de criação do PIN.
 
@@ -421,15 +432,13 @@ def realizar_unlock(
     home_page = HomePage(driver)
 
     # === Ativação do celular criado pela execução ===
-    _ativar_celular_primeiro_acesso(
+    _ativar_celular_antes_unlock(
         celular_api=celular_api,
         monitor_nome_pessoa=monitor_nome_pessoa,
         codigos_anteriores=codigos_anteriores,
     )
 
-    unlock_page.configurar_pin(
-        pin
-    )
+    unlock_page.configurar_pin(pin)
 
     home_page.aguardar_primeiro_acesso_pronto()
 
@@ -443,13 +452,10 @@ def realizar_unlock(
 
         return home_page
 
-    chegou_ao_primeiro_acesso = (
-        home_page.popup_lembrete_esta_visivel(
-            timeout=home_page.SHORT_TIMEOUT,
-        )
-        or home_page.esta_na_home(
-            timeout=home_page.SHORT_TIMEOUT,
-        )
+    chegou_ao_primeiro_acesso = home_page.popup_lembrete_esta_visivel(
+        timeout=home_page.SHORT_TIMEOUT,
+    ) or home_page.esta_na_home(
+        timeout=home_page.SHORT_TIMEOUT,
     )
 
     assert chegou_ao_primeiro_acesso, (
@@ -471,12 +477,19 @@ def realizar_primeiro_acesso(
     *,
     celular_api=None,
     monitor_nome_pessoa: str | None = None,
+    reaproveita_celular: bool = False,
 ) -> HomePage:
     """
     Executa a jornada de primeiro acesso até a Home.
 
-    Captura os códigos existentes antes do login, ativa o novo celular
-    pela API e conclui a criação do PIN no Android.
+    Captura os códigos existentes antes do login e ativa o novo
+    celular pela API antes da criação e confirmação do PIN.
+
+    reaproveita_celular: depois de Zerar Dados, o app continua instalado
+    com o mesmo identificador de aparelho e o login reaproveita o
+    registro de celular que já existia — não surge código novo. Com
+    True, ativa o registro de comunicação mais recente, sem ignorar os
+    que já existiam.
     """
     if celular_api is None:
         raise AssertionError(
@@ -485,21 +498,20 @@ def realizar_primeiro_acesso(
             "realizar_primeiro_acesso()."
         )
 
-    nome_pessoa = (
-        monitor_nome_pessoa or ""
-    ).strip()
+    nome_pessoa = (monitor_nome_pessoa or "").strip()
 
     if not nome_pessoa:
         raise AssertionError(
             "MONITOR_NOME_PESSOA não foi configurado. "
-            "Preencha a variável em config/env.yaml."
+            "Preencha a variável em config/env.<device>.yaml."
         )
 
+    # Só o emulador precisa saber os códigos de antes: é nele que um
+    # celular novo surge desativado e é ativado pela API.
     codigos_anteriores = (
-        celular_api
-        .obter_codigos_celular_por_nome_pessoa(
-            nome_pessoa
-        )
+        None
+        if reaproveita_celular or not is_emulator()
+        else celular_api.obter_codigos_celular_por_nome_pessoa(nome_pessoa)
     )
 
     realizar_login(
@@ -517,6 +529,7 @@ def realizar_primeiro_acesso(
         monitor_nome_pessoa=nome_pessoa,
         codigos_anteriores=codigos_anteriores,
     )
+
 
 # === Sessão autenticada ===
 def garantir_home_desbloqueada(
@@ -546,14 +559,13 @@ def garantir_home_desbloqueada(
     limite = monotonic() + home_page.POPUP_RESOLUTION_TIMEOUT
 
     while True:
-        while (
-            home_page.tratar_popup_opiniao_se_existir()
-            or home_page.tratar_popup_melhoria_se_existir()
-        ):
-            pass
+        home_page.dispensar_popups_sobrepostos()
 
+        # Timeout curto nas duas sondagens: o laço alterna entre elas
+        # até o limite, então esperar LONG pelo unlock só atrasava o
+        # caso comum (app já na Home).
         if unlock_page.esta_na_tela_unlock(
-            timeout=unlock_page.LONG_TIMEOUT,
+            timeout=unlock_page.SHORT_TIMEOUT,
         ):
             unlock_page.desbloquear_com_pin(pin)
 
@@ -587,3 +599,233 @@ def garantir_home_desbloqueada(
                 "O app não abriu na tela de desbloqueio por PIN "
                 "nem em uma Home autenticada."
             )
+
+
+# === Primeiro acesso em corrente ===
+# Os testes do primeiro acesso (Onboarding, Login, Unlock, E2E) usam a
+# mesma sessão e continuam de onde o anterior parou: sistema -> login ->
+# criação do PIN -> Home com o lembrete. Rodando sozinho (ou se o
+# anterior parou no meio), cada um leva o app à sua etapa por estas
+# funções. Já logado, o app volta ao começo pelo próprio ZERAR DADOS:
+# funciona no emulador e no celular (onde não há reinstalação).
+ETAPA_ONBOARDING = "onboarding"
+ETAPA_LOGIN = "login"
+ETAPA_CRIAR_PIN = "criar_pin"
+ETAPA_LOGADO = "logado"
+
+# Quanto esperar o app mostrar alguma tela conhecida (ex.: logo depois
+# de subir).
+TEMPO_PARA_RECONHECER_ETAPA = 15
+
+
+def etapa_do_primeiro_acesso(
+    driver,
+    timeout: float = TEMPO_PARA_RECONHECER_ETAPA,
+) -> str | None:
+    """
+    Em que etapa do primeiro acesso o app está, pelas telas visíveis:
+    onboarding (boas-vindas, informações, configurar sistema), login,
+    criação do PIN, ou logado (PIN de desbloqueio, Home, lembrete).
+    None se nenhuma aparecer no timeout.
+    """
+    home_page = HomePage(driver)
+    sondagens = (
+        (
+            ETAPA_ONBOARDING,
+            (
+                OnboardingPage.BOTAO_PROXIMO_BOAS_VINDAS,
+                OnboardingPage.BOTAO_INICIAR_CONFIGURACAO,
+                OnboardingPage.CAMPO_NOME_SISTEMA,
+            ),
+        ),
+        (ETAPA_LOGIN, (LoginPage.CAMPO_LOGIN,)),
+        # Logado antes de criar PIN: no Android o teclado numberN (o
+        # marcador da criação) aparece também no desbloqueio, e só o
+        # relative_first_access separa as duas telas. A primeira etapa
+        # que casar vence.
+        (
+            ETAPA_LOGADO,
+            (UnlockPage.TEXTO_TELA_UNLOCK, HomePage.POPUP_LEMBRETE_MENSAGEM),
+        ),
+        (
+            ETAPA_CRIAR_PIN,
+            (UnlockPage.TEXTO_CRIAR_PIN, UnlockPage.TEXTO_CONFIRMAR_PIN),
+        ),
+    )
+    limite = monotonic() + timeout
+
+    while True:
+        for etapa, locators in sondagens:
+            if any(_elemento_presente(driver, loc) for loc in locators):
+                return etapa
+
+        if home_page._home_esta_pronta_imediatamente():
+            return ETAPA_LOGADO
+
+        if monotonic() >= limite:
+            return None
+
+        sleep(0.5)
+
+
+def zerar_dados_pelo_app(driver, pin: str) -> None:
+    """
+    Logado -> Home (desbloqueando, se preciso) -> menu do perfil ->
+    ZERAR DADOS -> SIM -> primeiro acesso.
+    """
+    garantir_home_desbloqueada(driver=driver, pin=pin)
+
+    pagina = ZerarDadosPage(driver)
+    pagina.abrir_confirmacao()
+    pagina.confirmar()
+
+    assert pagina.voltou_ao_primeiro_acesso(timeout=pagina.LONG_TIMEOUT * 2), (
+        "Depois de zerar os dados para recomeçar o primeiro acesso, o app "
+        "não voltou ao onboarding."
+    )
+
+
+def levar_ao_onboarding(
+    driver,
+    credenciais: dict,
+    celular_api,
+    monitor_nome_pessoa: str,
+    estado: dict,
+) -> None:
+    """
+    Deixa o app no onboarding. Na tela de login ou de criação do PIN,
+    conclui o primeiro acesso antes; logado, zera os dados pelo app
+    (o próximo login reaproveita o registro de celular: estado
+    "reaproveita_celular").
+    """
+    etapa = etapa_do_primeiro_acesso(driver)
+
+    if etapa == ETAPA_ONBOARDING:
+        return
+
+    if etapa is None:
+        raise AssertionError(
+            "Nenhuma tela do primeiro acesso (onboarding, login, PIN) nem "
+            "a Home foi reconhecida: não dá para recomeçar o primeiro "
+            "acesso a partir daqui."
+        )
+
+    if etapa == ETAPA_LOGIN:
+        fazer_login_ate_criar_pin(
+            driver, credenciais, celular_api, monitor_nome_pessoa, estado
+        )
+        etapa = ETAPA_CRIAR_PIN
+
+    if etapa == ETAPA_CRIAR_PIN:
+        concluir_primeiro_acesso(
+            driver,
+            credenciais,
+            celular_api,
+            monitor_nome_pessoa,
+            estado,
+            tratar_popups_home=True,
+        )
+
+    zerar_dados_pelo_app(driver, credenciais["pin"])
+    estado["reaproveita_celular"] = True
+    estado["codigos_anteriores"] = None
+
+
+def levar_a_tela_login(
+    driver,
+    credenciais: dict,
+    celular_api,
+    monitor_nome_pessoa: str,
+    estado: dict,
+) -> LoginPage:
+    """Deixa o app na tela de login (vindo de qualquer etapa)."""
+    if etapa_do_primeiro_acesso(driver) != ETAPA_LOGIN:
+        levar_ao_onboarding(
+            driver, credenciais, celular_api, monitor_nome_pessoa, estado
+        )
+
+    return garantir_tela_login(
+        driver=driver,
+        nome_sistema=credenciais["sistema"],
+    )
+
+
+def fazer_login_ate_criar_pin(
+    driver,
+    credenciais: dict,
+    celular_api,
+    monitor_nome_pessoa: str,
+    estado: dict,
+) -> UnlockPage:
+    """
+    Da tela de login, login válido até a criação do PIN.
+
+    Antes do login, guarda no estado os códigos de celular que já
+    existiam: a ativação pela API (só no emulador) procura o código
+    novo. Depois de zerar pelo app, ou no celular real, não há código
+    novo a procurar.
+    """
+    reaproveita = estado.get("reaproveita_celular") or not is_emulator()
+
+    estado["codigos_anteriores"] = (
+        None
+        if reaproveita
+        else celular_api.obter_codigos_celular_por_nome_pessoa(
+            monitor_nome_pessoa
+        )
+    )
+
+    return realizar_login(
+        driver=driver,
+        nome_sistema=credenciais["sistema"],
+        usuario=credenciais["usuario"],
+        senha=credenciais["senha"],
+    )
+
+
+def levar_a_criacao_do_pin(
+    driver,
+    credenciais: dict,
+    celular_api,
+    monitor_nome_pessoa: str,
+    estado: dict,
+) -> UnlockPage:
+    """Deixa o app na criação do PIN (vindo de qualquer etapa)."""
+    if etapa_do_primeiro_acesso(driver) == ETAPA_CRIAR_PIN:
+        return UnlockPage(driver)
+
+    levar_a_tela_login(
+        driver, credenciais, celular_api, monitor_nome_pessoa, estado
+    )
+
+    return fazer_login_ate_criar_pin(
+        driver, credenciais, celular_api, monitor_nome_pessoa, estado
+    )
+
+
+def concluir_primeiro_acesso(
+    driver,
+    credenciais: dict,
+    celular_api,
+    monitor_nome_pessoa: str,
+    estado: dict,
+    tratar_popups_home: bool,
+) -> HomePage:
+    """
+    Da criação do PIN até a Home: ativação do celular (emulador), PIN
+    e confirmação. Com tratar_popups_home=False, o lembrete do primeiro
+    acesso fica na tela (o E2E o valida).
+    """
+    home_page = realizar_unlock(
+        driver=driver,
+        pin=credenciais["pin"],
+        tratar_popups_home=tratar_popups_home,
+        celular_api=celular_api,
+        monitor_nome_pessoa=monitor_nome_pessoa,
+        codigos_anteriores=estado.get("codigos_anteriores"),
+    )
+
+    estado["reaproveita_celular"] = False
+    estado["codigos_anteriores"] = None
+
+    return home_page

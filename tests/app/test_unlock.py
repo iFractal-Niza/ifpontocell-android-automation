@@ -1,97 +1,97 @@
-from dataclasses import dataclass
+"""
+Unlock: confirmação divergente na criação do PIN.
+
+Elo da corrente do primeiro acesso (Onboarding -> Login -> Unlock ->
+E2E), na sessão compartilhada: continua da criação do PIN deixada pelo
+CT005 e termina na Home com o lembrete do primeiro acesso na tela, para
+o CT007. Rodando sozinho, leva o app até a criação do PIN antes.
+"""
 
 import pytest
 
-from pages.unlock_page import UnlockPage
+from pages.home_page import HomePage
 from tests.support.flows import (
-    realizar_login,
-    realizar_unlock,
+    concluir_primeiro_acesso,
+    levar_a_criacao_do_pin,
 )
 
-
-@dataclass(frozen=True)
-class ContextoUnlock:
-    unlock_page: UnlockPage
-    codigos_anteriores: set[int]
+pytestmark = [pytest.mark.primeiro_acesso, pytest.mark.exibir_lembrete]
 
 
-# === Unlock: preparação do módulo ===
-@pytest.fixture(scope="module", autouse=True)
-def posicionar_na_tela_pin(
-    driver_unlock,
-    app_system,
-    app_user,
-    app_password,
+@pytest.mark.ct("CT006")
+# === Unlock: confirmação divergente ===
+@pytest.mark.regression
+def test_pin_divergente_reinicia_criacao(
+    app_session_e2e_registro_ponto,
+    _credenciais_app,
     celular_api,
     monitor_nome_pessoa,
-) -> ContextoUnlock:
-    """
-    Posiciona o driver na criação do PIN uma única vez.
-
-    Antes do login, captura os códigos existentes para identificar
-    o registro criado especificamente pela execução atual.
-
-    Fronteira: Login -> criação do PIN.
-    """
-    codigos_anteriores = (
-        celular_api
-        .obter_codigos_celular_por_nome_pessoa(
-            monitor_nome_pessoa
-        )
-    )
-
-    unlock_page = realizar_login(
-        driver=driver_unlock,
-        nome_sistema=app_system,
-        usuario=app_user,
-        senha=app_password,
-    )
-
-    return ContextoUnlock(
-        unlock_page=unlock_page,
-        codigos_anteriores=codigos_anteriores,
-    )
-
-
-# === Unlock: cenário positivo ===
-@pytest.mark.smoke
-def test_pin_valido(
-    posicionar_na_tela_pin,
-    driver_unlock,
+    estado_primeiro_acesso,
     app_pin,
-    celular_api,
-    monitor_nome_pessoa,
+    test_data,
 ):
     """
-    Valida a ativação paliativa do celular antes da criação
-    e confirmação do PIN válido.
+    Valida que confirmar um PIN diferente do criado reinicia a criação
+    do PIN.
+
+    Confirmação com PIN diferente do criado faz o app voltar para a
+    criação do PIN; criando e confirmando o PIN certo, chega à Home.
 
     Fronteira:
-    ativação pela API -> criação do PIN -> confirmação do PIN -> Home.
+    criação do PIN -> confirmação divergente -> criação do PIN ->
+    ativação pela API (emulador) -> criação e confirmação corretas ->
+    Home com o lembrete do primeiro acesso (fica para o CT007).
+
+    O app não exibe mensagem de erro na divergência: o sinal é a volta
+    para "Crie uma senha de 4 dígitos".
     """
-    assert (
-        posicionar_na_tela_pin
-        .unlock_page
-        .validar_tela_criar_pin()
-    ), "A tela de criação do PIN não foi exibida."
+    driver = app_session_e2e_registro_ponto.driver
+    pin_invalido = test_data["APP_PIN_INVALIDO"]
 
-    home_page = realizar_unlock(
-        driver=driver_unlock,
-        pin=app_pin,
-        celular_api=celular_api,
-        monitor_nome_pessoa=monitor_nome_pessoa,
-        codigos_anteriores=(
-            posicionar_na_tela_pin.codigos_anteriores
-        ),
+    assert pin_invalido != app_pin, (
+        "APP_PIN_INVALIDO (test_data.yaml) precisa ser diferente de "
+        "APP_PIN (env.<device>.yaml) para o cenário de confirmação divergente."
     )
 
-    assert home_page.validar_home(), (
-        "A Home não foi exibida após a ativação do celular "
-        "e configuração do PIN válido."
+    unlock_page = levar_a_criacao_do_pin(
+        driver,
+        _credenciais_app,
+        celular_api,
+        monitor_nome_pessoa,
+        estado_primeiro_acesso,
     )
 
+    assert unlock_page.validar_tela_criar_pin(), (
+        "A tela de criação do PIN não foi exibida."
+    )
 
-# === Unlock: cenários negativos ===
-# TODO: test_pin_invalido
-# Pendência: mapear os locators da mensagem de erro de PIN.
-# Rastrear em: [issue no board]
+    unlock_page.criar_pin(app_pin)
+    unlock_page.confirmar_pin(pin_invalido)
+
+    assert unlock_page.esta_na_tela_criar_pin(
+        timeout=unlock_page.LONG_TIMEOUT,
+    ), (
+        "Com a confirmação divergente, o app deveria voltar para a "
+        "criação do PIN ('Crie uma senha de 4 dígitos')."
+    )
+
+    # Sem tratar os popups: o lembrete do primeiro acesso fica na tela
+    # para o CT007 (realizar_unlock já confere que chegou à Home ou ao
+    # lembrete).
+    concluir_primeiro_acesso(
+        driver,
+        _credenciais_app,
+        celular_api,
+        monitor_nome_pessoa,
+        estado_primeiro_acesso,
+        tratar_popups_home=False,
+    )
+
+    home_page = HomePage(driver)
+
+    assert home_page.popup_lembrete_esta_visivel(
+        timeout=home_page.SHORT_TIMEOUT
+    ) or home_page.esta_na_home(timeout=home_page.SHORT_TIMEOUT), (
+        "A Home não foi exibida após criar e confirmar o PIN correto "
+        "depois da tentativa divergente."
+    )

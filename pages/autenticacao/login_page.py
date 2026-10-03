@@ -1,5 +1,4 @@
 from pages.android_locators import android_id, android_text
-
 from pages.base_page import BasePage
 
 
@@ -10,7 +9,8 @@ class LoginPage(BasePage):
     CAMPO_LOGIN = android_id("editTextLogin")
     CAMPO_SENHA = android_id("editTextSenha")
 
-    # PENDENTE: confirmar no Appium Inspector. Não existe no projeto de referência.
+    # PENDENTE: confirmar no Appium Inspector. Não existe no projeto de
+    # referência.
     BOTAO_VER_SENHA = android_id("btnVerSenha", "text_input_end_icon")
 
     BOTAO_ENTRAR = android_id("btn_confirmar")
@@ -51,10 +51,7 @@ class LoginPage(BasePage):
             timeout=self.SHORT_TIMEOUT,
         )
 
-        is_on_login_screen = (
-            campo_login_visivel
-            and campo_senha_visivel
-        )
+        is_on_login_screen = campo_login_visivel and campo_senha_visivel
 
         self._log_info(
             "Validação de presença da tela de login executada",
@@ -204,11 +201,7 @@ class LoginPage(BasePage):
             timeout=self.SHORT_TIMEOUT,
         )
 
-        is_valid = (
-            titulo_visivel
-            and mensagem_visivel
-            and botao_visivel
-        )
+        is_valid = titulo_visivel and mensagem_visivel and botao_visivel
 
         self._log_info(
             "Validação do popup de erro de login executada",
@@ -234,7 +227,10 @@ class LoginPage(BasePage):
 
     # === Popup de conexão indisponível ===
     def popup_sem_conexao_esta_visivel(self) -> bool:
-        """Checagem ativa; ver nota de timeout em popup_erro_login_esta_visivel."""
+        """
+        Checagem ativa; ver nota de timeout em
+        popup_erro_login_esta_visivel.
+        """
         is_visible = self._is_visible(
             self.POPUP_SEM_CONEXAO_MENSAGEM,
             timeout=self.OPTIONAL_POPUP_TIMEOUT,

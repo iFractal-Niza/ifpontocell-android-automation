@@ -1,6 +1,11 @@
-from pages.android_locators import android_id, android_text, android_text_contains
+from time import monotonic, sleep
 
 from config.timeouts import OPTIONAL_POPUP_TIMEOUT
+from pages.android_locators import (
+    android_id,
+    android_text,
+    android_text_contains,
+)
 from pages.base_page import BasePage
 
 
@@ -8,12 +13,18 @@ class OnboardingPage(BasePage):
     SCREEN_NAME = "onboarding"
 
     # === Locators Android (projeto de referência) ===
+    # Mesmo resource-id nas duas telas (boas-vindas e informações
+    # importantes): _passar_pelo_boas_vindas sai no primeiro toque e o
+    # preparar_fluxo_inicial toca de novo como "iniciar configuração".
+    # Um id/texto próprio da tela seguinte devolveria a conferência que
+    # o iOS faz (PENDENCIAS_LOCATORS_ANDROID.md).
     BOTAO_PROXIMO_BOAS_VINDAS = android_id("btn_confirmar_informacao")
     BOTAO_INICIAR_CONFIGURACAO = android_id("btn_confirmar_informacao")
     CAMPO_NOME_SISTEMA = android_id("editTextSistema")
     BOTAO_PROXIMO_SISTEMA = android_id("btn_confirmar")
 
-    # Conteúdo: fallback textual; validar resource-id no Inspector se necessário.
+    # Conteúdo: fallback textual; validar resource-id no Inspector se
+    # necessário.
     TITULO_BOAS_VINDAS = android_text_contains("bem-vindo")
     TITULO_CONFIGURAR_APLICATIVO = android_text_contains("Configurar")
 
@@ -30,7 +41,9 @@ class OnboardingPage(BasePage):
 
     # Popups: não há resource-id técnico no projeto Android de referência.
     POPUP_SISTEMA_NAO_ENCONTRADO_TITULO = android_text("ifPontoCell")
-    POPUP_SISTEMA_NAO_ENCONTRADO_MENSAGEM = android_text("Sistema não encontrado.")
+    POPUP_SISTEMA_NAO_ENCONTRADO_MENSAGEM = android_text(
+        "Sistema não encontrado."
+    )
     POPUP_SISTEMA_NAO_ENCONTRADO_BOTAO_OK = android_text("OK")
     POPUP_SEM_CONEXAO_MENSAGEM = android_text(
         "A conexão à internet parece estar desativada."
@@ -55,9 +68,9 @@ class OnboardingPage(BasePage):
         )
 
         popup_tratado = (
-            self._try_accept_ios_alert()
+            self._try_accept_native_alert()
             if permitir
-            else self._try_dismiss_ios_alert()
+            else self._try_dismiss_native_alert()
         )
 
         if popup_tratado:
@@ -167,6 +180,42 @@ class OnboardingPage(BasePage):
         )
 
     # === Navegação ===
+    # Toques em PRÓXIMO até sair do boas-vindas.
+    MAX_TOQUES_BOAS_VINDAS = 4
+
+    def _passar_pelo_boas_vindas(self) -> None:
+        """
+        Toca PRÓXIMO até a tela seguinte (informações importantes ou
+        configurar sistema) aparecer. Um toque só não bastava: visto
+        numa falha, depois do toque o boas-vindas continuou (página
+        seguinte com o mesmo botão, ou toque ignorado na transição).
+        """
+        seguintes = (self.BOTAO_INICIAR_CONFIGURACAO, self.CAMPO_NOME_SISTEMA)
+
+        for toque in range(1, self.MAX_TOQUES_BOAS_VINDAS + 1):
+            self.clicar_proximo_boas_vindas()
+
+            limite = monotonic() + self.DEFAULT_TIMEOUT
+
+            while monotonic() < limite:
+                if any(
+                    self._esta_visivel_imediatamente(loc) for loc in seguintes
+                ):
+                    return
+
+                sleep(self.POLL_FREQUENCY)
+
+            if not self._esta_visivel_imediatamente(
+                self.BOTAO_PROXIMO_BOAS_VINDAS
+            ):
+                return
+
+            self._log_warning(
+                "Boas-vindas continuou após PRÓXIMO; tocando de novo",
+                event="welcome_next_retry",
+                attempt=toque,
+            )
+
     def clicar_proximo_boas_vindas(self) -> None:
         self._click(
             self.BOTAO_PROXIMO_BOAS_VINDAS,
@@ -311,7 +360,10 @@ class OnboardingPage(BasePage):
 
     # === Popup de conexão indisponível ===
     def popup_sem_conexao_esta_visivel(self) -> bool:
-        """Checagem ativa; ver nota de timeout em popup_sistema_nao_encontrado_esta_visivel."""
+        """
+        Checagem ativa; ver nota de timeout em
+        popup_sistema_nao_encontrado_esta_visivel.
+        """
         is_visible = self._is_visible(
             self.POPUP_SEM_CONEXAO_MENSAGEM,
             timeout=self.OPTIONAL_POPUP_TIMEOUT,
@@ -359,7 +411,7 @@ class OnboardingPage(BasePage):
         )
 
         if self.esta_na_tela_boas_vindas():
-            self.clicar_proximo_boas_vindas()
+            self._passar_pelo_boas_vindas()
 
         if self.esta_na_tela_informacoes_importantes():
             self.clicar_iniciar_configuracao()

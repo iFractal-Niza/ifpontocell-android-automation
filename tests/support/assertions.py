@@ -1,5 +1,5 @@
-from pages.login_page import LoginPage
-from pages.onboarding_page import OnboardingPage
+from pages.autenticacao.login_page import LoginPage
+from pages.autenticacao.onboarding_page import OnboardingPage
 
 
 # === Assertions de login ===
@@ -70,8 +70,7 @@ def validar_popup_sistema_nao_encontrado(
     )
 
     mensagem_atual = (
-        onboarding_page
-        .obter_mensagem_popup_sistema_nao_encontrado()
+        onboarding_page.obter_mensagem_popup_sistema_nao_encontrado()
     )
 
     assert mensagem_atual == mensagem_esperada, (
@@ -100,8 +99,7 @@ def validar_avanco_para_login_apos_correcao(
     """
     if onboarding_page.validar_popup_sistema_nao_encontrado():
         mensagem_atual = (
-            onboarding_page
-            .obter_mensagem_popup_sistema_nao_encontrado()
+            onboarding_page.obter_mensagem_popup_sistema_nao_encontrado()
         )
 
         raise AssertionError(
@@ -113,6 +111,5 @@ def validar_avanco_para_login_apos_correcao(
     login_page = LoginPage(driver)
 
     assert login_page.validar_tela_login(), (
-        "A tela de login não foi exibida após corrigir "
-        "o nome do sistema."
+        "A tela de login não foi exibida após corrigir o nome do sistema."
     )

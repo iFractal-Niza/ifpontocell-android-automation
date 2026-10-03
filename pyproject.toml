@@ -1,0 +1,17 @@
+# Configuração de ferramentas de qualidade de código.
+# Dependências continuam em requirements.txt.
+
+[tool.ruff]
+line-length = 79
+target-version = "py310"
+
+[tool.ruff.lint]
+# E/W: estilo (pycodestyle) · F: erros reais (imports/variáveis sem uso,
+# nomes indefinidos) · I: ordenação de imports · B: armadilhas comuns
+# (bugbear) · UP: sintaxe moderna para a versão alvo.
+select = ["E", "F", "W", "I", "B", "UP"]
+
+[tool.ruff.format]
+# Herdado do iOS (locators com aspas simples e duplas misturadas de
+# propósito); normalizar geraria ruído sem ganho.
+quote-style = "preserve"

@@ -25,11 +25,17 @@ class LoginRejeitadoInesperado(AppAutomationError):
 
 
 class SistemaRejeitadoInesperado(AppAutomationError):
-    """Levantada quando o app rejeita um nome de sistema que deveria ser válido."""
+    """
+    Levantada quando o app rejeita um nome de sistema que deveria ser
+    válido.
+    """
 
 
 class ConexaoIndisponivel(AppAutomationError):
-    """Levantada quando o app exibe o alerta de conexão com a internet indisponível."""
+    """
+    Levantada quando o app exibe o alerta de conexão com a internet
+    indisponível.
+    """
 
 
 class AlertaInesperado(AppAutomationError):

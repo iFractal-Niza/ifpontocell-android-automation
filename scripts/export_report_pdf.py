@@ -3,17 +3,21 @@ from __future__ import annotations
 import base64
 import html
 import json
+import os
 import re
 from pathlib import Path
 from urllib.parse import unquote_to_bytes
 
 from weasyprint import CSS, HTML
 
-
 # === Caminhos ===
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-REPORTS_DIR = PROJECT_ROOT / "reports"
-PRINT_CSS = REPORTS_DIR / "assets" / "print.css"
+# A pasta do report pode ser por aparelho (DEVICE=... no make); o CSS de
+# impressão fica sempre nos assets.
+REPORTS_DIR = Path(
+    os.getenv("IFPONTO_REPORTS_DIR") or PROJECT_ROOT / "reports"
+).resolve()
+PRINT_CSS = PROJECT_ROOT / "reports" / "assets" / "print.css"
 
 _RESULT_ORDER = {
     "error": 0,
@@ -23,6 +27,15 @@ _RESULT_ORDER = {
     "xfailed": 4,
     "skipped": 5,
     "passed": 6,
+}
+
+# O WeasyPrint não executa o reports/assets/report.js, que traduz as
+# colunas no HTML: no PDF a tradução é feita aqui.
+_COLUNAS = {
+    "Result": "Resultado",
+    "Test": "Teste",
+    "Duration": "Duração",
+    "Links": "Evidências",
 }
 
 
@@ -59,15 +72,10 @@ def _extrair_dados_pytest_html(
 
     if not match:
         raise ValueError(
-            "O data-jsonblob do pytest-html não foi encontrado "
-            "no relatório."
+            "O data-jsonblob do pytest-html não foi encontrado no relatório."
         )
 
-    return json.loads(
-        html.unescape(
-            match.group(1)
-        )
-    )
+    return json.loads(html.unescape(match.group(1)))
 
 
 def _iterar_testes(
@@ -83,14 +91,10 @@ def _iterar_testes(
         testes,
         key=lambda teste: (
             _RESULT_ORDER.get(
-                str(
-                    teste.get("result", "")
-                ).lower(),
+                str(teste.get("result", "")).lower(),
                 99,
             ),
-            str(
-                teste.get("testId", "")
-            ),
+            str(teste.get("testId", "")),
         ),
     )
 
@@ -98,9 +102,7 @@ def _iterar_testes(
 def _decodificar_data_uri_texto(
     uri: str,
 ) -> str:
-    if not uri.startswith(
-        "data:text/plain"
-    ):
+    if not uri.startswith("data:text/plain"):
         return ""
 
     try:
@@ -113,16 +115,12 @@ def _decodificar_data_uri_texto(
 
     try:
         if ";base64" in cabecalho:
-            return base64.b64decode(
-                conteudo
-            ).decode(
+            return base64.b64decode(conteudo).decode(
                 "utf-8",
                 errors="replace",
             )
 
-        return unquote_to_bytes(
-            conteudo
-        ).decode(
+        return unquote_to_bytes(conteudo).decode(
             "utf-8",
             errors="replace",
         )
@@ -165,16 +163,10 @@ def _obter_erro_resumido(
     ).strip()
 
     if not log:
-        return (
-            "Erro sem mensagem resumida disponível."
-        )
+        return "Erro sem mensagem resumida disponível."
 
     return next(
-        (
-            linha.strip()
-            for linha in log.splitlines()
-            if linha.strip()
-        ),
+        (linha.strip() for linha in log.splitlines() if linha.strip()),
         "Erro sem mensagem resumida disponível.",
     )
 
@@ -193,42 +185,26 @@ def _resolver_imagem(
     if not caminho_original:
         return None
 
-    original = Path(
-        caminho_original
-    ).expanduser()
+    # Imagem embutida no HTML (base64): o WeasyPrint lê o data URI direto.
+    if caminho_original.startswith("data:image/"):
+        return caminho_original
+
+    original = Path(caminho_original).expanduser()
 
     candidatos: list[Path] = []
 
     if original.is_absolute():
-        candidatos.append(
-            original
-        )
+        candidatos.append(original)
     else:
-        candidatos.append(
-            (
-                html_path.parent
-                / original
-            ).resolve()
-        )
+        candidatos.append((html_path.parent / original).resolve())
 
-    candidatos.append(
-        REPORTS_DIR
-        / "screenshots"
-        / original.name
-    )
+    candidatos.append(REPORTS_DIR / "screenshots" / original.name)
 
     for candidato in candidatos:
         if candidato.is_file():
-            return (
-                candidato
-                .resolve()
-                .as_uri()
-            )
+            return candidato.resolve().as_uri()
 
-    print(
-        "[WARN] Screenshot não encontrado "
-        f"para o PDF: {caminho_original}"
-    )
+    print(f"[WARN] Screenshot não encontrado para o PDF: {caminho_original}")
 
     return None
 
@@ -241,9 +217,7 @@ def _obter_screenshot(
         "extras",
         [],
     ):
-        if extra.get(
-            "format_type"
-        ) == "image":
+        if extra.get("format_type") == "image":
             caminho = _resolver_imagem(
                 str(
                     extra.get(
@@ -278,11 +252,7 @@ def _renderizar_detalhes_falha(
     }:
         return ""
 
-    erro = html.escape(
-        _obter_erro_resumido(
-            teste
-        )
-    )
+    erro = html.escape(_obter_erro_resumido(teste))
 
     screenshot = _obter_screenshot(
         teste,
@@ -305,9 +275,7 @@ def _renderizar_detalhes_falha(
         """
 
     classe_sem_imagem = (
-        " pdf-failure-detail--without-media"
-        if not screenshot
-        else ""
+        " pdf-failure-detail--without-media" if not screenshot else ""
     )
 
     return f"""
@@ -340,9 +308,7 @@ def _renderizar_resultados_estaticos(
 ) -> str:
     partes: list[str] = []
 
-    for teste in _iterar_testes(
-        data
-    ):
+    for teste in _iterar_testes(data):
         resultado = str(
             teste.get(
                 "result",
@@ -366,18 +332,31 @@ def _renderizar_resultados_estaticos(
                 </tr>
 
                 {
-                    _renderizar_detalhes_falha(
-                        teste,
-                        html_path=html_path,
-                    )
-                }
+                _renderizar_detalhes_falha(
+                    teste,
+                    html_path=html_path,
+                )
+            }
             </tbody>
             """
         )
 
-    return "\n".join(
-        partes
-    )
+    return "\n".join(partes)
+
+
+def _traduzir_colunas(
+    cabecalho_html: str,
+) -> str:
+    """
+    Traduz os títulos das colunas no cabeçalho da tabela de resultados.
+    """
+    for original, traducao in _COLUNAS.items():
+        cabecalho_html = cabecalho_html.replace(
+            f">{original}</th>",
+            f">{traducao}</th>",
+        )
+
+    return cabecalho_html
 
 
 def _materializar_report_para_pdf(
@@ -390,15 +369,11 @@ def _materializar_report_para_pdf(
     O WeasyPrint não executa JavaScript. Sem esta etapa, os detalhes
     de falha e os screenshots não são criados no DOM usado pelo PDF.
     """
-    data = _extrair_dados_pytest_html(
-        html_text
-    )
+    data = _extrair_dados_pytest_html(html_text)
 
-    resultados = (
-        _renderizar_resultados_estaticos(
-            data,
-            html_path=html_path,
-        )
+    resultados = _renderizar_resultados_estaticos(
+        data,
+        html_path=html_path,
     )
 
     pattern = re.compile(
@@ -409,19 +384,14 @@ def _materializar_report_para_pdf(
         flags=re.DOTALL,
     )
 
-    if not pattern.search(
-        html_text
-    ):
+    if not pattern.search(html_text):
         raise ValueError(
-            "A tabela #results-table não foi encontrada "
-            "no relatório."
+            "A tabela #results-table não foi encontrada no relatório."
         )
 
     html_text = pattern.sub(
         lambda match: (
-            match.group(1)
-            + resultados
-            + match.group(3)
+            _traduzir_colunas(match.group(1)) + resultados + match.group(3)
         ),
         html_text,
         count=1,
@@ -455,19 +425,13 @@ def exportar_report_pdf(
 
     O HTML original não é alterado.
     """
-    pdf_path = html_path.with_suffix(
-        ".pdf"
-    )
+    pdf_path = html_path.with_suffix(".pdf")
 
-    html_original = html_path.read_text(
-        encoding="utf-8"
-    )
+    html_original = html_path.read_text(encoding="utf-8")
 
-    html_para_pdf = (
-        _materializar_report_para_pdf(
-            html_original,
-            html_path=html_path,
-        )
+    html_para_pdf = _materializar_report_para_pdf(
+        html_original,
+        html_path=html_path,
     )
 
     stylesheets = []
@@ -481,9 +445,7 @@ def exportar_report_pdf(
 
     HTML(
         string=html_para_pdf,
-        base_url=str(
-            PROJECT_ROOT
-        ),
+        base_url=str(PROJECT_ROOT),
         media_type="screen",
     ).write_pdf(
         target=pdf_path,
@@ -494,22 +456,13 @@ def exportar_report_pdf(
 
 
 def main() -> None:
-    html_path = (
-        obter_ultimo_report_html()
-    )
+    html_path = obter_ultimo_report_html()
 
-    print(
-        f"Exportando relatório: "
-        f"{html_path.name}"
-    )
+    print(f"Exportando relatório: {html_path.name}")
 
-    pdf_path = exportar_report_pdf(
-        html_path
-    )
+    pdf_path = exportar_report_pdf(html_path)
 
-    print(
-        f"PDF gerado: {pdf_path}"
-    )
+    print(f"PDF gerado: {pdf_path}")
 
 
 if __name__ == "__main__":

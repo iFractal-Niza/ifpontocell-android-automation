@@ -5,7 +5,7 @@
 @page {
     size: A4 landscape;
     margin: 7mm;
-    background: #0b1117;
+    background: #f4f4f4;
 }
 
 html,
@@ -14,8 +14,8 @@ body,
     min-width: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: #0b1117 !important;
-    color: #dde7e8 !important;
+    background: var(--bg-base) !important;
+    color: var(--text-secondary) !important;
     font-size: 9px !important;
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
@@ -24,6 +24,7 @@ body,
 
 /* === Elementos apenas interativos === */
 
+.qa-theme-toggle,
 button,
 .controls,
 .run-count,
@@ -47,14 +48,9 @@ body > p:first-of-type {
     width: 100% !important;
     margin: 0 0 4mm !important;
     padding: 4mm !important;
-    border: 1px solid #24313c !important;
+    border: 1px solid var(--border) !important;
     border-radius: 4mm !important;
-    background:
-        linear-gradient(
-            180deg,
-            #131b22 0%,
-            #10171d 100%
-        ) !important;
+    background: var(--bg-surface) !important;
     box-shadow: none !important;
     break-inside: auto !important;
 }
@@ -73,9 +69,94 @@ body > p:first-of-type {
     font-size: 8px !important;
 }
 
+/* Largura para a descrição mais longa do status em uma linha. */
+
 .qa-dashboard-status {
-    min-width: 48mm !important;
+    min-width: 80mm !important;
     padding: 2.5mm 3mm !important;
+}
+
+/* O WeasyPrint desenha duas vezes (uma "sombra" deslocada) o fundo e a
+   borda de um <span> que é item de flex/grid. Como bloco, desenha uma
+   vez só. */
+
+.qa-dashboard .qa-status,
+.qa-flow-badge,
+.qa-flow-meta-item {
+    display: block !important;
+}
+
+/* O status fica em bloco comum (não flex) para o rótulo ter a largura
+   do próprio texto. */
+
+.qa-dashboard-status > div {
+    display: block !important;
+}
+
+.qa-dashboard .qa-status {
+    display: inline-block !important;
+    margin-bottom: 1mm !important;
+    white-space: nowrap !important;
+}
+
+/* A descrição em duas linhas encostava na borda da caixa do status. */
+
+.qa-dashboard-status small {
+    display: block !important;
+    max-width: none !important;
+    white-space: nowrap !important;
+}
+
+/* O gap do grid do resumo não é respeitado: o ícone encostava no texto. */
+
+.qa-execution-alert-icon {
+    margin-right: 2mm !important;
+}
+
+.qa-context {
+    gap: 1.6mm !important;
+    margin-bottom: 2mm !important;
+}
+
+.qa-context-item {
+    padding: 1.2mm 2.4mm !important;
+}
+
+.qa-context-label {
+    font-size: 6.5px !important;
+}
+
+.qa-context-item strong {
+    font-size: 8.5px !important;
+}
+
+.qa-caveat-item {
+    margin-bottom: 1.6mm !important;
+    padding: 1.8mm 3mm !important;
+    break-inside: avoid !important;
+}
+
+.qa-caveat-flow {
+    font-size: 6.5px !important;
+}
+
+.qa-caveat-test strong {
+    font-size: 9px !important;
+}
+
+.qa-caveat-item p {
+    margin-top: 0.8mm !important;
+    font-size: 8px !important;
+}
+
+.qa-evidence-tag {
+    display: block !important;
+    color: var(--teal) !important;
+    font-size: 7.5px !important;
+}
+
+.qa-test-path {
+    font-size: 6.8px !important;
 }
 
 .qa-execution-alert {
@@ -153,8 +234,11 @@ body > p:first-of-type {
     break-inside: avoid !important;
 }
 
+/* 34%: cabe o nome de fluxo mais longo ao lado do selo mais longo
+   ("ASSINATURA DO ESPELHO" + "APROVADO COM RESSALVAS"). */
+
 .qa-flow-main {
-    flex: 0 0 25% !important;
+    flex: 0 0 34% !important;
     min-width: 0 !important;
 }
 
@@ -215,8 +299,8 @@ body > p:first-of-type {
     margin: 0 !important;
     table-layout: fixed !important;
     border-collapse: collapse !important;
-    background: #131b22 !important;
-    border: 1px solid #24313c !important;
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border) !important;
     font-size: 8px !important;
 }
 
@@ -227,15 +311,15 @@ body > p:first-of-type {
 #results-table th,
 #results-table td {
     padding: 2mm !important;
-    border: 1px solid #24313c !important;
-    background: #131b22 !important;
-    color: #dde7e8 !important;
+    border: 1px solid var(--border) !important;
+    background: var(--bg-surface) !important;
+    color: var(--text-secondary) !important;
     vertical-align: top !important;
 }
 
 #results-table th {
-    background: #1d2d35 !important;
-    color: #79b7bb !important;
+    background: var(--table-head-bg) !important;
+    color: var(--table-head-text) !important;
     font-weight: 700 !important;
 }
 
@@ -271,19 +355,19 @@ body > p:first-of-type {
 .failed .col-result,
 .error .col-result,
 .xpassed .col-result {
-    color: #c48a86 !important;
+    color: var(--red) !important;
     font-weight: 800 !important;
 }
 
 .passed .col-result {
-    color: #8fbe99 !important;
+    color: var(--green) !important;
     font-weight: 800 !important;
 }
 
 .skipped .col-result,
 .xfailed .col-result,
 .rerun .col-result {
-    color: #c9b07a !important;
+    color: var(--amber) !important;
     font-weight: 800 !important;
 }
 
@@ -292,7 +376,7 @@ body > p:first-of-type {
 
 .pdf-extras-row td {
     padding: 3mm !important;
-    background: #0f171e !important;
+    background: var(--bg-surface-alt) !important;
 }
 
 .pdf-failure-detail {
@@ -312,7 +396,7 @@ body > p:first-of-type {
 .pdf-detail-title {
     display: block !important;
     margin-bottom: 1.5mm !important;
-    color: #79b7bb !important;
+    color: var(--teal) !important;
     font-size: 7px !important;
     font-weight: 800 !important;
     letter-spacing: 0.4px !important;
@@ -323,10 +407,10 @@ body > p:first-of-type {
     width: 100% !important;
     margin: 0 !important;
     padding: 2.5mm !important;
-    border: 1px solid #24313c !important;
+    border: 1px solid var(--border) !important;
     border-radius: 2mm !important;
-    background: #e9ecee !important;
-    color: #b74a43 !important;
+    background: var(--red-soft) !important;
+    color: var(--red-dark) !important;
     font-family:
         "Courier New",
         Courier,
@@ -341,7 +425,7 @@ body > p:first-of-type {
 .pdf-html-reference {
     display: block !important;
     margin-top: 2mm !important;
-    color: #7f9199 !important;
+    color: var(--text-muted) !important;
     font-size: 6.8px !important;
 }
 
@@ -360,13 +444,13 @@ body > p:first-of-type {
     max-width: 100% !important;
     max-height: 70mm !important;
     margin: 0 auto !important;
-    border: 1px solid #71808b !important;
+    border: 1px solid var(--border) !important;
     object-fit: contain !important;
 }
 
 .pdf-media-panel figcaption {
     margin-top: 1.5mm !important;
-    color: #aab7bd !important;
+    color: var(--text-muted) !important;
     font-size: 7px !important;
 }
 
@@ -385,6 +469,15 @@ body > p:first-of-type {
 /* === Links === */
 
 a {
-    color: #79b7bb !important;
+    color: var(--teal) !important;
     text-decoration: none !important;
+}
+
+.qa-caveat-item p.qa-demorado-tempo {
+    margin-top: 0 !important;
+    font-size: 9px !important;
+}
+
+.qa-demorado-nota {
+    font-size: 7px !important;
 }

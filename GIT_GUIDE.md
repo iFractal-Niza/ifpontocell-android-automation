@@ -51,7 +51,7 @@ git diff desenvolvimento..feature/nome-da-feature
 ```
 
 - [ ] Testes passaram
-- [ ] Sem arquivo sensível (env.yaml, devices.yaml)
+- [ ] Sem arquivo sensível (config/env.*.yaml, test_data.yaml, devices.yaml)
 - [ ] Sem relatório ou cache versionado
 - [ ] Sem código de debug
 - [ ] Branch limpa

@@ -7,17 +7,31 @@ __pycache__/
 *$py.class
 
 # === Configurações locais ===
-# env.yaml contém credenciais e não deve ser versionado.
-# env.example.yaml deve permanecer versionado como template.
+# Um env por aparelho (config/env.emulator.yaml, config/env.real.yaml),
+# com credenciais: fora do git. Os templates (*.example.yaml) seguem
+# versionados. config/env.yaml é o formato antigo (um arquivo só).
 config/env.yaml
+config/env.*.yaml
+!config/env.*.example.yaml
 config/test_data.yaml
 config/devices.yaml
+
+# === Claude Code ===
+# settings.json é versionado (bloqueia leitura dos env com credenciais);
+# settings.local.json guarda preferências pessoais.
+.claude/settings.local.json
+
+# === Anotações locais ===
+# Checkpoint pessoal de continuidade; o registro compartilhado fica em
+# DECISOES.md.
+ONDE_PAREI.md
 
 # === Pytest e relatórios ===
 .pytest_cache/
 .cache/
-# reports/ é gerado a cada execução, mas reports/assets/ guarda
-# estilos versionados (style.css, print.css) usados no HTML/PDF.
+# reports/ é gerado a cada execução, mas reports/assets/ guarda os
+# arquivos versionados embutidos no report: estilos do HTML e do PDF
+# (style.css, print.css) e o script da página (report.js).
 reports/*
 !reports/assets/
 

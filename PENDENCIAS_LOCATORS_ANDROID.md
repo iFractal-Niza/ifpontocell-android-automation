@@ -63,6 +63,25 @@ switch_confirmacao_foto
 
 O fluxo de registro sem foto atual configura `sem_foto=True` pela API e usa `btn_confirmar_sem_foto`, então esse locator não bloqueia o fluxo principal de marcação.
 
+## Provisórios da refatoração para a arquitetura do iOS (2026-10-03)
+
+Locators que vieram com a lógica nova do iOS e não existem no projeto Android de referência. Estão por texto ou pelo diálogo genérico do app; confirmar no Inspector:
+
+| Page / constante | Provisório | Usado em |
+|---|---|---|
+| `HomePage.POPUP_ESPELHO_PENDENTE_*` | texto `Assinatura do espelho` / `DEPOIS` / `ASSINAR` | popups ao abrir o app (Home) |
+| `HomePage.POPUP_FORA_GEO_*` | texto `Você está fora da geo localização` / `NÃO` / `SIM` | registro de ponto fora da geo |
+| `ZerarDadosPage.DIALOGO` / `BOTAO_NAO` / `BOTAO_SIM` | `linear_dialog_geral` + `btnEsquerdo` / `btnDireito` | recomeçar o primeiro acesso (corrente onboarding → e2e) |
+| `MenuLateralPage` — `ESTADO DO HUMOR` | texto (sem id técnico) | menu lateral |
+| `VoltarParaHomeMixin.BOTAO_VOLTAR_TEXTO` | texto `VOLTAR`, senão `driver.back()` | telas abertas pelo menu |
+| `AlertaAppMixin` | texto da mensagem + `OK` | alertas do app |
+| `AutorizacaoPage.MODAL_APARELHO_INATIVO` / `BOTAO_OK_MODAL` | texto `Aparelho inativo` / `OK` | só se a tela de autorização existir |
+
+Também ajudariam (não bloqueiam):
+
+- **Onboarding:** um id/texto próprio da tela "informações importantes" — hoje o botão tem o mesmo id do boas-vindas (`btn_confirmar_informacao`), e a repetição de toques do iOS não acontece (DECISOES.md).
+- **PIN:** textos ou ids próprios de "Crie uma senha" e "Repita a senha"; e confirmar que `relative_first_access` só aparece no **desbloqueio** (é ele que separa o desbloqueio da criação do PIN em `flows.etapa_do_primeiro_acesso`).
+
 ## Fallbacks por texto — funcionais, mas vale trocar por resource-id
 
 O projeto Android de referência não continha IDs técnicos para estes componentes. A refatoração deixou fallback por texto:

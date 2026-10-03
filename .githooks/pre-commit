@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+#
+# Roda o ruff (lint + formatação) nos arquivos Python do commit e, em
+# seguida, os testes unitários.
+# Ativação, uma vez por clone: make git-hooks
+# Pular em um commit pontual (ex.: rascunho): git commit --no-verify
+
+set -euo pipefail
+
+RUFF="venv/bin/ruff"
+
+# Só os .py adicionados/alterados neste commit (removidos não entram).
+arquivos=()
+while IFS= read -r arquivo; do
+  arquivos+=("$arquivo")
+done < <(git diff --cached --name-only --diff-filter=ACMR -- '*.py')
+
+if [ ${#arquivos[@]} -eq 0 ]; then
+  exit 0
+fi
+
+if [ ! -x "$RUFF" ]; then
+  echo "pre-commit: ruff não encontrado em $RUFF; lint ignorado."
+  echo "Rode 'make install' para instalar."
+  exit 0
+fi
+
+if ! "$RUFF" check "${arquivos[@]}" || ! "$RUFF" format --check "${arquivos[@]}"; then
+  echo ""
+  echo "pre-commit: lint falhou. Rode 'make format', revise e adicione de novo."
+  echo "Para commitar mesmo assim: git commit --no-verify"
+  exit 1
+fi
+
+# Testes unitários (~1s, sem simulador). Mesmo comando do 'make unit'.
+if ! venv/bin/python -m pytest tests/unit -q --no-header \
+     -p no:observability.pytest_report; then
+  echo ""
+  echo "pre-commit: testes unitários falharam. Rode 'make unit' para ver."
+  echo "Para commitar mesmo assim: git commit --no-verify"
+  exit 1
+fi

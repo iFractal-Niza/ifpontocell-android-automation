@@ -14,7 +14,11 @@ from config.timeouts import (
     FLOW_TIMEOUT,
     OPTIONAL_POPUP_TIMEOUT,
 )
-from pages.android_locators import android_id, android_text, android_text_contains
+from pages.android_locators import (
+    android_id,
+    android_text,
+    android_text_contains,
+)
 from pages.base_page import BasePage
 
 
@@ -26,8 +30,11 @@ class HomePage(BasePage):
     POPUP_POLL_INTERVAL = 0.2
 
     # Mantém uma pequena janela de estabilidade antes de considerar
-    # a Home definitivamente livre. Alguns popups, como "Opinião",
-    # podem surgir alguns segundos após o fechamento de outro modal.
+    # a Home definitivamente livre: um popup pode surgir logo após o
+    # fechamento de outro modal. No iOS caiu para 1,5s porque "Opinião"
+    # e o alerta de atualização são suprimidos por launch argument; no
+    # Android não há equivalente (ver DECISOES.md, "Popups oportunistas"),
+    # então eles ainda podem aparecer e a janela continua em 4s.
     HOME_STABILITY_TIMEOUT = 4.0
 
     # FLOW_TIMEOUT (8s) é curto demais para loops que podem precisar
@@ -63,8 +70,33 @@ class HomePage(BasePage):
     POPUP_MELHORIA_TITULO = android_text_contains("O que podemos melhorar")
     POPUP_MELHORIA_BOTAO_DEPOIS = android_text("DEPOIS")
 
+    # === Popup de espelho pendente ===
+    # Aparece ao abrir o app enquanto houver espelho de ponto pendente de
+    # assinatura (DEPOIS / ASSINAR). Identificado pelo título, que é fixo
+    # (a mensagem muda com a quantidade de espelhos). Como no iOS, o
+    # DEPOIS tem o mesmo texto dos popups de lembrete e melhoria.
+    # TODO: provisório por texto; confirmar no Inspector
+    # (PENDENCIAS_LOCATORS_ANDROID.md).
+    POPUP_ESPELHO_PENDENTE_MENSAGEM = android_text("Assinatura do espelho")
+    POPUP_ESPELHO_PENDENTE_BOTAO_DEPOIS = android_text("DEPOIS")
+    POPUP_ESPELHO_PENDENTE_BOTAO_ASSINAR = android_text("ASSINAR")
+
+    # === Aviso de fora da geo delimitação ===
+    # Aparece depois do SIM da confirmação do registro, com a localização
+    # fora da área cadastrada. NÃO volta à Home sem registrar; SIM segue
+    # com o registro.
+    # TODO: provisório por texto; confirmar no Inspector
+    # (PENDENCIAS_LOCATORS_ANDROID.md).
+    POPUP_FORA_GEO_MENSAGEM = android_text_contains(
+        "Você está fora da geo localização"
+    )
+    POPUP_FORA_GEO_BOTAO_NAO = android_text("NÃO")
+    POPUP_FORA_GEO_BOTAO_SIM = android_text("SIM")
+
     # === Registro de ponto Android ===
-    CONFIRMACAO_PONTO_TITULO = android_id("linear_dialog_geral", "relativeDialogPopUp")
+    CONFIRMACAO_PONTO_TITULO = android_id(
+        "linear_dialog_geral", "relativeDialogPopUp"
+    )
     CONFIRMACAO_PONTO_BOTAO_NAO = android_id("btnEsquerdo")
     CONFIRMACAO_PONTO_BOTAO_SIM = android_id("btnDireito")
     CENTRO_CUSTO = android_id("linearCentroCusto")
@@ -109,14 +141,9 @@ class HomePage(BasePage):
             nonlocal ultimo_erro
 
             try:
-                elemento = self.driver.find_element(
-                    *locator
-                )
+                elemento = self.driver.find_element(*locator)
 
-                if (
-                    not elemento.is_displayed()
-                    or not elemento.is_enabled()
-                ):
+                if not elemento.is_displayed() or not elemento.is_enabled():
                     return False
 
                 elemento.click()
@@ -134,9 +161,7 @@ class HomePage(BasePage):
                 self.driver,
                 timeout,
                 poll_frequency=self.POPUP_POLL_INTERVAL,
-                ignored_exceptions=(
-                    StaleElementReferenceException,
-                ),
+                ignored_exceptions=(StaleElementReferenceException,),
             ).until(
                 clicar_elemento_atualizado,
                 message=(
@@ -166,6 +191,10 @@ class HomePage(BasePage):
 
         O botão Registrar pode estar disponível apenas pelo label
         durante a reconstrução inicial da árvore do UiAutomator2.
+
+        A aba PONTO não entra: a barra de abas aparece também em outras
+        telas (ex.: lista da Assinatura do Espelho), e a Home era dada
+        como aberta fora dela.
         """
         if self._esta_visivel_imediatamente(
             self.POPUP_ATUALIZACAO_ALERTA,
@@ -182,8 +211,6 @@ class HomePage(BasePage):
                 self.BOTAO_ABRIR_TOTALIZADOR,
                 self.BOTAO_DIA_ANTERIOR,
                 self.BOTAO_PROXIMO_DIA,
-                self.ABA_PONTO,
-                self.ABA_PONTO_FALLBACK,
             )
         )
 
@@ -215,9 +242,7 @@ class HomePage(BasePage):
         timeout: float | None = None,
     ) -> bool:
         timeout_resolvido = (
-            self.OPTIONAL_POPUP_TIMEOUT
-            if timeout is None
-            else timeout
+            self.OPTIONAL_POPUP_TIMEOUT if timeout is None else timeout
         )
 
         is_visible = self._is_visible(
@@ -264,9 +289,7 @@ class HomePage(BasePage):
         do switch nos Ajustes do Aplicativo.
         """
         timeout_resolvido = (
-            self.DEFAULT_TIMEOUT
-            if timeout is None
-            else timeout
+            self.DEFAULT_TIMEOUT if timeout is None else timeout
         )
 
         try:
@@ -294,8 +317,7 @@ class HomePage(BasePage):
 
         if not popup_fechou:
             self._log_warning(
-                "Popup de lembrete permaneceu visível "
-                "após selecionar ATIVAR",
+                "Popup de lembrete permaneceu visível após selecionar ATIVAR",
                 event="reminder_popup_still_visible_after_enable",
             )
 
@@ -388,8 +410,7 @@ class HomePage(BasePage):
 
         if not fechou:
             self._log_warning(
-                "Popup de opinião permaneceu visível após "
-                "selecionar 'NÃO'",
+                "Popup de opinião permaneceu visível após selecionar 'NÃO'",
                 event="opinion_popup_still_visible",
             )
 
@@ -418,6 +439,90 @@ class HomePage(BasePage):
             timeout=self.SHORT_TIMEOUT,
             element_name="botao_depois_popup_melhoria",
         )
+
+    # === Popup de espelho pendente ===
+    def popup_espelho_pendente_esta_visivel(
+        self,
+        timeout: float | None = None,
+    ) -> bool:
+        if timeout is None:
+            is_visible = self._esta_visivel_imediatamente(
+                self.POPUP_ESPELHO_PENDENTE_MENSAGEM,
+            )
+        else:
+            is_visible = self._is_visible(
+                self.POPUP_ESPELHO_PENDENTE_MENSAGEM,
+                timeout=timeout,
+            )
+
+        self._log_info(
+            "Verificação do popup de espelho pendente executada",
+            event="pending_mirror_popup_checked",
+            status="visible" if is_visible else "not_visible",
+        )
+
+        return is_visible
+
+    def tratar_popup_espelho_pendente_se_existir(self) -> bool:
+        """
+        Adia a assinatura (DEPOIS): mantém o espelho pendente, sem
+        consumir a massa de teste.
+        """
+        if not self.popup_espelho_pendente_esta_visivel():
+            return False
+
+        tocou = self._dismiss_if_present(
+            self.POPUP_ESPELHO_PENDENTE_BOTAO_DEPOIS,
+            timeout=self.SHORT_TIMEOUT,
+            element_name="botao_depois_popup_espelho_pendente",
+        )
+
+        if not tocou:
+            return False
+
+        fechou = self._wait_for_absence(
+            self.POPUP_ESPELHO_PENDENTE_MENSAGEM,
+            timeout=self.SHORT_TIMEOUT,
+        )
+
+        if not fechou:
+            self._log_warning(
+                "Popup de espelho pendente permaneceu visível após DEPOIS",
+                event="pending_mirror_popup_still_visible",
+            )
+
+        return True
+
+    def aceitar_popup_espelho_pendente(self) -> None:
+        """
+        Toca em ASSINAR no popup (redireciona para a Assinatura do
+        Espelho). Não assina nada por si só.
+        """
+        self._click(
+            self.POPUP_ESPELHO_PENDENTE_BOTAO_ASSINAR,
+            timeout=self.DEFAULT_TIMEOUT,
+            element_name="botao_assinar_popup_espelho_pendente",
+        )
+
+    def dispensar_popups_sobrepostos(self) -> None:
+        """
+        Dispensa Opinião, Melhoria e espelho pendente (DEPOIS),
+        encadeados, com checagem imediata.
+
+        Não espera a Home: serve para limpar a tela antes de sondar o
+        estado atual (unlock ou Home). Limitado por
+        POPUP_RESOLUTION_TIMEOUT porque os tratar_* retornam True após
+        o toque mesmo quando o popup não fecha; sem limite, um toque
+        sem efeito prenderia o laço indefinidamente.
+        """
+        limite = monotonic() + self.POPUP_RESOLUTION_TIMEOUT
+
+        while monotonic() < limite and (
+            self.tratar_popup_espelho_pendente_se_existir()
+            or self.tratar_popup_opiniao_se_existir()
+            or self.tratar_popup_melhoria_se_existir()
+        ):
+            sleep(self.POPUP_POLL_INTERVAL)
 
     # === Popup de atualização de versão ===
     def popup_atualizacao_esta_visivel(self) -> bool:
@@ -497,7 +602,8 @@ class HomePage(BasePage):
             )
 
         return (
-            self.tratar_popup_opiniao_se_existir()
+            self.tratar_popup_espelho_pendente_se_existir()
+            or self.tratar_popup_opiniao_se_existir()
             or self.tratar_popup_melhoria_se_existir()
         )
 
@@ -534,11 +640,8 @@ class HomePage(BasePage):
             # Quando o lembrete deve permanecer disponível para o
             # cenário atual, não aguardamos a janela de estabilidade
             # da Home: o modal foi preservado intencionalmente.
-            if (
-                not tratar_lembrete
-                and self._esta_visivel_imediatamente(
-                    self.BOTAO_LEMBRETE_ATIVAR,
-                )
+            if not tratar_lembrete and self._esta_visivel_imediatamente(
+                self.BOTAO_LEMBRETE_ATIVAR,
             ):
                 break
 
@@ -564,14 +667,37 @@ class HomePage(BasePage):
         )
 
     # === Validação da Home ===
+    def _home_pronta_dispensando_popups(self) -> bool:
+        """
+        Uma sondagem da Home, dispensando antes Opinião, Melhoria e o
+        espelho pendente (DEPOIS).
+
+        Esses popups surgem a qualquer momento (inclusive ao voltar de
+        outra tela) e cobrem a Home, fazendo os locators de referência
+        ficarem invisíveis. O lembrete não é tocado: há cenários que o
+        validam de propósito.
+        """
+        (
+            self.tratar_popup_espelho_pendente_se_existir()
+            or self.tratar_popup_opiniao_se_existir()
+            or self.tratar_popup_melhoria_se_existir()
+        )
+
+        return self._home_esta_pronta_imediatamente()
+
     def esta_na_home(
         self,
         timeout: float | None = None,
     ) -> bool:
+        """
+        Indica se a Home está disponível dentro do timeout.
+
+        Dispensa Opinião, Melhoria e espelho pendente durante a espera:
+        um popup oportunista
+        cobrindo a Home não significa que o app saiu dela.
+        """
         timeout_resolvido = (
-            self.DEFAULT_TIMEOUT
-            if timeout is None
-            else timeout
+            self.DEFAULT_TIMEOUT if timeout is None else timeout
         )
 
         try:
@@ -580,7 +706,7 @@ class HomePage(BasePage):
                 timeout_resolvido,
                 poll_frequency=self.POPUP_POLL_INTERVAL,
             ).until(
-                lambda _: self._home_esta_pronta_imediatamente(),
+                lambda _: self._home_pronta_dispensando_popups(),
                 message=(
                     "Nenhum locator de referência da Home ficou "
                     f"visível em {timeout_resolvido}s."
@@ -735,8 +861,13 @@ class HomePage(BasePage):
 
     def _clicar_registrar_tratando_popups(self) -> None:
         """
-        Garante a aba Ponto e clica em Registrar, tratando popups
-        que possam interceptar o fluxo nesse meio-tempo.
+        Abre a confirmação do registro, tratando popups que possam
+        interceptar o fluxo nesse meio-tempo.
+
+        A aba Ponto só é acionada quando Registrar não está visível:
+        clicá-la sempre, antes de olhar a tela, repetia a abertura do
+        registro (o toque em "PONTO" pode já abrir a confirmação, e a
+        iteração seguinte clicava de novo).
         """
         limite = monotonic() + self.POPUP_RESOLUTION_TIMEOUT
 
@@ -747,7 +878,8 @@ class HomePage(BasePage):
                 sleep(self.POPUP_POLL_INTERVAL)
                 continue
 
-            self.clicar_tab_ponto()
+            if self._confirmacao_registro_visivel_imediatamente():
+                return
 
             if self._esta_visivel_imediatamente(
                 self.BOTAO_REGISTRAR,
@@ -756,6 +888,8 @@ class HomePage(BasePage):
             ):
                 self.clicar_registrar()
                 return
+
+            self.clicar_tab_ponto()
 
             sleep(self.POPUP_POLL_INTERVAL)
 
@@ -771,9 +905,7 @@ class HomePage(BasePage):
         timeout: float | None = None,
     ) -> bool:
         timeout_resolvido = (
-            self.DEFAULT_TIMEOUT
-            if timeout is None
-            else timeout
+            self.DEFAULT_TIMEOUT if timeout is None else timeout
         )
 
         is_visible = self._is_visible(
@@ -794,21 +926,46 @@ class HomePage(BasePage):
 
         return is_visible
 
+    def _confirmacao_registro_visivel_imediatamente(self) -> bool:
+        return self._esta_visivel_imediatamente(
+            self.CONFIRMACAO_PONTO_TITULO,
+        ) or self._esta_visivel_imediatamente(
+            self.CONFIRMACAO_PONTO_BOTAO_SIM,
+        )
+
     def _aguardar_confirmacao_registro_ponto(self) -> None:
         WebDriverWait(
             self.driver,
             FLOW_TIMEOUT,
             poll_frequency=self.POPUP_POLL_INTERVAL,
-        ).until(
-            lambda _: (
-                self._esta_visivel_imediatamente(
-                    self.CONFIRMACAO_PONTO_TITULO,
-                )
-                or self._esta_visivel_imediatamente(
-                    self.CONFIRMACAO_PONTO_BOTAO_SIM,
-                )
-            )
-        )
+        ).until(lambda _: self._confirmacao_registro_visivel_imediatamente())
+
+    def _aguardar_resultado_do_registro(self, timeout: float) -> str | None:
+        """
+        Espera o que o app mostra depois do SIM da confirmação: a
+        mensagem de sucesso ("sucesso") ou o aviso de fora da geo
+        delimitação ("fora_geo"). None se nenhum aparecer no tempo.
+        """
+
+        def resultado(_):
+            if self._esta_visivel_imediatamente(
+                self.MENSAGEM_PONTO_REGISTRADO_SUCESSO
+            ):
+                return "sucesso"
+
+            if self._esta_visivel_imediatamente(self.POPUP_FORA_GEO_MENSAGEM):
+                return "fora_geo"
+
+            return False
+
+        try:
+            return WebDriverWait(
+                self.driver,
+                timeout,
+                poll_frequency=self.POPUP_POLL_INTERVAL,
+            ).until(resultado)
+        except TimeoutException:
+            return None
 
     def _aguardar_fechamento_confirmacao_ponto(self) -> None:
         WebDriverWait(
@@ -919,21 +1076,102 @@ class HomePage(BasePage):
             event="point_registration_cancelled",
         )
 
+    # === Fora da geo delimitação ===
+    def popup_fora_geo_esta_visivel(
+        self, timeout: float | None = None
+    ) -> bool:
+        return self._is_visible(
+            self.POPUP_FORA_GEO_MENSAGEM,
+            timeout=self.DEFAULT_TIMEOUT if timeout is None else timeout,
+        )
+
+    def validar_aviso_fora_da_geo(self) -> None:
+        """
+        Depois do SIM da confirmação, espera o aviso de fora da geo
+        delimitação.
+
+        Falha com a causa se o app registrar sem avisar: a localização
+        aplicada estava dentro da área (ou a geo não está cadastrada
+        para o usuário).
+        """
+        resultado = self._aguardar_resultado_do_registro(self.LONG_TIMEOUT)
+
+        if resultado == "sucesso":
+            raise AssertionError(
+                "O app registrou o ponto sem avisar que a localização "
+                "está fora da geo delimitação. Confira as coordenadas "
+                "ANDROID_GEO_FORA_* e se a geo está cadastrada para o usuário "
+                "de teste. Atenção: este registro ficou gravado."
+            )
+
+        assert resultado == "fora_geo", (
+            "Nem o aviso de fora da geo nem a mensagem de sucesso "
+            "apareceram após confirmar o registro."
+        )
+
+        self._log_info(
+            "Aviso de fora da geo delimitação exibido",
+            event="point_outside_geofence_warning",
+        )
+
+    def cancelar_registro_fora_da_geo(self) -> None:
+        """Responde NÃO ao aviso de fora da geo e espera ele fechar."""
+        self._click(
+            self.POPUP_FORA_GEO_BOTAO_NAO,
+            timeout=self.DEFAULT_TIMEOUT,
+            element_name="botao_nao_fora_geo",
+        )
+
+        assert self._wait_for_absence(
+            self.POPUP_FORA_GEO_MENSAGEM,
+            timeout=self.DEFAULT_TIMEOUT,
+        ), "O aviso de fora da geo não fechou após tocar em NÃO."
+
+        self._log_info(
+            "Registro fora da geo cancelado",
+            event="point_outside_geofence_cancelled",
+        )
+
+    def confirmar_registro_fora_da_geo(self) -> None:
+        """
+        Responde SIM ao aviso de fora da geo (registra mesmo fora da
+        área) e espera o aviso fechar.
+        """
+        self._click(
+            self.POPUP_FORA_GEO_BOTAO_SIM,
+            timeout=self.DEFAULT_TIMEOUT,
+            element_name="botao_sim_fora_geo",
+        )
+
+        assert self._wait_for_absence(
+            self.POPUP_FORA_GEO_MENSAGEM,
+            timeout=self.DEFAULT_TIMEOUT,
+        ), "O aviso de fora da geo não fechou após tocar em SIM."
+
+        self._log_info(
+            "Registro fora da geo confirmado",
+            event="point_outside_geofence_confirmed",
+        )
+
     # === Sucesso do registro ===
     def validar_ponto_registrado_com_sucesso(
         self,
         timeout: float | None = None,
     ) -> bool:
-        timeout_resolvido = (
-            self.LONG_TIMEOUT
-            if timeout is None
-            else timeout
-        )
+        timeout_resolvido = self.LONG_TIMEOUT if timeout is None else timeout
 
-        is_visible = self._is_visible(
-            self.MENSAGEM_PONTO_REGISTRADO_SUCESSO,
-            timeout=timeout_resolvido,
-        )
+        resultado = self._aguardar_resultado_do_registro(timeout_resolvido)
+
+        if resultado == "fora_geo":
+            raise AssertionError(
+                "O app avisou que a localização está fora da geo "
+                "delimitação ao confirmar o registro. A coordenada usada "
+                "deve estar dentro da área cadastrada para o usuário: "
+                "ANDROID_LOCATION_* (registro comum) ou ANDROID_GEO_DENTRO_* "
+                "(teste de geo) no env.<device>.yaml."
+            )
+
+        is_visible = resultado == "sucesso"
 
         self._log_info(
             "Validação do registro de ponto executada",
@@ -954,7 +1192,11 @@ class HomePage(BasePage):
         match_completo = self.REGEX_DATA_HORA_REGISTRO.search(texto)
         if match_completo:
             hora = match_completo.group(2)
-            formato = "%d/%m/%Y %H:%M:%S" if hora.count(":") == 2 else "%d/%m/%Y %H:%M"
+            formato = (
+                "%d/%m/%Y %H:%M:%S"
+                if hora.count(":") == 2
+                else "%d/%m/%Y %H:%M"
+            )
             return datetime.strptime(
                 f"{match_completo.group(1)} {hora}",
                 formato,
@@ -963,8 +1205,8 @@ class HomePage(BasePage):
         match_hora = self.REGEX_HORA_REGISTRO.search(texto)
         if not match_hora:
             raise AssertionError(
-                "Não foi possível interpretar a hora exibida no registro Android: "
-                f"'{texto}'."
+                "Não foi possível interpretar a hora exibida no registro "
+                f"Android: '{texto}'."
             )
 
         agora = datetime.now()
@@ -988,9 +1230,7 @@ class HomePage(BasePage):
             (datetime.now() - hora_registrada).total_seconds()
         )
 
-        dentro_da_tolerancia = (
-            diferenca_segundos <= tolerancia_segundos
-        )
+        dentro_da_tolerancia = diferenca_segundos <= tolerancia_segundos
 
         self._log_info(
             "Validação da hora do registro executada",
@@ -1024,20 +1264,4 @@ class HomePage(BasePage):
         self._log_info(
             "Registro real de ponto executado",
             event="point_registration_finished",
-        )
-
-    def validar_fluxo_registro_ponto(self) -> None:
-        """
-        Mantido por compatibilidade com chamadas existentes.
-        """
-        self.registrar_ponto()
-
-    def validar_fluxo_registrar(self) -> None:
-        self.validar_fluxo_registro_ponto()
-
-    # === Reset de estado ===
-    def resetar_estado_app(self) -> None:
-        raise NotImplementedError(
-            "Implementar o fluxo de resetar estado do app "
-            "com os locators reais de zerar dados."
         )

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./config/env.yaml)",
+      "Grep(./config/env.yaml)",
+      "Glob(./config/env.yaml)",
+      "Read(./config/env.emulator.yaml)",
+      "Grep(./config/env.emulator.yaml)",
+      "Glob(./config/env.emulator.yaml)",
+      "Read(./config/env.real.yaml)",
+      "Grep(./config/env.real.yaml)",
+      "Glob(./config/env.real.yaml)",
+      "Read(./app/**)",
+      "Grep(./app/**)",
+      "Glob(./app/**)"
+    ]
+  }
+}
