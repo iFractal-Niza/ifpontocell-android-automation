@@ -303,8 +303,10 @@ class MenuLateralPage(BaseMenuPage):
     AJUDA = "AJUDA"
     AJUSTES_APLICATIVO = "AJUSTES DO APLICATIVO"
     ASSINATURA_ESPELHO = "ASSINATURA DO ESPELHO"
-    COMUNICADOS = "COMUNICADOS"
-    ESTADO_HUMOR = "ESTADO DO HUMOR"
+    # Textos do Android (Inspector); no iOS: "COMUNICADOS" e
+    # "ESTADO DO HUMOR".
+    COMUNICADOS = "COMUNICADO"
+    ESTADO_HUMOR = "ESTADO DE HUMOR"
     FERIAS = "FÉRIAS"
     HOLERITE = "HOLERITE"
     INFORME_RENDIMENTOS = "INFORME DE RENDIMENTOS"
@@ -320,14 +322,15 @@ class MenuLateralPage(BaseMenuPage):
         INFORME_RENDIMENTOS,
     )
 
-    # texto exibido -> resource-id técnico (projeto Android de referência).
-    # ESTADO DO HUMOR ainda sem id: localizado pelo texto
-    # (PENDENCIAS_LOCATORS_ANDROID.md).
+    # texto exibido -> resource-id técnico. Confirmados no Inspector:
+    # ajuda, ajustes, assinatura do espelho, comunicado, estado de humor
+    # (férias, holerite e informe não apareceram para o usuário de teste).
     IDS_TECNICOS = {
         AJUDA: "menuItemEsquerdoAjuda",
         AJUSTES_APLICATIVO: "menuItemEsquerdoAjustes",
         ASSINATURA_ESPELHO: "menuItemEsquerdoAssinaturaEspelho",
         COMUNICADOS: "menuItemEsquerdoComunicado",
+        ESTADO_HUMOR: "menuItemEsquerdoEstadoHumor",
         FERIAS: "menuItemEsquerdoFerias",
         HOLERITE: "menuItemEsquerdoHolerite",
         INFORME_RENDIMENTOS: "menuItemEsquerdoInformeRendimento",

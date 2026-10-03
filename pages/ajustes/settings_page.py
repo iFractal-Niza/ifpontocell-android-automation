@@ -20,8 +20,9 @@ class SettingsPage(BasePage):
         return MenuLateralPage(self.driver)
 
     # === Tela de ajustes ===
-    # Confirmado no projeto Android de referência.
-    MARCADOR_TELA_AJUSTES = android_id("linearAjustes")
+    # Confirmado no Inspector (o linearAjustes do projeto de referência
+    # não existe na build atual).
+    MARCADOR_TELA_AJUSTES = android_id("header_ajustes")
 
     # === Configurações iniciais ===
     # PENDENTE: confirmar os resource-ids exatos no Appium Inspector
@@ -100,7 +101,7 @@ class SettingsPage(BasePage):
         timeout: float | None = None,
     ) -> bool:
         """
-        Valida a tela pelo container técnico dos Ajustes (linearAjustes),
+        Valida a tela pelo cabeçalho técnico dos Ajustes (header_ajustes),
         sem depender do título visual.
         """
         timeout_resolvido = self.LONG_TIMEOUT if timeout is None else timeout
