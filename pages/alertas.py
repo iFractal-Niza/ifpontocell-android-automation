@@ -31,7 +31,7 @@ class AlertaAppMixin:
     ) -> None:
         """
         Espera o alerta com a mensagem exata, toca OK e confere que
-        fechou.
+        fechou (ou que fechou sozinho, no Android, pela barra de tempo).
 
         Se aparecer outro alerta no lugar (ex.: erro), falha mostrando o
         texto dele, em vez de um timeout genérico. 'acao' descreve o que
@@ -53,9 +53,13 @@ class AlertaAppMixin:
                 )
             )
 
-        self._click(
+        # Particularidade do Android: alguns alertas (ex.: sucesso da
+        # troca de senha) têm uma barra de tempo e fecham sozinhos. Toca
+        # OK se ele ainda estiver na tela; em qualquer caso, o alerta
+        # precisa sumir.
+        tocou_ok = self._click_if_visible(
             self.ALERTA_BOTAO_OK,
-            timeout=self.DEFAULT_TIMEOUT,
+            timeout=self.SHORT_TIMEOUT,
             element_name="botao_ok_alerta",
         )
 
@@ -68,4 +72,5 @@ class AlertaAppMixin:
             "Alerta do app confirmado",
             event="app_alert_confirmed",
             mensagem=mensagem,
+            fechado_por="ok" if tocou_ok else "tempo",
         )

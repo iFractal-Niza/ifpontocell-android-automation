@@ -225,6 +225,19 @@ houver alerta, volta se ficar na tela e termina ao reconhecer a Home.
 
 ---
 
+## Alertas que fecham sozinhos
+
+**Data:** 2026-10-03
+
+No Android, o alerta de sucesso da troca de senha do sistema ("Senha
+alterada com sucesso.", mesmo texto do iOS) tem uma barra de tempo e
+fecha sozinho, além do OK. `AlertaAppMixin.confirmar_alerta` mantém a
+lógica do iOS (o alerta com a mensagem certa tem de aparecer e sumir),
+mas toca OK só se ele ainda estiver na tela: o clique do iOS esperava o
+OK e dava timeout quando o alerta já tinha fechado.
+
+---
+
 ## Plataforma: equivalentes Android
 
 **Data:** 2026-10-03
