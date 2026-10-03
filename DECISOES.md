@@ -219,6 +219,10 @@ pedir a senha atual. `AlterarPinPage.repeticao_divergente_recusada`
 aceita também essa volta; o CT030 continua dali (o `alterar_pin` já
 começa pela senha atual quando ela é pedida).
 
+Sucesso da troca: no Android, um pop-up rápido (sem botão) e o app vai
+direto para a Home. O `_concluir_alteracao` do iOS já cobre: toca OK se
+houver alerta, volta se ficar na tela e termina ao reconhecer a Home.
+
 ---
 
 ## Plataforma: equivalentes Android

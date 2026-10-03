@@ -188,7 +188,8 @@ class AlterarPinPage(AlterarSenhaBasePage):
         """
         Depois de repetir o novo PIN: confirma o alerta do app, se
         aparecer, e garante a volta à Home (voltando da tela, se o app
-        continuar nela).
+        continuar nela). No Android não há alerta com OK: um pop-up
+        rápido some sozinho e o app vai direto para a Home.
         """
         limite = monotonic() + self.LONG_TIMEOUT
         home = HomePage(self.driver)
