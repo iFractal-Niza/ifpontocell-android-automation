@@ -2,6 +2,25 @@
 
 A refatoração reutilizou os `resource-id` disponíveis no projeto Android de referência. Os itens abaixo **não existem naquele projeto** e precisam ser confirmados na build Android atual pelo Appium Inspector.
 
+## Telas trazidas do iOS — locators a capturar (2026-10-03)
+
+Testes CT010–CT033 vieram do iOS com a mesma lógica. Locators sem
+equivalente conhecido são `android_pendente("<nome>")`: nunca casam, e a
+falha mostra `PENDENTE_<nome>`. Os demais estão pelo texto do iOS
+(provisórios). XMLs a capturar, por tela:
+
+| Tela (make) | Capturar | Pendentes no código |
+|---|---|---|
+| Aba STATUS (`status`) | lista com uma marcação; a célula expandida/comprovante | `status_lista`, `status_marcacao` (item), `status_lblStatus`, `status_prgSincronizacao`, `status_btnComprovante`; **leitura do dia/código** (no iOS vem do nome da célula) |
+| Tela Ponto (`ponto`) | dia com marcação registrada; totais abertos | `MARCACOES` (texto " horas"), `PRIMEIRO_ITEM_TOTAIS` e itens dos totais (assumido `textview_valor_ponto`) |
+| Registro com geo (`registro-geo`) | aviso "fora da geo" | `HomePage.POPUP_FORA_GEO_*` (texto) |
+| Holerite / Informe (`holerite`, `informe`) | lista de documentos; visualizador aberto | `holerite_lista`/`_item`/`_competencia`, `informe_lista`/`_item`/`_exercicio`, `lista_documentos_btnVisualizar`, `visualizar_btn*`, `visualizar_texto` |
+| Estado de Humor (`humor`) | tela de percentuais; grade de humores; confirmação | `estadoHumor_btnHumor`; humores, CONFIRMAR/CANCELAR por texto |
+| Assinatura do Espelho (`ass-espelho`) | lista; item expandido; Impressão; Assinar; popup de espelho pendente | `assinatura_*`, `assinaturaContent_btnVisualizar`, `impressao_btn*`, `assinar_*`; **período** (no iOS vem do nome da célula) |
+| Sobre (`sobre`) | tela inteira (rolando) | título/rótulos por texto; PLATAFORMA assumida "Android" |
+| Alterar PIN (`alterar-pin`) | aba SENHA 4 DÍGITOS | título e abas por texto; instrução assumida `text_instrucao` |
+| Senha do sistema (`alterar-senha-sistema`) | aba SENHA SISTEMA | `alterarSenhaSistema_*` (campos, erros, ver senha, salvar) |
+
 ## Prioridade 1 — necessários para a suíte atual
 
 ### 1. Ajustes — switch "Lembrete para registro do ponto"

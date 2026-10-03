@@ -10,9 +10,9 @@ A arquitetura é a mesma do projeto irmão `ifpontocell-ios-automation` (configu
 
 Validar os fluxos críticos do app Android com testes estáveis e diagnósticos claros na falha:
 
-* primeiro acesso em corrente (onboarding → login → PIN → Home)
-* registro de ponto sem foto
-* integração com a API de controle de celular (ativação e `sem_foto`)
+* os mesmos casos de teste do iOS (CT001–CT038, mesma numeração): primeiro
+  acesso em corrente, registro de ponto, telas do app e apagar dados
+* integração com a API de controle de celular (`sem_foto`)
 
 ---
 
@@ -86,15 +86,20 @@ ifpontocell-android-automation/
 │   ├── navegacao.py                     # voltar para a Home (mixin)
 │   ├── home_page.py                     # Home, popups e registro de ponto
 │   ├── menu_page.py                     # menu lateral e menu do perfil
+│   ├── compartilhado/                   # lista de documentos, visualizador, rótulo/valor
 │   ├── autenticacao/                    # onboarding, login, unlock (PIN), autorização
-│   ├── ajustes/                         # Ajustes do Aplicativo
-│   └── zerar_dados/                     # diálogo Zerar Dados (recomeçar o primeiro acesso)
+│   ├── ajustes/                         # Ajustes do Aplicativo e apagar dados
+│   ├── alterar_senha/                   # Alterar PIN e senha do sistema
+│   ├── ass_espelho/                     # Assinatura do Espelho: lista, Impressão, assinar
+│   ├── dados_pessoais/  estado_humor/  holerite/  informe_rendimentos/
+│   ├── ponto/  privacidade/  sobre_aplicativo/  status/
+│   └── zerar_dados/                     # diálogo Zerar Dados (menu do perfil)
 │
 ├── scripts/                             # doctor, setup, check_app, impact, report PDF...
 │
 ├── tests/
 │   ├── api/                             # API de controle de celular
-│   ├── app/                             # onboarding, login, unlock, e2e, registro sem foto
+│   ├── app/                             # os testes de tela (CT001–CT037, como no iOS)
 │   ├── fixtures/                        # fixtures por assunto (plugins do conftest)
 │   ├── support/                         # flows, assertions, profile_resolver
 │   └── unit/                            # unitários (make unit, sem emulador)
@@ -197,6 +202,9 @@ make smoke                # testes smoke
 make regression
 make primeiro-acesso      # onboarding > login > unlock
 make onboarding | login | unlock | e2e | registro-ponto | jornada
+make status | ponto | registro-geo | holerite | informe | humor
+make ass-espelho | sobre | dados-pessoais | privacidade
+make alterar-pin | alterar-senha-sistema | zerar-dados
 make api
 make ct id=CT005          # pelo ID do caso de teste
 make falhas               # só o que falhou na última execução

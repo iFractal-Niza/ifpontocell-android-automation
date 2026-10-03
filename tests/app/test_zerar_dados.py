@@ -7,8 +7,8 @@ o mesmo nos dois (linearApagarDadosDoApp), mas o botão que o abre é
 outro e o SIM pode estar ligado a outra rotina. Em cada par, o NÃO deixa
 a tela aberta e o SIM continua dali (rodando sozinho, parte da Home).
 
-O NÃO do menu do perfil fecha o diálogo e deixa o menu aberto: o CT014
-termina assim e o CT015 continua dali, tocando em ZERAR DADOS de novo.
+O NÃO do menu do perfil fecha o diálogo e deixa o menu aberto: o CT036
+termina assim e o CT037 continua dali, tocando em ZERAR DADOS de novo.
 
 O SIM apaga os dados do usuário no aparelho e o app volta ao primeiro
 acesso; o teste refaz o primeiro acesso completo (o mesmo fluxo do e2e)
@@ -56,7 +56,7 @@ def _refazer_primeiro_acesso(
     )
 
 
-@pytest.mark.ct("CT012")
+@pytest.mark.ct("CT034")
 @pytest.mark.regression
 def test_apagar_dados_pelos_ajustes_nao_mantem_os_dados(home_autenticada):
     """
@@ -66,7 +66,7 @@ def test_apagar_dados_pelos_ajustes_nao_mantem_os_dados(home_autenticada):
 
     Fronteira: Home -> menu lateral -> AJUSTES DO APLICATIVO -> APAGAR
     DADOS DO APLICATIVO -> diálogo -> NÃO -> continua nos Ajustes (fica
-    neles para o CT013).
+    neles para o CT035).
     """
     pagina = ApagarDadosAjustesPage(home_autenticada.driver)
     pagina.abrir_confirmacao()
@@ -81,14 +81,14 @@ def test_apagar_dados_pelos_ajustes_nao_mantem_os_dados(home_autenticada):
 
     pagina.cancelar()
 
-    # Fica nos Ajustes: o SIM (CT013) continua daqui.
+    # Fica nos Ajustes: o SIM (CT035) continua daqui.
     assert pagina.ajustes.esta_na_tela_ajustes(), (
         "Após NÃO no diálogo de apagar dados, o app não continuou nos "
         "Ajustes do aplicativo."
     )
 
 
-@pytest.mark.ct("CT013")
+@pytest.mark.ct("CT035")
 @pytest.mark.regression
 def test_apagar_dados_pelos_ajustes_sim_volta_ao_primeiro_acesso(
     request,
@@ -105,7 +105,7 @@ def test_apagar_dados_pelos_ajustes_sim_volta_ao_primeiro_acesso(
     dados, o app volta ao primeiro acesso e um novo primeiro acesso
     completo leva à Home.
 
-    Fronteira: Ajustes do aplicativo (deixados pelo CT012, ou Home ->
+    Fronteira: Ajustes do aplicativo (deixados pelo CT034, ou Home ->
     menu lateral -> AJUSTES DO APLICATIVO) -> APAGAR DADOS DO APLICATIVO
     -> diálogo -> SIM -> onboarding -> primeiro acesso -> Home.
     """
@@ -138,7 +138,7 @@ def test_apagar_dados_pelos_ajustes_sim_volta_ao_primeiro_acesso(
     )
 
 
-@pytest.mark.ct("CT014")
+@pytest.mark.ct("CT036")
 @pytest.mark.regression
 def test_zerar_dados_nao_mantem_os_dados(home_autenticada):
     """
@@ -146,7 +146,7 @@ def test_zerar_dados_nao_mantem_os_dados(home_autenticada):
     irreversível) e que NÃO só fecha o diálogo, sem apagar nada.
 
     Fronteira: Home -> menu do perfil -> ZERAR DADOS -> diálogo -> NÃO ->
-    menu do perfil aberto (fica nele para o CT015).
+    menu do perfil aberto (fica nele para o CT037).
     """
     pagina = ZerarDadosPage(home_autenticada.driver)
     pagina.abrir_confirmacao()
@@ -162,14 +162,14 @@ def test_zerar_dados_nao_mantem_os_dados(home_autenticada):
     pagina.cancelar()
 
     # O NÃO só fecha o diálogo: o menu do perfil continua aberto (o app
-    # não foi para o primeiro acesso). O CT015 continua daqui.
+    # não foi para o primeiro acesso). O CT037 continua daqui.
     assert pagina.menu_perfil.esta_aberto(timeout=pagina.DEFAULT_TIMEOUT), (
         "Após NÃO no diálogo de zerar dados, o menu do perfil não "
         "continuou aberto."
     )
 
 
-@pytest.mark.ct("CT015")
+@pytest.mark.ct("CT037")
 @pytest.mark.regression
 def test_zerar_dados_sim_volta_ao_primeiro_acesso(
     request,
@@ -185,7 +185,7 @@ def test_zerar_dados_sim_volta_ao_primeiro_acesso(
     Valida que SIM apaga os dados, o app volta ao primeiro acesso e um
     novo primeiro acesso completo leva à Home.
 
-    Fronteira: menu do perfil aberto (deixado pelo CT014, ou Home -> menu
+    Fronteira: menu do perfil aberto (deixado pelo CT036, ou Home -> menu
     do perfil) -> ZERAR DADOS -> diálogo -> SIM -> onboarding -> primeiro
     acesso (sistema, login, sem_foto pela API, criação do PIN) -> Home.
     """

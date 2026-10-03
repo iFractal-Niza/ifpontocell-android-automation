@@ -36,8 +36,18 @@ TEST_LOGIN := $(APP_TESTS)/test_login.py
 TEST_UNLOCK := $(APP_TESTS)/test_unlock.py
 TEST_E2E := $(APP_TESTS)/test_e2e.py
 TEST_REGISTRO_PONTO := $(APP_TESTS)/test_registro_sem_foto.py
+TEST_STATUS := $(APP_TESTS)/test_status.py
+TEST_PONTO := $(APP_TESTS)/test_ponto.py
+TEST_REGISTRO_GEO := $(APP_TESTS)/test_registro_geo.py
+TEST_HOLERITE := $(APP_TESTS)/test_holerite.py
+TEST_INFORME := $(APP_TESTS)/test_informe_rendimentos.py
+TEST_HUMOR := $(APP_TESTS)/test_estado_humor.py
+TEST_ASS_ESPELHO := $(APP_TESTS)/test_ass_espelho.py
+TEST_SOBRE := $(APP_TESTS)/test_sobre_aplicativo.py
 TEST_DADOS_PESSOAIS := $(APP_TESTS)/test_dados_pessoais.py
 TEST_PRIVACIDADE := $(APP_TESTS)/test_privacidade.py
+TEST_ALTERAR_PIN := $(APP_TESTS)/test_alterar_pin.py
+TEST_ALTERAR_SENHA_SISTEMA := $(APP_TESTS)/test_alterar_senha_sistema.py
 TEST_ZERAR_DADOS := $(APP_TESTS)/test_zerar_dados.py
 
 # Suíte principal de app em ordem controlada
@@ -47,8 +57,18 @@ APP_SUITE := \
 	$(TEST_UNLOCK) \
 	$(TEST_E2E) \
 	$(TEST_REGISTRO_PONTO) \
+	$(TEST_STATUS) \
+	$(TEST_PONTO) \
+	$(TEST_REGISTRO_GEO) \
+	$(TEST_HOLERITE) \
+	$(TEST_INFORME) \
+	$(TEST_HUMOR) \
+	$(TEST_ASS_ESPELHO) \
+	$(TEST_SOBRE) \
 	$(TEST_DADOS_PESSOAIS) \
 	$(TEST_PRIVACIDADE) \
+	$(TEST_ALTERAR_PIN) \
+	$(TEST_ALTERAR_SENHA_SISTEMA) \
 	$(TEST_ZERAR_DADOS)
 
 # Suíte completa em ordem controlada
@@ -139,7 +159,7 @@ DEBUG_TARGET = $(if $(test),$(test),$(FULL_SUITE))
         check-appium check-mobile \
         doctor impact appium appium-servers lint format \
         run debug unit smoke regression \
-        ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto jornada dados-pessoais privacidade zerar-dados \
+        ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto status ponto registro-geo jornada holerite informe humor ass-espelho sobre dados-pessoais privacidade alterar-pin alterar-senha-sistema zerar-dados \
         api \
         clear limpar-historico report report-pdf renumerar-ct \
         git-status commit push update-dev update-feature start-feature \
@@ -182,10 +202,20 @@ help:
 	@echo "  make e2e                   Roda testes end-to-end"
 	@echo "  make e2e-debug             Roda testes end-to-end em modo debug"
 	@echo "  make registro-ponto        Roda testes de registro de ponto"
+	@echo "  make status                Registra um ponto e confere a marcação e o comprovante na aba STATUS"
+	@echo "  make ponto                 Roda testes da tela Ponto (dias e totais do espelho)"
+	@echo "  make registro-geo          Roda o registro de ponto dentro e fora da geo delimitação"
 	@echo "  make jornada               Roda e2e + registro de ponto"
+	@echo "  make holerite              Roda testes do Holerite"
+	@echo "  make informe               Roda testes do Informe de Rendimentos"
+	@echo "  make humor                 Roda testes do Estado de Humor"
+	@echo "  make ass-espelho          ASSINA os 2 espelhos pendentes (consome massa, irreversível)"
+	@echo "  make sobre                 Roda o teste do Sobre o aplicativo (versão e textos)"
 	@echo "  make dados-pessoais        Roda o teste de Dados Pessoais (nome do colaborador)"
 	@echo "  make privacidade           Roda o teste da Privacidade (índice e navegação)"
-	@echo "  make zerar-dados           Apagar dados (Ajustes e menu do perfil: NÃO e SIM; o SIM refaz o primeiro acesso)"
+	@echo "  make alterar-pin           Troca do PIN (e negativos), com restauração do original"
+	@echo "  make alterar-senha-sistema Senha do sistema: negativos e troca real com restauração"
+	@echo "  make zerar-dados           Diálogo de zerar dados (NÃO e SIM; o SIM volta ao primeiro acesso)"
 	@echo "  make api                   Roda testes de API"
 	@echo ""
 	@echo "=== Reports ==="
@@ -414,8 +444,8 @@ endef
 
 
 # === Execuções ===
-# Inclui os testes que consomem massa (--consumir-massa), como no iOS;
-# hoje nenhum teste do Android consome.
+# Inclui os testes que consomem massa (assinatura do espelho): repor os
+# dois fechamentos pendentes antes de rodar. Sem massa, eles só pulam.
 run: check-mobile
 	$(call run_pytest_with_report,$(FULL_SUITE),$(PYTEST_FLAGS_CLEAN) --consumir-massa $(PYTEST_FLAGS))
 
@@ -423,7 +453,7 @@ debug: check-mobile
 	$(call run_pytest_with_report,$(DEBUG_TARGET),$(PYTEST_FLAGS_DEBUG) $(PYTEST_FLAGS))
 
 # Casos de teste pelo ID, na ordem da suíte: make ct id=CT010 (ou CT010,CT011).
-# Pedir o CT é escolha explícita: inclui os que consomem massa.
+# Pedir o CT é escolha explícita: inclui os que consomem massa (assinatura).
 ct: check-mobile
 	@if [ -z "$(id)" ]; then \
 		echo "Informe o CT. Exemplo: make ct id=CT010 (vários: id=CT010,CT011)"; \
@@ -444,8 +474,8 @@ unit: check-venv
 	@$(PYTEST) $(UNIT_TESTS) -q -p no:observability.pytest_report $(PYTEST_FLAGS)
 
 # === Testes por marker ===
-# Inclui os que consomem massa; merge-dev e merge-main dependem deste
-# alvo. Sem massa, eles pulam e o merge segue.
+# Inclui os que consomem massa (assinatura do espelho); merge-dev e
+# merge-main dependem deste alvo. Sem massa, eles pulam e o merge segue.
 smoke: check-mobile
 	$(call run_pytest_with_report,$(FULL_SUITE) -m "smoke",$(PYTEST_FLAGS_CLEAN) --consumir-massa $(PYTEST_FLAGS))
 
@@ -461,18 +491,54 @@ e2e-debug: check-mobile
 registro-ponto: check-mobile
 	$(call run_pytest_with_report,$(TEST_REGISTRO_PONTO),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 
-# Jornada: e2e + registro de ponto
+# A aba STATUS só lista as marcações deste app: roda junto com o registro
+# confirmado (o cancelamento não marca nada).
+status: check-mobile
+	$(call run_pytest_with_report,$(TEST_REGISTRO_PONTO)::test_registro_ponto_confirmar $(TEST_STATUS),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+ponto: check-mobile
+	$(call run_pytest_with_report,$(TEST_PONTO),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+sobre: check-mobile
+	$(call run_pytest_with_report,$(TEST_SOBRE),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
 dados-pessoais: check-mobile
 	$(call run_pytest_with_report,$(TEST_DADOS_PESSOAIS),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 
 privacidade: check-mobile
 	$(call run_pytest_with_report,$(TEST_PRIVACIDADE),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 
-# Apaga os dados do app no aparelho (Ajustes e menu do perfil) e refaz o
-# primeiro acesso a cada SIM.
+# Senha de login do sistema (servidor): negativos e a troca REAL, que restaura
+# a original (APP_PASSWORD_NOVA no env do aparelho; sem ela, a troca é pulada).
+alterar-senha-sistema: check-mobile
+	$(call run_pytest_with_report,$(TEST_ALTERAR_SENHA_SISTEMA),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+# Apaga os dados do app no aparelho e refaz o primeiro acesso (fluxo do e2e).
 zerar-dados: check-mobile
 	$(call run_pytest_with_report,$(TEST_ZERAR_DADOS),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 
+# Requer APP_PIN_NOVO no env do aparelho. Troca e restaura o PIN.
+alterar-pin: check-mobile
+	$(call run_pytest_with_report,$(TEST_ALTERAR_PIN),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+# Massa: geo delimitação cadastrada e ANDROID_GEO_* no env do aparelho.
+registro-geo: check-mobile
+	$(call run_pytest_with_report,$(TEST_REGISTRO_GEO),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+holerite: check-mobile
+	$(call run_pytest_with_report,$(TEST_HOLERITE),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+informe: check-mobile
+	$(call run_pytest_with_report,$(TEST_INFORME),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+humor: check-mobile
+	$(call run_pytest_with_report,$(TEST_HUMOR),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
+
+# Consome massa: assinar só volta excluindo e refazendo o fechamento.
+ass-espelho: check-mobile
+	$(call run_pytest_with_report,$(TEST_ASS_ESPELHO),$(PYTEST_FLAGS_CLEAN) --consumir-massa $(PYTEST_FLAGS))
+
+# Jornada: e2e + registro de ponto
 jornada: check-mobile
 	$(call run_pytest_with_report,$(TEST_E2E) $(TEST_REGISTRO_PONTO),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 

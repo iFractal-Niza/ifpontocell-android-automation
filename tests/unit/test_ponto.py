@@ -136,6 +136,38 @@ def test_jornada_fora_do_formato_diz_qual_horario():
         ler_jornada("8:00 12:00")
 
 
+def test_cards_e_totais_lidos_com_espacos_e_caixa_variados():
+    from unittest.mock import Mock
+
+    from pages.ponto.painel_ponto_page import PainelPontoPage
+
+    elementos = []
+
+    # Android: content-desc "RÓTULO valor" (no iOS, "RÓTULO, valor").
+    for texto in (
+        "ATIVIDADE LABORAL ",
+        "STATUS DO MOMENTO Folga",
+        # Caso real no iOS: três espaços entre as palavras.
+        "JORNADA   DIÁRIA 0%",
+        "Total De Horas 28:58",
+    ):
+        elemento = Mock()
+        elemento.get_attribute.return_value = texto
+        elementos.append(elemento)
+
+    driver = Mock()
+    driver.find_elements.return_value = elementos
+    painel = PainelPontoPage(driver)
+
+    assert painel.cards() == {
+        "ATIVIDADE LABORAL": "",
+        "STATUS DO MOMENTO": "Folga",
+        "JORNADA DIÁRIA": "0%",
+    }
+    assert painel.totais()["TOTAL DE HORAS"] == "28:58"
+    assert painel.totais()["INTERJORNADA"] is None
+
+
 @pytest.mark.parametrize(
     ("texto", "tipo"),
     [

@@ -8,7 +8,7 @@ from pages.dados_pessoais.dados_pessoais_page import DadosPessoaisPage
 from utils.texto import normalizar_texto
 
 
-@pytest.mark.ct("CT010")
+@pytest.mark.ct("CT026")
 @pytest.mark.regression
 def test_dados_pessoais_exibe_o_colaborador(
     home_autenticada,

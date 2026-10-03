@@ -58,3 +58,23 @@ def android_description(description: str) -> tuple[str, str]:
     """Locator por content-desc exato."""
     selector = f'new UiSelector().description({json.dumps(description)})'
     return AppiumBy.ANDROID_UIAUTOMATOR, selector
+
+
+def android_id_prefixo(prefixo: str) -> tuple[str, str]:
+    """
+    Locator por início do resource-id (como o BEGINSWITH do iOS): para
+    itens de lista cujo id termina com um sufixo variável.
+    """
+    regex = rf"(.*:id/)?{re.escape(prefixo)}.*"
+    selector = f"new UiSelector().resourceIdMatches({json.dumps(regex)})"
+    return AppiumBy.ANDROID_UIAUTOMATOR, selector
+
+
+def android_pendente(nome: str) -> tuple[str, str]:
+    """
+    Locator ainda não capturado no Appium Inspector (trazido do iOS sem
+    equivalente Android conhecido). Nunca casa: a falha mostra
+    "PENDENTE_<nome>", o que falta capturar
+    (PENDENCIAS_LOCATORS_ANDROID.md).
+    """
+    return android_id(f"PENDENTE_{nome}")

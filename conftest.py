@@ -20,6 +20,8 @@ pytest_plugins = [
     "tests.fixtures.dados",
     "tests.fixtures.massa",
     "tests.fixtures.geo",
+    "tests.fixtures.pin",
+    "tests.fixtures.senha_sistema",
     "tests.fixtures.casos_teste",
 ]
 

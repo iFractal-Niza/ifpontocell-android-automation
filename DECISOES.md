@@ -172,9 +172,7 @@ O ZERAR DADOS do menu do perfil e o APAGAR DADOS DO APLICATIVO dos
 Ajustes abrem o mesmo diálogo (`linearApagarDadosDoApp`); no iOS são
 componentes diferentes. O `test_zerar_dados.py` mantém o par NÃO/SIM
 dos dois caminhos, como no iOS (o SIM pode estar ligado a outra rotina),
-como CT012–CT015 (`make zerar-dados`), depois de Dados Pessoais (CT010)
-e Privacidade (CT011); o teste de API foi renumerado de CT038 para
-CT016.
+como CT034–CT037 (`make zerar-dados`).
 
 ---
 
@@ -189,6 +187,24 @@ some dela; no iOS ficavam as duas ocorrências e a seção era a última.
 `secao_esta_visivel` passa a tomar a última ocorrência que não é item do
 índice (id `indice_*`; a seção tem o id sem o prefixo). O item 2 do
 índice é "Ciclo de vida dos dados" no Android (iOS: "Vida dos Dados").
+
+---
+
+## Todos os testes do iOS, com a mesma numeração de CT
+
+**Data:** 2026-10-03
+
+A suíte Android tem os mesmos testes do iOS, na mesma ordem (`APP_SUITE`
+do Makefile) e com os mesmos números de CT (CT001–CT038): um CT é o mesmo
+caso nos dois projetos. As telas trazidas por último (Status, Ponto,
+geo, Holerite, Informe, Estado de Humor, Assinatura do Espelho, Sobre,
+Alterar PIN e Senha do sistema) mantêm a lógica do iOS; os locators sem
+equivalente conhecido são `android_pendente("...")`, que nunca casa e
+mostra na falha o que falta capturar (PENDENCIAS_LOCATORS_ANDROID.md).
+
+Dependências do iOS que provavelmente mudam com o XML: a aba STATUS e a
+Assinatura do Espelho leem dados (dia, código, período) do **nome da
+célula**; no Android, ids de item costumam ser fixos.
 
 ---
 

@@ -34,7 +34,7 @@ ITENS_NAVEGADOS = (
 )
 
 
-@pytest.mark.ct("CT011")
+@pytest.mark.ct("CT027")
 @pytest.mark.regression
 def test_privacidade_indice_e_navegacao(home_autenticada):
     """
