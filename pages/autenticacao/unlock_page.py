@@ -41,6 +41,10 @@ class UnlockPage(BasePage):
     TEXTO_CONFIRMAR_PIN = BOTAO_DIGITO_1
 
     # === Desbloqueio ===
+    # ERRADO, a corrigir: o Inspector mostrou que relative_first_access é
+    # o contêiner do boas-vindas do onboarding, não do desbloqueio.
+    # Falta o XML da tela de PIN de desbloqueio
+    # (PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0).
     TEXTO_TELA_UNLOCK = android_id("relative_first_access")
 
     # === Popup de salvar senha ===

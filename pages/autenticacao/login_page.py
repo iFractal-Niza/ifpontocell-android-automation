@@ -5,21 +5,21 @@ from pages.base_page import BasePage
 class LoginPage(BasePage):
     SCREEN_NAME = "login"
 
-    # === Locators Android (projeto de referência) ===
+    # === Locators Android (confirmado no Inspector) ===
+    # Tela: relative_login_access.
     CAMPO_LOGIN = android_id("editTextLogin")
     CAMPO_SENHA = android_id("editTextSenha")
-
-    # PENDENTE: confirmar no Appium Inspector. Não existe no projeto de
-    # referência.
-    BOTAO_VER_SENHA = android_id("btnVerSenha", "text_input_end_icon")
+    BOTAO_VER_SENHA = android_id("btn_senha_ver")
 
     BOTAO_ENTRAR = android_id("btn_confirmar")
     BOTAO_PROXIMO = BOTAO_ENTRAR
 
-    # Popups sem resource-id conhecido no projeto de referência.
-    POPUP_ERRO_TITULO = android_text("ifPontoCell")
+    # Popups: diálogo genérico do app (BasePage.DIALOGO_APP_*, confirmado
+    # no Inspector). A mensagem fica pelo texto: é ela que diz qual popup
+    # apareceu.
+    POPUP_ERRO_TITULO = BasePage.DIALOGO_APP_TITULO
     POPUP_ERRO_MENSAGEM = android_text("Usuário e/ou senha inválidos.")
-    POPUP_ERRO_BOTAO_OK = android_text("OK")
+    POPUP_ERRO_BOTAO_OK = BasePage.DIALOGO_APP_BOTAO_OK
     POPUP_SEM_CONEXAO_MENSAGEM = android_text(
         "A conexão à internet parece estar desativada."
     )

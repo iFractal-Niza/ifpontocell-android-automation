@@ -1,7 +1,6 @@
 from collections.abc import Callable
 from time import monotonic, sleep
 
-from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import (
     InvalidArgumentException,
     NoAlertPresentException,
@@ -19,6 +18,7 @@ from config.timeouts import (
     OPTIONAL_POPUP_TIMEOUT,
     SHORT_TIMEOUT,
 )
+from pages.android_locators import android_id, android_text
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -34,6 +34,15 @@ class BasePage:
     OPTIONAL_POPUP_TIMEOUT = OPTIONAL_POPUP_TIMEOUT
 
     POLL_FREQUENCY = 0.2
+
+    # === Diálogo genérico do app (confirmado no Inspector) ===
+    # linear_dialog_geral: título "ifPonto Cell" + mensagem + OK. Usado
+    # por "Sistema não encontrado.", credenciais inválidas, sem conexão.
+    # O título vai pelo texto: o id "titulo" é genérico demais.
+    TITULO_DIALOGO_APP = "ifPonto Cell"
+    DIALOGO_APP_TITULO = android_text(TITULO_DIALOGO_APP)
+    DIALOGO_APP_MENSAGEM = android_id("mensagem")
+    DIALOGO_APP_BOTAO_OK = android_id("btnDireito")
 
     # === Inicialização ===
     def __init__(
@@ -812,16 +821,14 @@ class BasePage:
         textos_conhecidos: set[str],
     ) -> str | None:
         """
-        Best-effort: detecta um alerta com título/botão já conhecidos,
-        mas cuja mensagem ainda não tem locator específico.
+        Detecta um alerta do app com título/botão conhecidos e devolve a
+        mensagem dele quando ela ainda não tem locator específico (não
+        está em textos_conhecidos). None se não houver alerta ou se a
+        mensagem for conhecida.
 
-        TODO: validar no Appium Inspector se a heurística abaixo
-        (primeiro StaticText visível fora do título/botão) sempre
-        captura o texto do alerta, e não texto de outro elemento da
-        tela. A suposição é que o restante da tela fica visible=false
-        enquanto o alerta está em primeiro plano — mesmo comportamento
-        documentado em _wait_for_absence. Ajustar aqui se um falso
-        positivo aparecer em execução real.
+        No Android a mensagem do diálogo genérico tem id próprio
+        (DIALOGO_APP_MENSAGEM): lê dele. O iOS varria os textos visíveis,
+        o que aqui pegaria a tela atrás do diálogo, que continua visível.
         """
         if not self._is_visible(
             titulo_locator,
@@ -835,33 +842,22 @@ class BasePage:
         ):
             return None
 
-        ignorar = textos_conhecidos | {"ifPontoCell", "OK"}
+        elemento = self._obter_elemento_visivel_imediatamente(
+            self.DIALOGO_APP_MENSAGEM
+        )
 
-        try:
-            elementos = self.driver.find_elements(
-                AppiumBy.CLASS_NAME,
-                "android.widget.TextView",
-            )
-        except WebDriverException:
+        if elemento is None:
             return None
 
-        for elemento in elementos:
-            try:
-                if not elemento.is_displayed():
-                    continue
+        try:
+            texto = (elemento.text or "").strip()
+        except (StaleElementReferenceException, WebDriverException):
+            return None
 
-                texto = (elemento.text or "").strip()
+        if not texto or texto in textos_conhecidos:
+            return None
 
-            except (
-                StaleElementReferenceException,
-                WebDriverException,
-            ):
-                continue
-
-            if texto and texto not in ignorar:
-                return texto
-
-        return None
+        return texto
 
     def _wait_for_absence(
         self,

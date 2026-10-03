@@ -97,7 +97,9 @@ para as funções da corrente terem a mesma assinatura do iOS.
 
 O projeto Android de referência não tem marcador exclusivo de cada etapa
 do PIN: o teclado `numberN` aparece na criação, na confirmação e no
-desbloqueio; só o `relative_first_access` marca o desbloqueio.
+desbloqueio. O marcador do desbloqueio herdado do Android antigo
+(`relative_first_access`) é, na verdade, o contêiner do boas-vindas
+(Inspector, 2026-10-03): falta capturar o do desbloqueio.
 
 - `UnlockPage` usa a digitação robusta do iOS (toca o mesmo dígito até a
   tela mudar, até 6 toques), com o teclado como marcador: a criação
@@ -111,16 +113,23 @@ faz (PENDENCIAS_LOCATORS_ANDROID.md).
 
 ---
 
-## Onboarding: o mesmo botão em duas telas
+## Onboarding: telas pelo contêiner
 
 **Data:** 2026-10-03
 
-`BOTAO_PROXIMO_BOAS_VINDAS` e `BOTAO_INICIAR_CONFIGURACAO` são o mesmo
-resource-id (`btn_confirmar_informacao`). O `_passar_pelo_boas_vindas`
-do iOS (toca PRÓXIMO até a tela seguinte, até 4 vezes) sai no primeiro
-toque, e o `preparar_fluxo_inicial` toca de novo como "iniciar
-configuração" — o comportamento que o Android já tinha. Um unitário
-documenta isso.
+O botão de avançar é o mesmo resource-id no boas-vindas e nas
+informações importantes (`btn_confirmar_informacao`), e o título
+"Configurar Aplicativo" é o mesmo nas telas de sistema e de login. Cada
+tela tem, porém, um contêiner próprio (`relative_first_access`,
+`relative_information`, `relative_system_access`, `relative_login_access`),
+e é por ele que a `OnboardingPage` e o `flows.etapa_do_primeiro_acesso`
+reconhecem a tela. Com isso, o `_passar_pelo_boas_vindas` do iOS (toca
+PRÓXIMO até a tela seguinte, até 4 vezes) funciona igual.
+
+O diálogo genérico do app (`linear_dialog_geral`: `titulo`, `mensagem`,
+`btnDireito`) fica na `BasePage` (`DIALOGO_APP_*`). O texto de um alerta
+desconhecido é lido do id `mensagem`; o iOS varria os textos visíveis, o
+que no Android pegaria a tela atrás do diálogo.
 
 ---
 

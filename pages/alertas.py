@@ -1,19 +1,20 @@
 from pages.android_locators import android_text
+from pages.base_page import BasePage
 
 
 class AlertaAppMixin:
     """
-    Alertas do próprio app: título (em geral "ifPontoCell") + mensagem +
-    botão OK, sem ids técnicos. Usado após salvar documento, assinar
-    espelho, e onde mais o app confirmar uma ação com esse componente.
+    Alertas do próprio app: diálogo genérico (título "ifPonto Cell" +
+    mensagem + OK; ids em BasePage.DIALOGO_APP_*). Usado após salvar
+    documento, assinar espelho, e onde mais o app confirmar uma ação com
+    esse componente.
 
     Requer os métodos da BasePage. Declarar antes de BasePage nas bases.
     """
 
-    TITULO_ALERTA_PADRAO = "ifPontoCell"
+    TITULO_ALERTA_PADRAO = BasePage.TITULO_DIALOGO_APP
 
-    # TODO: substituir por resource-id técnico quando disponível.
-    ALERTA_BOTAO_OK = android_text("OK")
+    ALERTA_BOTAO_OK = BasePage.DIALOGO_APP_BOTAO_OK
 
     @staticmethod
     def _texto_alerta(texto: str) -> tuple[str, str]:

@@ -595,16 +595,17 @@ def etapa_do_primeiro_acesso(
         (
             ETAPA_ONBOARDING,
             (
-                OnboardingPage.BOTAO_PROXIMO_BOAS_VINDAS,
-                OnboardingPage.BOTAO_INICIAR_CONFIGURACAO,
-                OnboardingPage.CAMPO_NOME_SISTEMA,
+                OnboardingPage.TELA_BOAS_VINDAS,
+                OnboardingPage.TELA_INFORMACOES_IMPORTANTES,
+                OnboardingPage.TELA_CONFIGURAR_APLICATIVO,
             ),
         ),
         (ETAPA_LOGIN, (LoginPage.CAMPO_LOGIN,)),
         # Logado antes de criar PIN: no Android o teclado numberN (o
         # marcador da criação) aparece também no desbloqueio, e só o
-        # relative_first_access separa as duas telas. A primeira etapa
-        # que casar vence.
+        # marcador do desbloqueio separa as duas telas (hoje errado:
+        # PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0). A primeira
+        # etapa que casar vence; o onboarding vem antes de tudo.
         (
             ETAPA_LOGADO,
             (UnlockPage.TEXTO_TELA_UNLOCK, HomePage.POPUP_LEMBRETE_MENSAGEM),

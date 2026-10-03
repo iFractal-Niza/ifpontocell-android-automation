@@ -12,21 +12,24 @@ from pages.base_page import BasePage
 class OnboardingPage(BasePage):
     SCREEN_NAME = "onboarding"
 
-    # === Locators Android (projeto de referência) ===
-    # Mesmo resource-id nas duas telas (boas-vindas e informações
-    # importantes): _passar_pelo_boas_vindas sai no primeiro toque e o
-    # preparar_fluxo_inicial toca de novo como "iniciar configuração".
-    # Um id/texto próprio da tela seguinte devolveria a conferência que
-    # o iOS faz (PENDENCIAS_LOCATORS_ANDROID.md).
+    # === Telas (contêiner de cada uma; confirmado no Inspector) ===
+    # O botão de avançar é o mesmo resource-id no boas-vindas e nas
+    # informações importantes: quem diz em qual tela o app está é o
+    # contêiner.
+    TELA_BOAS_VINDAS = android_id("relative_first_access")
+    TELA_INFORMACOES_IMPORTANTES = android_id("relative_information")
+    TELA_CONFIGURAR_APLICATIVO = android_id("relative_system_access")
+
+    # === Botões e campo (confirmado no Inspector) ===
     BOTAO_PROXIMO_BOAS_VINDAS = android_id("btn_confirmar_informacao")
     BOTAO_INICIAR_CONFIGURACAO = android_id("btn_confirmar_informacao")
     CAMPO_NOME_SISTEMA = android_id("editTextSistema")
     BOTAO_PROXIMO_SISTEMA = android_id("btn_confirmar")
 
-    # Conteúdo: fallback textual; validar resource-id no Inspector se
-    # necessário.
+    # === Títulos ===
+    # Pelo texto: o id (text_1) se repete entre as telas.
     TITULO_BOAS_VINDAS = android_text_contains("bem-vindo")
-    TITULO_CONFIGURAR_APLICATIVO = android_text_contains("Configurar")
+    TITULO_CONFIGURAR_APLICATIVO = android_text("Configurar Aplicativo")
 
     # Permission Controller Android.
     BOTAO_ALERTA_NAO_PERMITIR = android_id(
@@ -39,12 +42,14 @@ class OnboardingPage(BasePage):
         "com.android.packageinstaller:id/permission_allow_button",
     )
 
-    # Popups: não há resource-id técnico no projeto Android de referência.
-    POPUP_SISTEMA_NAO_ENCONTRADO_TITULO = android_text("ifPontoCell")
+    # Popups: diálogo genérico do app (BasePage.DIALOGO_APP_*, confirmado
+    # no Inspector). A mensagem fica pelo texto: é ela que diz qual popup
+    # apareceu.
+    POPUP_SISTEMA_NAO_ENCONTRADO_TITULO = BasePage.DIALOGO_APP_TITULO
     POPUP_SISTEMA_NAO_ENCONTRADO_MENSAGEM = android_text(
         "Sistema não encontrado."
     )
-    POPUP_SISTEMA_NAO_ENCONTRADO_BOTAO_OK = android_text("OK")
+    POPUP_SISTEMA_NAO_ENCONTRADO_BOTAO_OK = BasePage.DIALOGO_APP_BOTAO_OK
     POPUP_SEM_CONEXAO_MENSAGEM = android_text(
         "A conexão à internet parece estar desativada."
     )
@@ -120,7 +125,7 @@ class OnboardingPage(BasePage):
     # === Validações de tela ===
     def esta_na_tela_boas_vindas(self) -> bool:
         is_visible = self._is_visible(
-            self.BOTAO_PROXIMO_BOAS_VINDAS,
+            self.TELA_BOAS_VINDAS,
             timeout=self.DEFAULT_TIMEOUT,
         )
 
@@ -137,7 +142,7 @@ class OnboardingPage(BasePage):
 
     def esta_na_tela_informacoes_importantes(self) -> bool:
         is_visible = self._is_visible(
-            self.BOTAO_INICIAR_CONFIGURACAO,
+            self.TELA_INFORMACOES_IMPORTANTES,
             timeout=self.DEFAULT_TIMEOUT,
         )
 
@@ -190,7 +195,10 @@ class OnboardingPage(BasePage):
         numa falha, depois do toque o boas-vindas continuou (página
         seguinte com o mesmo botão, ou toque ignorado na transição).
         """
-        seguintes = (self.BOTAO_INICIAR_CONFIGURACAO, self.CAMPO_NOME_SISTEMA)
+        seguintes = (
+            self.TELA_INFORMACOES_IMPORTANTES,
+            self.TELA_CONFIGURAR_APLICATIVO,
+        )
 
         for toque in range(1, self.MAX_TOQUES_BOAS_VINDAS + 1):
             self.clicar_proximo_boas_vindas()
@@ -205,9 +213,7 @@ class OnboardingPage(BasePage):
 
                 sleep(self.POLL_FREQUENCY)
 
-            if not self._esta_visivel_imediatamente(
-                self.BOTAO_PROXIMO_BOAS_VINDAS
-            ):
+            if not self._esta_visivel_imediatamente(self.TELA_BOAS_VINDAS):
                 return
 
             self._log_warning(

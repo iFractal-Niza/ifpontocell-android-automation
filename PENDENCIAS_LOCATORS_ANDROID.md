@@ -2,30 +2,22 @@
 
 A refatoração reutilizou os `resource-id` disponíveis no projeto Android de referência. Os itens abaixo **não existem naquele projeto** e precisam ser confirmados na build Android atual pelo Appium Inspector.
 
+## Prioridade 0 — desbloqueio por PIN (bloqueia a sessão morna)
+
+`UnlockPage.TEXTO_TELA_UNLOCK` usa `relative_first_access`, mas o Inspector mostrou (2026-10-03) que esse é o contêiner do **boas-vindas** do onboarding. Com o app no onboarding, `esta_na_tela_unlock()` dá verdadeiro, e a `home_autenticada` tentaria desbloquear em vez de fazer o primeiro acesso.
+
+Falta o XML de duas telas:
+
+- **criação do PIN** (depois do login), e da confirmação ("repita a senha");
+- **desbloqueio por PIN** (reabrir o app já logado).
+
+Do desbloqueio, preciso de um contêiner ou texto que só exista nele, para substituir o `relative_first_access`.
+
 ## Prioridade 1 — necessários para a suíte atual
 
-### 1. Login — botão exibir/ocultar senha
+### 1. Ajustes — switch "Lembrete para registro do ponto"
 
-Arquivo: `pages/login_page.py`
-
-Constante:
-
-```python
-BOTAO_VER_SENHA
-```
-
-Fallback temporário configurado:
-
-```text
-btnVerSenha
-text_input_end_icon
-```
-
-Capturar no Inspector o `resource-id` real do ícone que alterna a visibilidade da senha.
-
-### 2. Ajustes — switch "Lembrete para registro do ponto"
-
-Arquivo: `pages/settings_page.py`
+Arquivo: `pages/ajustes/settings_page.py`
 
 Constante:
 
@@ -44,9 +36,9 @@ Esse locator é usado pelo E2E para validar que a opção ativada no popup ficou
 
 ## Prioridade 2 — usado por cenário/configuração relacionada
 
-### 3. Ajustes — switch "Confirmação de foto"
+### 2. Ajustes — switch "Confirmação de foto"
 
-Arquivo: `pages/settings_page.py`
+Arquivo: `pages/ajustes/settings_page.py`
 
 Constante:
 
@@ -74,26 +66,34 @@ Locators que vieram com a lógica nova do iOS e não existem no projeto Android 
 | `ZerarDadosPage.DIALOGO` / `BOTAO_NAO` / `BOTAO_SIM` | `linear_dialog_geral` + `btnEsquerdo` / `btnDireito` | recomeçar o primeiro acesso (corrente onboarding → e2e) |
 | `MenuLateralPage` — `ESTADO DO HUMOR` | texto (sem id técnico) | menu lateral |
 | `VoltarParaHomeMixin.BOTAO_VOLTAR_TEXTO` | texto `VOLTAR`, senão `driver.back()` | telas abertas pelo menu |
-| `AlertaAppMixin` | texto da mensagem + `OK` | alertas do app |
 | `AutorizacaoPage.MODAL_APARELHO_INATIVO` / `BOTAO_OK_MODAL` | texto `Aparelho inativo` / `OK` | só se a tela de autorização existir |
 
 Também ajudariam (não bloqueiam):
 
-- **Onboarding:** um id/texto próprio da tela "informações importantes" — hoje o botão tem o mesmo id do boas-vindas (`btn_confirmar_informacao`), e a repetição de toques do iOS não acontece (DECISOES.md).
-- **PIN:** textos ou ids próprios de "Crie uma senha" e "Repita a senha"; e confirmar que `relative_first_access` só aparece no **desbloqueio** (é ele que separa o desbloqueio da criação do PIN em `flows.etapa_do_primeiro_acesso`).
+- **PIN:** textos ou ids próprios de "Crie uma senha" e "Repita a senha" (ver Prioridade 0).
+- **Sem conexão:** confirmar que usa o mesmo diálogo genérico (confirmado para "Sistema não encontrado." e credenciais inválidas).
+
+## Confirmados no Inspector (2026-10-03)
+
+| Tela | Locators |
+|---|---|
+| Boas-vindas | contêiner `relative_first_access`; título `text_1` ("Olá.\nSeja bem-vindo."); `btn_confirmar_informacao` ("Próximo") |
+| Informações importantes | contêiner `relative_information`; `btn_confirmar_informacao` ("Iniciar configuração") |
+| Configurar Aplicativo (sistema) | contêiner `relative_system_access`; `editTextSistema`; `btn_confirmar` |
+| Configurar Aplicativo (login) | contêiner `relative_login_access`; `editTextLogin`; `editTextSenha`; `btn_senha_ver`; `btn_confirmar` ("Entrar") |
+| Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.") | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
+
+O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo título "Configurar Aplicativo" nas telas de sistema e de login: as pages reconhecem cada tela pelo contêiner.
 
 ## Fallbacks por texto — funcionais, mas vale trocar por resource-id
 
 O projeto Android de referência não continha IDs técnicos para estes componentes. A refatoração deixou fallback por texto:
 
-- popup de sistema não encontrado (`ifPontoCell`, `Sistema não encontrado.`, `OK`);
-- popup de credenciais inválidas (`Usuário e/ou senha inválidos.`, `OK`);
-- popup de conexão sem internet;
+- mensagem dos popups do diálogo genérico (o texto diz qual popup apareceu; título e OK já são por id);
 - popup de lembrete (`ATIVAR` / `DEPOIS`);
 - popup de opinião (`Opinião` / `NÃO`);
 - popup de atualização (`Tem novidade pra você` / `Cancelar`);
 - popup de melhoria (`O que podemos melhorar` / `DEPOIS`);
-- títulos de onboarding;
 - eventual botão Android `Agora não` após login.
 
 Esses itens **não estão bloqueados**: os testes conseguem procurá-los pelo texto atual. Se houver `resource-id`, vale substituir para reduzir dependência de idioma/copy.
