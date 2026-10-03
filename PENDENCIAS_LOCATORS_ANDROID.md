@@ -2,10 +2,6 @@
 
 A refatoração reutilizou os `resource-id` disponíveis no projeto Android de referência. Os itens abaixo **não existem naquele projeto** e precisam ser confirmados na build Android atual pelo Appium Inspector.
 
-## Prioridade 0 — texto da confirmação do PIN
-
-A confirmação existe, como no iOS (criação → "repita a senha" → Home com o lembrete). `UnlockPage.TEXTO_CONFIRMAR_PIN` procura o trecho **"Repita a senha"** (texto do iOS, sem a palavra acentuada). Se a criação do PIN falhar com "A tela de confirmação do PIN não foi exibida", é este texto: capturar a `text_instrucao` da confirmação no Inspector.
-
 ## Prioridade 1 — necessários para a suíte atual
 
 ### 1. Ajustes — switch "Lembrete para registro do ponto"
@@ -77,6 +73,7 @@ Também ajudariam (não bloqueiam):
 | Home (aba PONTO) | `linearPonto`; `bt_init` (texto = hora corrente, "Registrar" no content-desc); `carregarDadosMenos` / `carregarDadosMais`; data do dia `data`; jornada `mc1`…`mc4`; totais `textViewTituloTotais` / `textViewPeriodoTotais` / `abrirFecharTotalizador` (o clicável é o pai, `topTotalizador`) |
 | Barra de cima e de baixo | `menu_esquerdo`; `menu_direito`; abas `ponto`, `espelho`, `status`, `alertas` (content-desc com o nome) |
 | Criação do PIN | contêiner `relative_first_access` (o mesmo do boas-vindas); `text_instrucao` ("Crie uma senha de 4 digitos para…"); `number0`…`number9` |
+| Confirmação do PIN | contêiner `relative_first_access`; `text_instrucao` ("Entre novamente para confirmar\na senha de acesso rápido criada.") — diferente do iOS ("Repita a senha") |
 | Desbloqueio por PIN | contêiner `relative_first_access` (o mesmo); `text_titulo` ("Senha de Acesso Rápido"); `text_instrucao` ("Entre com sua senha"); `esqueci_senha`; `clear` |
 | Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.", lembrete) | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
 

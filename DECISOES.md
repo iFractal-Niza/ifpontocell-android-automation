@@ -100,9 +100,8 @@ do PIN: o teclado `numberN` aparece na criação, na confirmação e no
 desbloqueio, todos no mesmo contêiner (`relative_first_access`, também
 do boas-vindas). O que separa as telas é a instrução (`text_instrucao`):
 "Crie uma senha de 4 digitos" na criação e "Entre com sua senha" no
-desbloqueio (Inspector, 2026-10-03). A confirmação é a mesma do iOS
-(confirmado pelo Alessandro) e vai pelo trecho "Repita a senha"; o texto
-exato ainda não foi visto no Inspector.
+desbloqueio, e "Entre novamente para confirmar" na confirmação
+(Inspector, 2026-10-03; no iOS é "Repita a senha").
 
 - `UnlockPage` usa a digitação robusta do iOS (toca o mesmo dígito até a
   tela mudar, até 6 toques): a criação termina quando aparece a

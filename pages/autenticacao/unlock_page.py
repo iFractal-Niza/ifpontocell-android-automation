@@ -35,11 +35,12 @@ class UnlockPage(BasePage):
     TEXTO_CRIAR_PIN = android_text_contains("Crie uma senha de 4 digitos")
     TELA_CRIAR_PIN = TEXTO_CRIAR_PIN
 
-    # Confirmação: mesma tela do iOS ("Repita a senha de 4 dígitos",
-    # confirmado pelo Alessandro). Pelo trecho sem a palavra acentuada: a
-    # criação no Android escreve "digitos" sem acento. Texto exato ainda
-    # não visto no Inspector (PENDENCIAS_LOCATORS_ANDROID.md).
-    TEXTO_CONFIRMAR_PIN = android_text_contains("Repita a senha")
+    # Confirmação (Inspector): "Entre novamente para confirmar\na senha de
+    # acesso rápido criada." Diferente do iOS ("Repita a senha...") e do
+    # desbloqueio ("Entre com sua senha").
+    TEXTO_CONFIRMAR_PIN = android_text_contains(
+        "Entre novamente para confirmar"
+    )
 
     # === Desbloqueio ===
     # Confirmado no Inspector: título "Senha de Acesso Rápido" e
