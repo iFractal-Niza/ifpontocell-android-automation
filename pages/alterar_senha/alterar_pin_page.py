@@ -22,8 +22,9 @@ class AlterarPinPage(AlterarSenhaBasePage):
     SCREEN_NAME = "alterar_pin"
     ABA = "SENHA 4 DÍGITOS"
 
-    # PENDENTE: assumida a mesma instrução das telas de PIN do primeiro
-    # acesso (text_instrucao); no iOS, alterarSenha.lblInstrucao.
+    # Confirmado no Inspector: a aba usa a mesma tela de PIN do primeiro
+    # acesso (relative_first_access, text_titulo "Alterar Senha",
+    # text_instrucao, teclado numberN). No iOS, alterarSenha.lblInstrucao.
     INSTRUCAO = android_id("text_instrucao")
 
     TEXTO_SENHA_ATUAL = "Digite a senha atual"

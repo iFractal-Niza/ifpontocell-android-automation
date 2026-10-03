@@ -17,11 +17,13 @@ class AlterarSenhaBasePage(AlertaAppMixin, VoltarParaHomeMixin, BasePage):
 
     NOME_TELA = "Alterar Senha"
 
-    # Nome da aba (no iOS, dentro do controle alterarSenha.segTipoSenha).
-    # PENDENTE: pelo texto da aba até o XML da tela.
+    # Nome da aba, pelo texto, como no iOS (lá, dentro do controle
+    # alterarSenha.segTipoSenha). No Android as abas ficam no
+    # segmentedButtonGroup, com itemSenha4digitos / itemSenhaSistema
+    # (alternativa se o texto não for achado).
     ABA = ""
 
-    # PENDENTE: por texto, como no iOS, até o XML da tela.
+    # Confirmado no Inspector: título do cabeçalho, pelo texto.
     TITULO = android_text("ALTERAR SENHA")
 
     # === Composição ===
