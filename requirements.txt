@@ -1,0 +1,22 @@
+# === Automação mobile ===
+Appium-Python-Client==5.3.0
+selenium==4.36.0
+
+# === Execução e relatórios de testes ===
+pytest==9.1.1
+pytest-html==4.2.0
+pytest-metadata==3.1.1
+pytest-order==1.5.0
+
+# === HTTP e API ===
+requests==2.34.2
+
+# === Configuração e utilitários ===
+PyYAML==6.0.3
+
+# === Suporte e compatibilidade ===
+urllib3==2.7.0
+typing_extensions==4.15.0
+
+# === Exportação de relatórios ===
+WeasyPrint==69.0

@@ -1,0 +1,53 @@
+# === Ambiente Python ===
+venv/
+.env
+.env.*
+__pycache__/
+*.py[cod]
+*$py.class
+
+# === Configurações locais ===
+# env.yaml contém credenciais e não deve ser versionado.
+# env.example.yaml deve permanecer versionado como template.
+config/env.yaml
+config/test_data.yaml
+config/devices.yaml
+
+# === Pytest e relatórios ===
+.pytest_cache/
+.cache/
+# reports/ é gerado a cada execução, mas reports/assets/ guarda
+# estilos versionados (style.css, print.css) usados no HTML/PDF.
+reports/*
+!reports/assets/
+
+# === Logs ===
+*.log
+
+# === IDEs e editores ===
+.vscode/
+.idea/
+*.swp
+
+# === macOS ===
+.DS_Store
+
+# === Builds e arquivos temporários ===
+dist/
+build/
+*.egg-info/
+*.tmp
+*.bak
+
+# === Cobertura de testes ===
+.coverage
+htmlcov/
+
+# === Aplicativos mobile ===
+*.ipa
+*.app
+*.apk
+
+# === Certificados e chaves ===
+*.key
+*.pem

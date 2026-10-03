@@ -1,0 +1,390 @@
+/* =========================
+   PDF / impressão
+   ========================= */
+
+@page {
+    size: A4 landscape;
+    margin: 7mm;
+    background: #0b1117;
+}
+
+html,
+body,
+.pdf-export {
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #0b1117 !important;
+    color: #dde7e8 !important;
+    font-size: 9px !important;
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+
+
+/* === Elementos apenas interativos === */
+
+button,
+.controls,
+.run-count,
+.filter,
+.summary__reload,
+.summary__spacer,
+.logexpander,
+#title,
+#environment-header,
+#environment,
+#summary,
+.summary__data > h2,
+body > p:first-of-type {
+    display: none !important;
+}
+
+
+/* === Dashboard === */
+
+.qa-dashboard {
+    width: 100% !important;
+    margin: 0 0 4mm !important;
+    padding: 4mm !important;
+    border: 1px solid #24313c !important;
+    border-radius: 4mm !important;
+    background:
+        linear-gradient(
+            180deg,
+            #131b22 0%,
+            #10171d 100%
+        ) !important;
+    box-shadow: none !important;
+    break-inside: auto !important;
+}
+
+.qa-dashboard-header {
+    gap: 5mm !important;
+    margin-bottom: 2.5mm !important;
+}
+
+.qa-dashboard-title h2 {
+    font-size: 17px !important;
+}
+
+.qa-dashboard-title p,
+.qa-dashboard-status small {
+    font-size: 8px !important;
+}
+
+.qa-dashboard-status {
+    min-width: 48mm !important;
+    padding: 2.5mm 3mm !important;
+}
+
+.qa-execution-alert {
+    margin-bottom: 2mm !important;
+    padding: 2mm 3mm !important;
+    break-inside: avoid !important;
+}
+
+.qa-execution-alert-content strong {
+    font-size: 10px !important;
+}
+
+.qa-execution-alert-rate strong {
+    font-size: 14px !important;
+}
+
+
+/* WeasyPrint lida melhor com flex neste trecho
+   do que com o grid do dashboard original. */
+
+.qa-kpi-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 2mm !important;
+    break-inside: avoid !important;
+}
+
+.qa-kpi-card {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 2mm 2.7mm !important;
+    border-radius: 2.5mm !important;
+    box-shadow: none !important;
+}
+
+.qa-kpi-label {
+    font-size: 7.5px !important;
+}
+
+.qa-kpi-value {
+    font-size: 16px !important;
+}
+
+.qa-kpi-detail {
+    font-size: 7px !important;
+    white-space: normal !important;
+}
+
+.qa-section {
+    margin-top: 2.5mm !important;
+    padding-top: 2mm !important;
+}
+
+.qa-section-header {
+    margin-bottom: 2mm !important;
+}
+
+.qa-section-header h3 {
+    font-size: 11px !important;
+}
+
+.qa-flow-list {
+    display: block !important;
+}
+
+.qa-flow-row {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4mm !important;
+    margin-bottom: 1.8mm !important;
+    padding: 2.2mm 3mm 3.8mm !important;
+    border-radius: 2.5mm !important;
+    box-shadow: none !important;
+    break-inside: avoid !important;
+}
+
+.qa-flow-main {
+    flex: 0 0 25% !important;
+    min-width: 0 !important;
+}
+
+.qa-flow-title {
+    font-size: 9px !important;
+}
+
+.qa-flow-summary strong {
+    font-size: 15px !important;
+}
+
+.qa-flow-summary span {
+    font-size: 7.5px !important;
+}
+
+.qa-flow-meta {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    gap: 1.6mm !important;
+}
+
+.qa-flow-meta-item {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 2mm !important;
+}
+
+.qa-flow-meta-item span {
+    font-size: 6.5px !important;
+}
+
+.qa-flow-meta-item strong {
+    font-size: 9px !important;
+}
+
+.qa-flow-progress-bar {
+    right: 3mm !important;
+    bottom: 2mm !important;
+    left: 3mm !important;
+    height: 1.3mm !important;
+}
+
+.qa-footer {
+    margin-top: 2.5mm !important;
+    padding-top: 2mm !important;
+    break-inside: avoid !important;
+}
+
+.qa-footer-brand strong {
+    font-size: 13px !important;
+}
+
+
+/* === Resultado dos testes === */
+
+#results-table {
+    width: 100% !important;
+    margin: 0 !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    background: #131b22 !important;
+    border: 1px solid #24313c !important;
+    font-size: 8px !important;
+}
+
+#results-table-head {
+    display: table-header-group !important;
+}
+
+#results-table th,
+#results-table td {
+    padding: 2mm !important;
+    border: 1px solid #24313c !important;
+    background: #131b22 !important;
+    color: #dde7e8 !important;
+    vertical-align: top !important;
+}
+
+#results-table th {
+    background: #1d2d35 !important;
+    color: #79b7bb !important;
+    font-weight: 700 !important;
+}
+
+#results-table th:nth-child(1),
+#results-table td:nth-child(1) {
+    width: 9% !important;
+}
+
+#results-table th:nth-child(2),
+#results-table td:nth-child(2) {
+    width: 58% !important;
+}
+
+#results-table th:nth-child(3),
+#results-table td:nth-child(3) {
+    width: 12% !important;
+}
+
+#results-table th:nth-child(4),
+#results-table td:nth-child(4) {
+    width: 21% !important;
+}
+
+.pdf-result-row {
+    break-inside: avoid !important;
+}
+
+/* Erro resumido e screenshot são protegidos individualmente
+   (.pdf-error-panel / .pdf-media-panel), não como bloco único —
+   assim o texto pode preencher o espaço que sobrar na página atual
+   mesmo quando o screenshot precisa ir para a próxima. */
+
+.failed .col-result,
+.error .col-result,
+.xpassed .col-result {
+    color: #c48a86 !important;
+    font-weight: 800 !important;
+}
+
+.passed .col-result {
+    color: #8fbe99 !important;
+    font-weight: 800 !important;
+}
+
+.skipped .col-result,
+.xfailed .col-result,
+.rerun .col-result {
+    color: #c9b07a !important;
+    font-weight: 800 !important;
+}
+
+
+/* === Detalhes estáticos de falha === */
+
+.pdf-extras-row td {
+    padding: 3mm !important;
+    background: #0f171e !important;
+}
+
+.pdf-failure-detail {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 3mm !important;
+    width: 100% !important;
+}
+
+.pdf-error-panel {
+    width: 100% !important;
+    min-width: 0 !important;
+    break-inside: avoid !important;
+}
+
+.pdf-detail-title {
+    display: block !important;
+    margin-bottom: 1.5mm !important;
+    color: #79b7bb !important;
+    font-size: 7px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.4px !important;
+    text-transform: uppercase !important;
+}
+
+.pdf-error-summary {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 2.5mm !important;
+    border: 1px solid #24313c !important;
+    border-radius: 2mm !important;
+    background: #e9ecee !important;
+    color: #b74a43 !important;
+    font-family:
+        "Courier New",
+        Courier,
+        monospace !important;
+    font-size: 6.7px !important;
+    line-height: 1.25 !important;
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+}
+
+.pdf-html-reference {
+    display: block !important;
+    margin-top: 2mm !important;
+    color: #7f9199 !important;
+    font-size: 6.8px !important;
+}
+
+.pdf-media-panel {
+    width: 55mm !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    text-align: center !important;
+    break-inside: avoid !important;
+}
+
+.pdf-media-panel img {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 70mm !important;
+    margin: 0 auto !important;
+    border: 1px solid #71808b !important;
+    object-fit: contain !important;
+}
+
+.pdf-media-panel figcaption {
+    margin-top: 1.5mm !important;
+    color: #aab7bd !important;
+    font-size: 7px !important;
+}
+
+
+/* Evita conflito com o media viewer
+   dinâmico do pytest-html. */
+
+.media,
+.media-container,
+.extraHTML,
+.logwrapper {
+    display: none !important;
+}
+
+
+/* === Links === */
+
+a {
+    color: #79b7bb !important;
+    text-decoration: none !important;
+}
