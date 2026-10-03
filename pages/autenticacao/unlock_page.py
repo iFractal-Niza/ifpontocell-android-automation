@@ -42,11 +42,11 @@ class UnlockPage(BasePage):
     TEXTO_CONFIRMAR_PIN = BOTAO_DIGITO_1
 
     # === Desbloqueio ===
-    # ERRADO, a corrigir: relative_first_access é o contêiner reaproveitado
-    # pelo boas-vindas e pela criação do PIN (Inspector), não exclusivo do
-    # desbloqueio. Falta o XML da tela de PIN de desbloqueio
-    # (PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0).
-    TEXTO_TELA_UNLOCK = android_id("relative_first_access")
+    # Confirmado no Inspector: título "Senha de Acesso Rápido" e
+    # instrução (text_instrucao) "Entre com sua senha", como no iOS. Pela
+    # instrução: o contêiner (relative_first_access) é o mesmo do
+    # boas-vindas e da criação do PIN.
+    TEXTO_TELA_UNLOCK = android_text_contains("Entre com sua senha")
 
     # === Popup de salvar senha ===
     def popup_salvar_senha_esta_visivel(self) -> bool:

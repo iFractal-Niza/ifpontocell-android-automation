@@ -2,14 +2,9 @@
 
 A refatoração reutilizou os `resource-id` disponíveis no projeto Android de referência. Os itens abaixo **não existem naquele projeto** e precisam ser confirmados na build Android atual pelo Appium Inspector.
 
-## Prioridade 0 — desbloqueio por PIN (bloqueia a sessão morna)
+## Prioridade 0 — confirmação do PIN
 
-`UnlockPage.TEXTO_TELA_UNLOCK` usa `relative_first_access`, mas o Inspector mostrou (2026-10-03) que esse contêiner é reaproveitado pelo **boas-vindas** e pela **criação do PIN**. Com o app numa dessas telas, `esta_na_tela_unlock()` dá verdadeiro, e a `home_autenticada` tentaria desbloquear em vez de fazer o primeiro acesso. (A detecção de etapa da corrente já contorna: sonda onboarding e criação antes.)
-
-Falta o XML de duas telas:
-
-- **confirmação do PIN** (depois de digitar os 4 dígitos na criação): o texto da `text_instrucao`;
-- **desbloqueio por PIN** (reabrir o app já logado): um texto ou id que só exista nele (provavelmente a `text_instrucao` também).
+Falta o XML da **confirmação do PIN** (a tela depois de digitar os 4 dígitos na criação): o texto da `text_instrucao`. Até lá, `UnlockPage.TEXTO_CONFIRMAR_PIN` é o próprio teclado (`number1`): a criação termina com ele ainda na tela e a confirmação, quando ele some; e a corrente do primeiro acesso não reconhece um teste parado no meio da confirmação.
 
 ## Prioridade 1 — necessários para a suíte atual
 
@@ -68,7 +63,6 @@ Locators que vieram com a lógica nova do iOS e não existem no projeto Android 
 
 Também ajudariam (não bloqueiam):
 
-- **PIN:** textos ou ids próprios de "Crie uma senha" e "Repita a senha" (ver Prioridade 0).
 - **Sem conexão:** confirmar que usa o mesmo diálogo genérico (confirmado para "Sistema não encontrado." e credenciais inválidas).
 
 ## Confirmados no Inspector (2026-10-03)
@@ -83,6 +77,7 @@ Também ajudariam (não bloqueiam):
 | Home (aba PONTO) | `linearPonto`; `bt_init` (texto = hora corrente, "Registrar" no content-desc); `carregarDadosMenos` / `carregarDadosMais`; data do dia `data`; jornada `mc1`…`mc4`; totais `textViewTituloTotais` / `textViewPeriodoTotais` / `abrirFecharTotalizador` (o clicável é o pai, `topTotalizador`) |
 | Barra de cima e de baixo | `menu_esquerdo`; `menu_direito`; abas `ponto`, `espelho`, `status`, `alertas` (content-desc com o nome) |
 | Criação do PIN | contêiner `relative_first_access` (o mesmo do boas-vindas); `text_instrucao` ("Crie uma senha de 4 digitos para…"); `number0`…`number9` |
+| Desbloqueio por PIN | contêiner `relative_first_access` (o mesmo); `text_titulo` ("Senha de Acesso Rápido"); `text_instrucao` ("Entre com sua senha"); `esqueci_senha`; `clear` |
 | Diálogo genérico do app ("Sistema não encontrado.", "Usuário e/ou senha inválidos.", lembrete) | `linear_dialog_geral`; `titulo` ("ifPonto Cell", com espaço); `mensagem`; OK = `btnDireito` |
 
 O mesmo botão aparece no boas-vindas e nas informações importantes, e o mesmo título "Configurar Aplicativo" nas telas de sistema, login e PIN: as pages reconhecem cada tela pelo contêiner — menos o boas-vindas (pelo título "bem-vindo") e o PIN (pela instrução), que dividem o `relative_first_access`.

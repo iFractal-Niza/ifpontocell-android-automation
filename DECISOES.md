@@ -97,19 +97,18 @@ para as funções da corrente terem a mesma assinatura do iOS.
 
 O projeto Android de referência não tem marcador exclusivo de cada etapa
 do PIN: o teclado `numberN` aparece na criação, na confirmação e no
-desbloqueio. A criação tem instrução própria (`text_instrucao`, "Crie uma
-senha de 4 digitos"); a confirmação e o desbloqueio ainda não foram
-capturados. O marcador do desbloqueio herdado do Android antigo
-(`relative_first_access`) é dividido pelo boas-vindas e pela criação do
-PIN (Inspector, 2026-10-03).
+desbloqueio, todos no mesmo contêiner (`relative_first_access`, também
+do boas-vindas). O que separa as telas é a instrução (`text_instrucao`):
+"Crie uma senha de 4 digitos" na criação e "Entre com sua senha" no
+desbloqueio (Inspector, 2026-10-03). A da confirmação ainda não foi
+capturada.
 
 - `UnlockPage` usa a digitação robusta do iOS (toca o mesmo dígito até a
   tela mudar, até 6 toques), com o teclado como marcador: a criação
   termina com o teclado ainda na tela; a confirmação, quando ele some.
   Por isso o `APP_PIN` precisa ser um dígito repetido (ex.: `1111`).
-- Em `flows.etapa_do_primeiro_acesso`, onboarding e criação do PIN (pela
-  instrução) são sondados antes de "logado", cujo marcador hoje casa
-  também com essas telas.
+- Em `flows.etapa_do_primeiro_acesso`, criação e desbloqueio vão pela
+  instrução; a confirmação fica de fora até ter texto próprio.
 
 Textos ou ids próprios de cada etapa devolveriam a conferência que o iOS
 faz (PENDENCIAS_LOCATORS_ANDROID.md).

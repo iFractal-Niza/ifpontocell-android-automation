@@ -601,13 +601,10 @@ def etapa_do_primeiro_acesso(
             ),
         ),
         (ETAPA_LOGIN, (LoginPage.CAMPO_LOGIN,)),
-        # A primeira etapa que casar vence. No Android o marcador do
-        # desbloqueio (relative_first_access) é reaproveitado pelo
-        # boas-vindas e pela criação do PIN, e o teclado aparece em todas
-        # as telas de PIN: por isso onboarding e criação (pelo texto da
-        # instrução) vêm antes de "logado", e a confirmação do PIN fica
-        # de fora até ter texto próprio (PENDENCIAS_LOCATORS_ANDROID.md,
-        # Prioridade 0).
+        # As telas de PIN dividem o contêiner e o teclado: criação e
+        # desbloqueio vão pela instrução (text_instrucao). A confirmação
+        # do PIN fica de fora até ter texto próprio
+        # (PENDENCIAS_LOCATORS_ANDROID.md, Prioridade 0).
         (ETAPA_CRIAR_PIN, (UnlockPage.TEXTO_CRIAR_PIN,)),
         (
             ETAPA_LOGADO,
