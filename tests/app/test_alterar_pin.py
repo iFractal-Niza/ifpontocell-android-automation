@@ -80,15 +80,16 @@ def test_alterar_pin_confirmacao_divergente_reinicia(
 ):
     """
     Valida que repetir um PIN diferente do novo é recusado: o app pede
-    para tentar novamente e continua pedindo o PIN. (Que o PIN não mudou
+    para tentar novamente e continua pedindo o PIN. No Android o app
+    reseta a troca e volta a pedir a senha atual. (Que o PIN não mudou
     fica provado pelo CT030, que troca o PIN usando o original como
     senha atual.)
 
     Fronteira: tela pedindo a senha atual (deixada pelo CT028, ou Home
     -> ALTERAR SENHA -> SENHA 4 DÍGITOS) -> PIN atual -> novo PIN ->
     repetição divergente -> aviso "Confirmação de senha não conferem /
-    Favor tentar novamente", esperando o PIN (fica na tela para o
-    CT030).
+    Favor tentar novamente" (iOS) ou de volta a "Digite a senha atual"
+    (Android), esperando o PIN (fica na tela para o CT030).
     """
     sessao = app_session_e2e_registro_ponto
     pagina = _tela_aberta_ou_pelo_menu(request, sessao)
@@ -104,7 +105,8 @@ def test_alterar_pin_confirmacao_divergente_reinicia(
         "novamente."
     )
 
-    # O aviso fica na tela esperando o PIN: o CT030 continua daqui.
+    # A tela fica esperando o PIN (aviso no iOS; senha atual no Android):
+    # o CT030 continua daqui.
 
     restauracao_do_pin.pode_estar_trocado = False
 

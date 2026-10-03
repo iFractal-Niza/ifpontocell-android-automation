@@ -208,6 +208,19 @@ célula**; no Android, ids de item costumam ser fixos.
 
 ---
 
+## Alterar PIN: confirmação divergente reseta a troca
+
+**Data:** 2026-10-03
+
+No iOS, repetir um PIN diferente do novo mostra "Confirmação de senha
+não conferem / Favor tentar novamente" e continua esperando o PIN. No
+Android (confirmado pelo Alessandro), o app reseta a troca e volta a
+pedir a senha atual. `AlterarPinPage.repeticao_divergente_recusada`
+aceita também essa volta; o CT030 continua dali (o `alterar_pin` já
+começa pela senha atual quando ela é pedida).
+
+---
+
 ## Plataforma: equivalentes Android
 
 **Data:** 2026-10-03

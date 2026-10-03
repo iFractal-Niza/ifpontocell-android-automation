@@ -88,13 +88,18 @@ class AlterarPinPage(AlterarSenhaBasePage):
         """
         Depois de repetir um PIN diferente do novo: o app avisa para
         tentar novamente (ou volta à criação da nova senha).
+
+        Particularidade do Android (confirmado pelo Alessandro): o app
+        reseta a troca e volta a pedir a senha atual.
         """
         limite = monotonic() + timeout
 
         while monotonic() < limite:
-            if self._esta_visivel_imediatamente(
-                self.AVISO_TENTAR_NOVAMENTE
-            ) or self._esta_visivel_imediatamente(UnlockPage.TEXTO_CRIAR_PIN):
+            if (
+                self._esta_visivel_imediatamente(self.AVISO_TENTAR_NOVAMENTE)
+                or self._esta_visivel_imediatamente(UnlockPage.TEXTO_CRIAR_PIN)
+                or self.pedindo_senha_atual(timeout=0)
+            ):
                 return True
 
             sleep(self.POLL_FREQUENCY)
