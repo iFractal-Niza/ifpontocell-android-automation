@@ -22,8 +22,9 @@ class SobreAplicativoPage(
     SCREEN_NAME = "sobre_aplicativo"
     NOME_TELA = "Sobre o aplicativo"
 
-    # PENDENTE: por texto, como no iOS, até o XML da tela
-    # (PENDENCIAS_LOCATORS_ANDROID.md).
+    # Confirmado no Inspector: pelo texto, como no iOS. No Android cada
+    # par é uma linha (nome_app, versao, desenvolvedor, plataforma,
+    # status_app) com tvTitulo + tvTexto, lida em ordem pelo mixin.
     TITULO = android_text("SOBRE O APLICATIVO")
     ROTULO_VERSAO = android_text("VERSÃO")
 

@@ -20,7 +20,8 @@ from utils.texto import normalizar_texto
 
 DESCRICAO = (
     "O ifPonto Cell é um aplicativo para registro online e offline da "
-    "jornada dos colaboradores vinculado ao sistema ifPonto. Neste "
+    # Android: "vinculados" (no iOS, "vinculado").
+    "jornada dos colaboradores vinculados ao sistema ifPonto. Neste "
     "aplicativo é possível também acompanhar o status das suas "
     "marcações, o espelho de ponto, receber alertas e comunicados do "
     "gestor."
@@ -29,7 +30,6 @@ DESCRICAO = (
 CAMPOS = {
     "NOME": "ifPonto Cell",
     "DESENVOLVEDOR": "iFractal®",
-    # PENDENTE: confirmar o texto no Android (no iOS, "iOS").
     "PLATAFORMA": "Android",
 }
 
