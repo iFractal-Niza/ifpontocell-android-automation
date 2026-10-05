@@ -1126,19 +1126,82 @@ body {
   color: var(--amber);
 }
 
-.qa-manual-remover {
-  padding: 3px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-muted);
+/* Evidências da linha manual: arquivos e "+ Anexar" à esquerda,
+   lixeira do teste na ponta direita. */
+.qa-manual-evidencias {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.qa-evidencias-lista {
+  min-width: 0;
+}
+
+.qa-evidencia-manual {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 0 6px;
+}
+
+.col-links .qa-evidencia-abrir {
+  max-width: 180px;
+  margin: 0;
+  overflow: hidden;
   font: inherit;
   font-size: 0.9em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.qa-evidencia-tirar {
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qa-evidencia-tirar:hover {
+  color: var(--red);
+}
+
+.qa-evidencia-anexar {
+  padding: 3px 10px;
+  border: 1px dashed var(--teal-line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--teal);
+  font: inherit;
+  font-size: 0.9em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.qa-evidencia-anexar:hover {
+  border-style: solid;
+  border-color: var(--teal);
+}
+
+.qa-manual-remover {
+  display: inline-flex;
+  flex: none;
+  padding: 5px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
 }
 
 .qa-manual-remover:hover {
   border-color: var(--red-line);
+  background: var(--red-soft);
   color: var(--red);
 }
 
@@ -1660,6 +1723,14 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   object-fit: contain;
+}
+
+.qa-lightbox video {
+  max-width: 100%;
+  max-height: calc(100vh - 80px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #000;
 }
 
 .qa-lightbox-legenda {

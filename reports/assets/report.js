@@ -481,7 +481,7 @@
   // A página aberta, com as escolhas gravadas. Sai a tabela já montada:
   // o pytest-html remonta tudo ao abrir, a partir dos dados do arquivo,
   // e ela repetiria os prints e o vídeo (o arquivo dobraria de tamanho).
-  function htmlDaCopia() {
+  function htmlDaCopia(manuaisComArquivos) {
     var copia = document.documentElement.cloneNode(true);
 
     copia
@@ -497,7 +497,7 @@
       'window.QA_CLASSIFICACAO_FIXA = ' +
       paraScript(classificacoesEscolhidas()) +
       ';\nwindow.QA_TESTES_MANUAIS_FIXOS = ' +
-      paraScript(testesManuais) +
+      paraScript(manuaisComArquivos) +
       ';';
 
     var cabeca = copia.querySelector('head');
@@ -506,22 +506,51 @@
     return '<!DOCTYPE html>\n' + copia.outerHTML;
   }
 
-  function baixarHtml() {
-    var arquivo = new Blob([htmlDaCopia()], {
-      type: 'text/html;charset=utf-8',
-    });
-    var endereco = URL.createObjectURL(arquivo);
+  // Os arquivos das evidências manuais vêm do IndexedDB e vão embutidos
+  // na cópia (por isso a espera).
+  function baixarHtml(evento) {
+    var botao = evento.currentTarget;
+    var texto = botao.textContent;
+
+    botao.disabled = true;
+    botao.textContent = 'Preparando...';
+
+    manuaisComArquivos()
+      .then(function (manuais) {
+        baixarArquivo(
+          new Blob([htmlDaCopia(manuais)], {
+            type: 'text/html;charset=utf-8',
+          }),
+          nomeDaCopia()
+        );
+      })
+      .catch(function () {
+        window.alert(
+          'Não foi possível montar a cópia com as evidências manuais.'
+        );
+      })
+      .then(function () {
+        botao.disabled = false;
+        botao.textContent = texto;
+      });
+  }
+
+  function baixarArquivo(conteudo, nome) {
+    var endereco =
+      typeof conteudo === 'string' ? conteudo : URL.createObjectURL(conteudo);
     var link = document.createElement('a');
 
     link.href = endereco;
-    link.download = nomeDaCopia();
+    link.download = nome;
     document.body.appendChild(link);
     link.click();
     link.remove();
 
-    setTimeout(function () {
-      URL.revokeObjectURL(endereco);
-    }, 1000);
+    if (endereco !== conteudo) {
+      setTimeout(function () {
+        URL.revokeObjectURL(endereco);
+      }, 1000);
+    }
   }
 
   // Na cópia, o botão vira o aviso de que ela é só leitura.
@@ -702,12 +731,9 @@
               '00:00:00'
             )
       );
-    } else if (!fixo && coluna === coluna.parentNode.lastElementChild) {
+    } else if (coluna === coluna.parentNode.lastElementChild) {
       celula.className = 'col-links';
-
-      var remover = criar('button', 'qa-manual-remover', 'Remover');
-      remover.type = 'button';
-      celula.appendChild(remover);
+      celula.appendChild(evidenciasManuais(teste, fixo));
     }
 
     return celula;
@@ -810,13 +836,337 @@
     var teste = remover ? testeManualDa(remover) : null;
 
     if (teste && window.confirm('Remover este teste manual?')) {
+      (teste.evidencias || []).forEach(function (evidencia) {
+        apagarArquivo(evidencia.id);
+      });
       testesManuais = testesManuais.filter(function (outro) {
         return outro !== teste;
       });
       gravarTestesManuais();
       redesenharTestesManuais();
+      return;
+    }
+
+    var anexar = evento.target.closest('.qa-evidencia-anexar');
+
+    if (anexar) {
+      escolherArquivos(testeManualDa(anexar));
+      return;
+    }
+
+    var abrir = evento.target.closest('.qa-evidencia-abrir');
+
+    if (abrir) {
+      abrirEvidenciaManual(
+        testeManualDa(abrir),
+        abrir.getAttribute('data-evidencia')
+      );
+      return;
+    }
+
+    var tirar = evento.target.closest('.qa-evidencia-tirar');
+    var dono = tirar ? testeManualDa(tirar) : null;
+
+    if (dono && window.confirm('Remover esta evidência?')) {
+      var id = tirar.getAttribute('data-evidencia');
+
+      apagarArquivo(id);
+      dono.evidencias = (dono.evidencias || []).filter(function (evidencia) {
+        return evidencia.id !== id;
+      });
+      gravarTestesManuais();
+      redesenharTestesManuais();
     }
   });
+
+  // === Evidências dos testes manuais ===
+  // O arquivo (imagem, vídeo, PDF...) fica no IndexedDB do navegador: o
+  // localStorage só comporta alguns MB. No teste, só id, nome e tipo. Na
+  // cópia do "Baixar HTML", o arquivo vai embutido (campo dados).
+  var LIMITE_EVIDENCIA_MB = 50;
+  var bancoDeArquivos = null;
+
+  function abrirBanco() {
+    if (!bancoDeArquivos) {
+      bancoDeArquivos = new Promise(function (resolver, rejeitar) {
+        var pedido = indexedDB.open('qa-report-evidencias', 1);
+
+        pedido.onupgradeneeded = function () {
+          pedido.result.createObjectStore('arquivos');
+        };
+        pedido.onsuccess = function () {
+          resolver(pedido.result);
+        };
+        pedido.onerror = function () {
+          rejeitar(pedido.error);
+        };
+      });
+    }
+
+    return bancoDeArquivos;
+  }
+
+  function operarArquivo(modo, operacao) {
+    return abrirBanco().then(function (banco) {
+      return new Promise(function (resolver, rejeitar) {
+        var pedido = operacao(
+          banco.transaction('arquivos', modo).objectStore('arquivos')
+        );
+
+        pedido.onsuccess = function () {
+          resolver(pedido.result);
+        };
+        pedido.onerror = function () {
+          rejeitar(pedido.error);
+        };
+      });
+    });
+  }
+
+  function guardarArquivo(id, dados) {
+    return operarArquivo('readwrite', function (arquivos) {
+      return arquivos.put(dados, id);
+    });
+  }
+
+  function lerArquivo(id) {
+    return operarArquivo('readonly', function (arquivos) {
+      return arquivos.get(id);
+    });
+  }
+
+  function apagarArquivo(id) {
+    operarArquivo('readwrite', function (arquivos) {
+      return arquivos.delete(id);
+    }).catch(function () {
+      // Sem banco: não há o que apagar.
+    });
+  }
+
+  function dadosDaEvidencia(evidencia) {
+    return evidencia.dados
+      ? Promise.resolve(evidencia.dados)
+      : lerArquivo(evidencia.id);
+  }
+
+  function manuaisComArquivos() {
+    return Promise.all(
+      testesManuais.map(function (teste) {
+        return Promise.all(
+          (teste.evidencias || []).map(function (evidencia) {
+            return dadosDaEvidencia(evidencia).then(function (dados) {
+              return {
+                id: evidencia.id,
+                nome: evidencia.nome,
+                tipo: evidencia.tipo,
+                dados: dados || '',
+              };
+            });
+          })
+        ).then(function (evidencias) {
+          var copia = {};
+
+          Object.keys(teste).forEach(function (chave) {
+            copia[chave] = teste[chave];
+          });
+          copia.evidencias = evidencias;
+
+          return copia;
+        });
+      })
+    );
+  }
+
+  function lerComoDataUrl(arquivo) {
+    return new Promise(function (resolver, rejeitar) {
+      var leitor = new FileReader();
+
+      leitor.onload = function () {
+        resolver(leitor.result);
+      };
+      leitor.onerror = function () {
+        rejeitar(leitor.error);
+      };
+      leitor.readAsDataURL(arquivo);
+    });
+  }
+
+  function anexarArquivos(teste, arquivos) {
+    var grandes = arquivos.filter(function (arquivo) {
+      return arquivo.size > LIMITE_EVIDENCIA_MB * 1024 * 1024;
+    });
+
+    if (grandes.length) {
+      window.alert(
+        'Ficaram de fora (acima de ' +
+          LIMITE_EVIDENCIA_MB +
+          ' MB): ' +
+          grandes
+            .map(function (arquivo) {
+              return arquivo.name;
+            })
+            .join(', ')
+      );
+    }
+
+    var aceitos = arquivos.filter(function (arquivo) {
+      return grandes.indexOf(arquivo) === -1;
+    });
+
+    Promise.all(
+      aceitos.map(function (arquivo, indice) {
+        var id = 'e' + Date.now() + '-' + indice;
+
+        return lerComoDataUrl(arquivo)
+          .then(function (dados) {
+            return guardarArquivo(id, dados);
+          })
+          .then(function () {
+            return { id: id, nome: arquivo.name, tipo: arquivo.type };
+          });
+      })
+    )
+      .then(function (novas) {
+        teste.evidencias = (teste.evidencias || []).concat(novas);
+        gravarTestesManuais();
+        redesenharTestesManuais();
+      })
+      .catch(function () {
+        window.alert(
+          'Não foi possível guardar o arquivo neste navegador ' +
+            '(sem espaço ou navegação privada).'
+        );
+      });
+  }
+
+  // Vários arquivos de uma vez.
+  function escolherArquivos(teste) {
+    if (!teste) {
+      return;
+    }
+
+    var seletor = document.createElement('input');
+
+    seletor.type = 'file';
+    seletor.multiple = true;
+    seletor.accept = 'image/*,video/*,application/pdf';
+    seletor.addEventListener('change', function () {
+      anexarArquivos(teste, Array.prototype.slice.call(seletor.files));
+    });
+    seletor.click();
+  }
+
+  // Imagem e vídeo abrem ampliados na página; o resto é baixado.
+  function abrirEvidenciaManual(teste, id) {
+    var evidencia = ((teste && teste.evidencias) || []).filter(function (e) {
+      return e.id === id;
+    })[0];
+
+    if (!evidencia) {
+      return;
+    }
+
+    dadosDaEvidencia(evidencia).then(function (dados) {
+      if (!dados) {
+        window.alert('Arquivo não encontrado neste navegador.');
+        return;
+      }
+
+      var tipo = evidencia.tipo || '';
+
+      if (tipo.indexOf('image/') !== 0 && tipo.indexOf('video/') !== 0) {
+        baixarArquivo(dados, evidencia.nome);
+        return;
+      }
+
+      fecharImagem();
+
+      var fundo = criar('div', 'qa-lightbox');
+      var midia = criar(tipo.indexOf('video/') === 0 ? 'video' : 'img');
+
+      fundo.title = 'Clique fora ou tecle Esc para fechar';
+      midia.src = dados;
+
+      if (midia.tagName === 'VIDEO') {
+        midia.controls = true;
+        midia.autoplay = true;
+      } else {
+        midia.alt = evidencia.nome;
+      }
+
+      fundo.appendChild(midia);
+      fundo.appendChild(criar('div', 'qa-lightbox-legenda', evidencia.nome));
+      fundo.addEventListener('click', function (clique) {
+        if (clique.target === fundo) {
+          fecharImagem();
+        }
+      });
+      document.body.appendChild(fundo);
+    });
+  }
+
+  var ICONE_LIXEIRA =
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>';
+
+  // Célula Evidências da linha manual: as evidências anexadas, o botão de
+  // anexar e, na ponta direita, a lixeira do teste.
+  function evidenciasManuais(teste, fixo) {
+    var caixa = criar('div', 'qa-manual-evidencias');
+    var lista = criar('div', 'qa-evidencias-lista');
+
+    (teste.evidencias || []).forEach(function (evidencia) {
+      var item = criar('span', 'qa-evidencia-manual');
+      var abrir = criar('button', 'col-links__extra qa-evidencia-abrir');
+
+      abrir.type = 'button';
+      abrir.textContent = evidencia.nome;
+      abrir.title = evidencia.nome;
+      abrir.setAttribute('data-evidencia', evidencia.id);
+      item.appendChild(abrir);
+
+      if (!fixo) {
+        var tirar = criar('button', 'qa-evidencia-tirar', '×');
+
+        tirar.type = 'button';
+        tirar.title = 'Remover evidência';
+        tirar.setAttribute('data-evidencia', evidencia.id);
+        item.appendChild(tirar);
+      }
+
+      lista.appendChild(item);
+    });
+
+    if (!fixo) {
+      var anexar = criar(
+        'button',
+        'qa-evidencia-anexar',
+        '+ Anexar evidências'
+      );
+
+      anexar.type = 'button';
+      anexar.title = 'Imagens, vídeos ou PDF (pode escolher vários)';
+      lista.appendChild(anexar);
+    }
+
+    caixa.appendChild(lista);
+
+    if (!fixo) {
+      var lixeira = criar('button', 'qa-manual-remover');
+
+      lixeira.type = 'button';
+      lixeira.title = 'Remover teste manual';
+      lixeira.setAttribute('aria-label', 'Remover teste manual');
+      lixeira.innerHTML = ICONE_LIXEIRA;
+      caixa.appendChild(lixeira);
+    } else if (!(teste.evidencias || []).length) {
+      caixa.appendChild(criar('span', 'qa-sem-erro', '—'));
+    }
+
+    return caixa;
+  }
 
   function atualizarTesteManual(evento) {
     var campo = evento.target;
