@@ -953,11 +953,36 @@ body {
   overflow-wrap: anywhere;
 }
 
-/* Coluna Evidências: nome de cada imagem embutida (abre ao expandir). */
-.qa-evidence-tag {
+/*
+ * Coluna Evidências: cada link do pytest-html (Árvore da tela, Erro
+ * resumido) vira um botão, um por linha. Prints e vídeo não entram: já
+ * aparecem ao expandir a linha.
+ */
+.col-links .col-links__extra {
   display: block;
+  width: fit-content;
+  margin: 0 0 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-surface-alt);
   color: var(--teal);
   font-size: 0.9em;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.col-links .col-links__extra:last-child {
+  margin-bottom: 0;
+}
+
+.col-links .col-links__extra:hover {
+  border-color: var(--teal);
+}
+
+/* A linha inteira expande o teste (report.js), não só a coluna Status. */
+.collapsible td {
+  cursor: pointer;
 }
 
 /* Ressalvas: testes pulados e o motivo de cada um. */
@@ -1453,6 +1478,31 @@ body {
 
 .media-container__viewport img {
   cursor: zoom-in;
+}
+
+/*
+ * Vídeo: o pytest-html usa object-fit: cover, que corta a tela do
+ * aparelho (retrato) e continua cortando na tela cheia. Contain mostra a
+ * tela inteira, na miniatura e na tela cheia.
+ */
+.media-container__viewport video {
+  height: 100%;
+  background: #000;
+  object-fit: contain;
+}
+
+.media-container__viewport video:fullscreen {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
+}
+
+.media-container__viewport video:-webkit-full-screen {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
 }
 
 /******************************

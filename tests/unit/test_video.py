@@ -64,16 +64,15 @@ def test_nome_do_video_leva_o_ct():
     )
 
 
-def test_video_e_embutido_no_report_com_legenda(tmp_path, monkeypatch):
-    monkeypatch.setattr(pytest_report, "_legendas_por_teste", {})
+def test_video_e_embutido_no_report_com_legenda(tmp_path):
     arquivo = tmp_path / "CT014.mp4"
     arquivo.write_bytes(VIDEO)
     report_extras = []
 
-    assert pytest_report.anexar_video(report_extras, "t.py::x", str(arquivo))
+    assert pytest_report.anexar_video(report_extras, str(arquivo))
     assert report_extras[0]["format_type"] == "video"
     assert report_extras[0]["content"] == VIDEO_B64
-    assert pytest_report._legendas_por_teste == {"t.py::x": ["Vídeo do teste"]}
+    assert report_extras[0]["name"] == "Vídeo do teste"
 
 
 def _excinfo(erro: BaseException):

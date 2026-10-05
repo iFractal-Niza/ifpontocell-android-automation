@@ -69,19 +69,18 @@ def test_ignora_valores_sem_driver():
     assert obter_driver_ativo(item) is None
 
 
-# === Imagens embutidas (anexar_imagem / montar_celula_links) ===
-def test_imagem_e_embutida_em_base64_e_ganha_legenda(tmp_path, monkeypatch):
+# === Imagens embutidas (anexar_imagem) ===
+def test_imagem_e_embutida_em_base64_e_ganha_legenda(tmp_path):
     import base64
 
     from observability import pytest_report
 
-    monkeypatch.setattr(pytest_report, "_legendas_por_teste", {})
     png = tmp_path / "print.png"
     png.write_bytes(b"\x89PNG-falso")
     report_extras = []
 
     anexou = pytest_report.anexar_imagem(
-        report_extras, "t.py::test_x", str(png), "Print da falha"
+        report_extras, str(png), "Print da falha"
     )
 
     assert anexou is True
@@ -91,47 +90,21 @@ def test_imagem_e_embutida_em_base64_e_ganha_legenda(tmp_path, monkeypatch):
         report_extras[0]["content"]
         == base64.b64encode(b"\x89PNG-falso").decode()
     )
-    assert pytest_report._legendas_por_teste == {
-        "t.py::test_x": ["Print da falha"]
-    }
+    assert report_extras[0]["name"] == "Print da falha"
 
 
-def test_arquivo_ausente_nao_anexa(tmp_path, monkeypatch):
+def test_arquivo_ausente_nao_anexa(tmp_path):
     from observability import pytest_report
 
-    monkeypatch.setattr(pytest_report, "_legendas_por_teste", {})
     report_extras = []
 
     assert (
         pytest_report.anexar_imagem(
-            report_extras, "t.py::x", str(tmp_path / "nao.png"), "x"
+            report_extras, str(tmp_path / "nao.png"), "x"
         )
         is False
     )
     assert report_extras == []
-
-
-def test_celula_de_evidencias_lista_as_legendas():
-    from observability.pytest_report import montar_celula_links
-
-    celula = montar_celula_links(
-        '<td class="col-links"><a href="#">Erro resumido</a></td>',
-        ["Print da falha", "Evidência: lista <vazia>"],
-    )
-
-    assert celula.startswith('<td class="col-links"><a href="#">')
-    assert "Print da falha" in celula
-    assert "Evidência: lista &lt;vazia&gt;" in celula
-    assert celula.endswith("</span></td>")
-    assert "\n" not in celula
-
-
-def test_celula_sem_legendas_fica_igual():
-    from observability.pytest_report import montar_celula_links
-
-    original = '<td class="col-links"></td>'
-
-    assert montar_celula_links(original, []) == original
 
 
 # === Falha no setup: driver numa fixture intermediária ===

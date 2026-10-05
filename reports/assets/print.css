@@ -149,8 +149,10 @@ body > p:first-of-type {
     font-size: 8px !important;
 }
 
-.qa-evidence-tag {
+.col-links .col-links__extra {
     display: block !important;
+    margin-bottom: 1mm !important;
+    padding: 0.3mm 2mm !important;
     color: var(--teal) !important;
     font-size: 7.5px !important;
 }

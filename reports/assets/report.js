@@ -303,6 +303,34 @@
     true
   );
 
+  // Clique em qualquer ponto da linha expande o teste. O pytest-html só
+  // escuta as células e pega a linha pelo pai do elemento clicado: no
+  // título da coluna Teste (um div dentro da célula) não achava a linha.
+  // Repassa o clique à célula de Status, que ele trata. Links e botões
+  // seguem normais, e selecionar texto não expande.
+  document.addEventListener(
+    'click',
+    function (evento) {
+      var linha = evento.target.closest
+        ? evento.target.closest('tr.collapsible')
+        : null;
+      var status = linha ? linha.querySelector('.col-result') : null;
+
+      if (
+        !status ||
+        evento.target === status ||
+        evento.target.closest('a, button, input, video') ||
+        String(window.getSelection ? window.getSelection() : '')
+      ) {
+        return;
+      }
+
+      evento.stopPropagation();
+      status.click();
+    },
+    true
+  );
+
   document.addEventListener('keydown', function (evento) {
     if (evento.key === 'Escape') {
       fecharImagem();

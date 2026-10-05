@@ -59,11 +59,6 @@ MARKER_CT = "ct"
 # Início da execução, para a data e a duração do cabeçalho do dashboard.
 _inicio_execucao = datetime.now()
 
-# Legendas das imagens anexadas a cada teste (print de falha e
-# evidências), por nodeid e somando todas as fases, para a coluna
-# Evidências da tabela.
-_legendas_por_teste: dict[str, list[str]] = {}
-
 LEGENDA_PRINT_FALHA = "Print da falha"
 
 # Controla a contabilização única por teste na fase de erro.
@@ -341,7 +336,6 @@ def pytest_configure(
     _inicio_execucao = datetime.now()
 
     _nodeids_com_erro_contabilizado.clear()
-    _legendas_por_teste.clear()
     execution_metrics.reset_dashboard_stats()
 
 
@@ -516,7 +510,6 @@ def pytest_runtest_makereport(
 
                 if screenshot_saved and anexar_imagem(
                     report_extras,
-                    report.nodeid,
                     path,
                     LEGENDA_PRINT_FALHA,
                 ):
@@ -590,14 +583,13 @@ def pytest_runtest_makereport(
     caminho_video = getattr(item, ATRIBUTO_VIDEO, None)
 
     if report.when == "call" and caminho_video:
-        anexar_video(report_extras, report.nodeid, caminho_video)
+        anexar_video(report_extras, caminho_video)
 
     # Evidências registradas pelo próprio teste (capturar_evidencia),
     # qualquer que seja o resultado — inclusive skip por falta de massa.
     for caminho, descricao in retirar_evidencias(report.nodeid):
         anexar_imagem(
             report_extras,
-            report.nodeid,
             caminho,
             f"Evidência: {descricao}",
         )
@@ -608,7 +600,6 @@ def pytest_runtest_makereport(
 # === Imagens no report ===
 def anexar_imagem(
     report_extras: list,
-    nodeid: str,
     caminho: str,
     legenda: str,
 ) -> bool:
@@ -627,7 +618,6 @@ def anexar_imagem(
         return False
 
     report_extras.append(extras.png(conteudo, name=legenda))
-    _legendas_por_teste.setdefault(nodeid, []).append(legenda)
 
     return True
 
@@ -676,11 +666,10 @@ def anexar_arvore_da_tela(
     return True
 
 
-def anexar_video(report_extras: list, nodeid: str, caminho: str) -> bool:
+def anexar_video(report_extras: list, caminho: str) -> bool:
     """
     Anexa o vídeo do teste ao report, embutido (base64), como as
-    imagens, e o nomeia na coluna Evidências. False se não houver
-    arquivo.
+    imagens. False se não houver arquivo.
     """
     try:
         with open(caminho, "rb") as arquivo:
@@ -689,29 +678,8 @@ def anexar_video(report_extras: list, nodeid: str, caminho: str) -> bool:
         return False
 
     report_extras.append(extras.video(conteudo, name=LEGENDA_VIDEO))
-    _legendas_por_teste.setdefault(nodeid, []).append(LEGENDA_VIDEO)
 
     return True
-
-
-def montar_celula_links(
-    celula_original: str,
-    legendas: list[str],
-) -> str:
-    """
-    Acrescenta à coluna Evidências o nome de cada imagem anexada. Só o
-    nome, sem link: a imagem está embutida e aparece ao expandir a linha
-    (e no PDF). Em uma linha só, como a célula do teste.
-    """
-    if not legendas or not celula_original.endswith("</td>"):
-        return celula_original
-
-    etiquetas = "".join(
-        f'<span class="qa-evidence-tag">{html.escape(legenda)}</span>'
-        for legenda in legendas
-    )
-
-    return celula_original[: -len("</td>")] + etiquetas + "</td>"
 
 
 # === Coluna Teste ===
@@ -744,10 +712,7 @@ def pytest_html_results_table_row(
     report,
     cells,
 ) -> None:
-    """
-    Troca o nodeid da coluna Teste pelo título legível do teste e lista,
-    na coluna Evidências, as imagens anexadas.
-    """
+    """Troca o nodeid da coluna Teste pelo título legível do teste."""
     if len(cells) < 2:
         return
 
@@ -755,12 +720,6 @@ def pytest_html_results_table_row(
         str(cells[1]),
         getattr(report, ATRIBUTO_TITULO, ""),
     )
-
-    if len(cells) >= 4:
-        cells[3] = montar_celula_links(
-            str(cells[3]),
-            _legendas_por_teste.get(report.nodeid, []),
-        )
 
 
 # === Histórico ===
