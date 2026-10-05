@@ -1053,8 +1053,50 @@ body {
  */
 #results-table .col-classificacao,
 .qa-manuais-tabela .col-classificacao {
-  width: 150px;
   text-align: center;
+}
+
+/*
+ * Mesmas larguras nas tabelas dos testes automatizados e manuais (são
+ * duas tabelas: sem isso, cada uma mede as colunas pelo conteúdo).
+ * Em porcentagem, para caber em qualquer largura de tela; Teste fica
+ * com o que sobra (cerca de 30%). Duração tem espaço para a coluna
+ * "Obs. Tester", que a substitui nos blocos manuais. No layout fixo
+ * vale o cabeçalho.
+ */
+#results-table,
+.qa-manuais-tabela {
+  table-layout: fixed;
+}
+
+#results-table th[data-column-type='result'],
+.qa-manuais-tabela th[data-column-type='result'] {
+  width: 8%;
+}
+
+#results-table th.col-classificacao[data-campo='categoria'],
+.qa-manuais-tabela th.col-classificacao[data-campo='categoria'] {
+  width: 11%;
+}
+
+#results-table th.col-classificacao[data-campo='tipo'],
+.qa-manuais-tabela th.col-classificacao[data-campo='tipo'] {
+  width: 13%;
+}
+
+#results-table th.col-classificacao[data-campo='apontamento'],
+.qa-manuais-tabela th.col-classificacao[data-campo='apontamento'] {
+  width: 14%;
+}
+
+#results-table th[data-column-type='duration'],
+.qa-manuais-tabela th[data-column-type='duration'] {
+  width: 12%;
+}
+
+#results-table th:last-child,
+.qa-manuais-tabela th:last-child {
+  width: 12%;
 }
 
 .qa-sem-erro {
@@ -1094,6 +1136,22 @@ body {
   border-color: var(--amber-line);
   background: var(--amber-soft);
   color: var(--amber);
+  font-weight: 700;
+}
+
+.qa-classificacao[data-valor='Melhoria implementada'],
+.qa-classificacao[data-valor='Correção realizada'] {
+  border-color: var(--green-line);
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 700;
+}
+
+.qa-classificacao[data-valor='Melhoria não implementada'],
+.qa-classificacao[data-valor='Correção não realizada'] {
+  border-color: var(--red-line);
+  background: var(--red-soft);
+  color: var(--red);
   font-weight: 700;
 }
 
@@ -1137,13 +1195,49 @@ body {
   font-weight: 700;
 }
 
-.qa-manual-duracao {
-  max-width: 100px;
+.qa-manual-obs {
+  display: block;
+  max-width: none;
+  min-height: 34px;
+  resize: vertical;
+  line-height: 1.35;
+}
+
+.qa-obs-fixa {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.qa-obs-ver {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--teal);
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.qa-obs-ver[hidden] {
+  display: none;
 }
 
 .qa-manual-resultado {
   max-width: 110px;
   font-weight: 700;
+}
+
+.qa-manual-resultado[data-valor=''] {
+  color: var(--text-muted);
+  font-weight: 400;
 }
 
 .qa-manual-resultado[data-valor='Passou'] {
@@ -1178,8 +1272,13 @@ body {
   margin: 0 0 6px;
 }
 
+.qa-evidencia-manual {
+  min-width: 0;
+}
+
 .col-links .qa-evidencia-abrir {
-  max-width: 180px;
+  min-width: 0;
+  max-width: 100%;
   margin: 0;
   overflow: hidden;
   font: inherit;
@@ -1237,7 +1336,7 @@ body {
   color: var(--red);
 }
 
-/* Blocos "Testes automatizados" e "Testes manuais" (report.js). */
+/* Blocos "Testes automatizados", "Testes manuais" e "Melhorias" (report.js). */
 .qa-bloco-titulo {
   margin: 24px 0 8px;
   color: var(--text-primary);
@@ -1709,6 +1808,12 @@ body {
 
   .qa-dashboard-status {
     width: 100%;
+  }
+
+  /* Larguras fixas não cabem: cada tabela volta a medir pelo conteúdo. */
+  #results-table,
+  .qa-manuais-tabela {
+    table-layout: auto;
   }
 
   .qa-execution-alert {

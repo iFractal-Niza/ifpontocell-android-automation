@@ -727,14 +727,24 @@ TIPOS_DE_ERRO = (
     "Outro",
 )
 
+# Andamento do apontamento (o erro ou a melhoria apontada ao time).
+STATUS_DE_APONTAMENTO = (
+    "Melhoria implementada",
+    "Melhoria não implementada",
+    "Correção realizada",
+    "Correção não realizada",
+)
+
 COLUNAS_DE_CLASSIFICACAO = (
     ("categoria", "Categoria do erro", CATEGORIAS_DE_ERRO),
     ("tipo", "Tipo de erro", TIPOS_DE_ERRO),
+    ("apontamento", "Status apont.", STATUS_DE_APONTAMENTO),
 )
 
 # Ordem da tabela: Teste, Status, Categoria do erro, Tipo de erro,
-# Duração, Evidências. O pytest-html entrega Result, Test, Duration,
-# Links: Teste e Status trocam de lugar e a classificação entra depois.
+# Status apont., Duração, Evidências. O pytest-html entrega Result,
+# Test, Duration, Links: Teste e Status trocam de lugar e a
+# classificação entra depois.
 POSICAO_CLASSIFICACAO = 2
 
 

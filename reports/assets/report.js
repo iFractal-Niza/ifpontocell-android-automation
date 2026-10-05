@@ -506,13 +506,13 @@
   // A página aberta, com as escolhas gravadas. Sai a tabela já montada:
   // o pytest-html remonta tudo ao abrir, a partir dos dados do arquivo,
   // e ela repetiria os prints e o vídeo (o arquivo dobraria de tamanho).
-  function htmlDaCopia(manuaisComArquivos) {
+  function htmlDaCopia(manuais, melhoriasFixas) {
     var copia = document.documentElement.cloneNode(true);
 
     copia
       .querySelectorAll(
         '#results-table > tbody, .qa-lightbox, .qa-bloco-manuais, ' +
-          '.qa-titulo-automatizados'
+          '.qa-bloco-melhorias, .qa-titulo-automatizados'
       )
       .forEach(function (elemento) {
         elemento.remove();
@@ -523,7 +523,9 @@
       'window.QA_CLASSIFICACAO_FIXA = ' +
       paraScript(classificacoesEscolhidas()) +
       ';\nwindow.QA_TESTES_MANUAIS_FIXOS = ' +
-      paraScript(manuaisComArquivos) +
+      paraScript(manuais) +
+      ';\nwindow.QA_MELHORIAS_FIXAS = ' +
+      paraScript(melhoriasFixas) +
       ';';
 
     var cabeca = copia.querySelector('head');
@@ -541,10 +543,13 @@
     botao.disabled = true;
     botao.textContent = 'Preparando...';
 
-    manuaisComArquivos()
-      .then(function (manuais) {
+    Promise.all([
+      comArquivos(testesManuais),
+      comArquivos(melhorias),
+    ])
+      .then(function (listas) {
         baixarArquivo(
-          new Blob([htmlDaCopia(manuais)], {
+          new Blob([htmlDaCopia(listas[0], listas[1])], {
             type: 'text/html;charset=utf-8',
           }),
           nomeDaCopia()
@@ -601,31 +606,291 @@
   // colunas. Salvos no navegador como a classificação; a cópia do
   // "Baixar HTML" os leva gravados, só leitura. Não entram no dashboard
   // nem no PDF.
+  //
+  // O bloco "Melhorias" (sugestões encontradas nos testes) segue o mesmo
+  // modelo e as mesmas colunas (Melhoria no lugar de Teste): implementada,
+  // a melhoria também é testada e pode falhar. Começa sem Status.
   var CHAVE_MANUAIS = 'qa-manuais:' + location.pathname;
+  var CHAVE_MELHORIAS = 'qa-melhorias:' + location.pathname;
   var RESULTADOS_MANUAIS = ['Passou', 'Falhou', 'Pulado'];
-  var testesManuais = lerTestesManuais();
+  var testesManuais = lerLista(CHAVE_MANUAIS, window.QA_TESTES_MANUAIS_FIXOS);
+  var melhorias = lerLista(CHAVE_MELHORIAS, window.QA_MELHORIAS_FIXAS).map(
+    function (melhoria) {
+      // Primeiro formato das melhorias: descricao e prioridade.
+      if (melhoria.descricao !== undefined && melhoria.teste === undefined) {
+        melhoria.teste = melhoria.descricao;
+        delete melhoria.descricao;
+        delete melhoria.prioridade;
+      }
 
-  function lerTestesManuais() {
+      return melhoria;
+    }
+  );
+
+  function lerLista(chave, fixa) {
     if (CLASSIFICACAO_FIXA) {
-      return window.QA_TESTES_MANUAIS_FIXOS || [];
+      return fixa || [];
     }
 
     try {
-      return JSON.parse(localStorage.getItem(CHAVE_MANUAIS) || '[]');
+      return JSON.parse(localStorage.getItem(chave) || '[]');
     } catch (erro) {
       return [];
     }
   }
 
-  function gravarTestesManuais() {
+  function gravarLista(chave, lista) {
     try {
-      if (testesManuais.length) {
-        localStorage.setItem(CHAVE_MANUAIS, JSON.stringify(testesManuais));
+      if (lista.length) {
+        localStorage.setItem(chave, JSON.stringify(lista));
       } else {
-        localStorage.removeItem(CHAVE_MANUAIS);
+        localStorage.removeItem(chave);
       }
     } catch (erro) {
       // Sem armazenamento: as linhas valem só enquanto a página está aberta.
+    }
+  }
+
+  // Grava as duas listas (testes manuais e melhorias) e atualiza os
+  // totais do dashboard.
+  function gravarTestesManuais() {
+    gravarLista(CHAVE_MANUAIS, testesManuais);
+    gravarLista(CHAVE_MELHORIAS, melhorias);
+    atualizarTotais();
+  }
+
+  // === Totais do dashboard com os testes manuais e as melhorias ===
+  // O dashboard vem pronto do Python (utils/report_dashboard.py) só com a
+  // automação; os totais dela ficam em data-qa-totais. Aqui entram os
+  // testes manuais e as melhorias com Status (sem Status, não contam), e
+  // taxa, cards, status e resumo são refeitos com as mesmas regras de
+  // calcular_taxa_sucesso, _get_status_meta e _build_summary_text. Falha
+  // manual não é do smoke: não conta como crítica (só pela taxa).
+  var ROTULOS_STATUS = {
+    neutral: 'SEM EXECUÇÃO',
+    failed: 'CRÍTICO',
+    unstable: 'INSTÁVEL',
+    caveat: 'APROVADO COM RESSALVAS',
+    healthy: 'APROVADO',
+  };
+
+  function plural(quantidade, singular, varios) {
+    return quantidade === 1 ? singular : varios;
+  }
+
+  function formatarTaxa(taxa) {
+    var arredondada = Math.round(taxa * 100) / 100;
+
+    return Number.isInteger(arredondada)
+      ? arredondada + '%'
+      : arredondada.toFixed(2).replace('.', ',') + '%';
+  }
+
+  function statusDaExecucao(t, taxa) {
+    if (t.total === 0) {
+      return ['neutral', 'Nenhum teste foi executado.'];
+    }
+
+    if (t.skipped >= t.total) {
+      return ['neutral', 'Todos os testes foram pulados.'];
+    }
+
+    if (t.criticas > 0 || taxa < t.instavel) {
+      return ['failed', 'A execução exige análise imediata.'];
+    }
+
+    if (t.failed > 0 || t.error > 0 || taxa < t.saudavel) {
+      return ['unstable', 'A execução possui resultados que exigem atenção.'];
+    }
+
+    if (t.skipped > 0) {
+      return [
+        'caveat',
+        'Nenhuma falha; há testes que não foram executados.',
+      ];
+    }
+
+    return ['healthy', 'A execução foi concluída sem falhas.'];
+  }
+
+  function resumoDaExecucao(t) {
+    if (t.total === 0) {
+      return 'Nenhum teste foi executado.';
+    }
+
+    if (t.failed === 0 && t.error === 0) {
+      return t.skipped
+        ? 'Execução concluída sem falhas, com ' +
+            t.skipped +
+            ' ' +
+            plural(t.skipped, 'teste pulado', 'testes pulados') +
+            '.'
+        : 'Execução concluída sem falhas ou erros técnicos.';
+    }
+
+    var problemas = [];
+
+    if (t.failed) {
+      problemas.push(
+        t.failed +
+          ' ' +
+          plural(t.failed, 'falha funcional', 'falhas funcionais')
+      );
+    }
+
+    if (t.error) {
+      problemas.push(
+        t.error + ' ' + plural(t.error, 'erro técnico', 'erros técnicos')
+      );
+    }
+
+    var resumo =
+      problemas.join(' e ') +
+      ' ' +
+      (problemas.length === 1 ? 'detectado' : 'detectados') +
+      '.';
+
+    if (!t.criticas) {
+      return resumo + ' Nenhum teste do smoke falhou.';
+    }
+
+    return t.criticas === 1
+      ? resumo + ' 1 teste do smoke falhou.'
+      : resumo + ' ' + t.criticas + ' testes do smoke falharam.';
+  }
+
+  function trocarClasseDeStatus(elemento, status) {
+    if (!elemento) {
+      return;
+    }
+
+    Object.keys(ROTULOS_STATUS).forEach(function (classe) {
+      elemento.classList.remove(classe);
+    });
+    elemento.classList.add(status);
+  }
+
+  function preencherCard(chave, valor, detalhe, ativo) {
+    var card = document.querySelector('[data-qa-kpi="' + chave + '"]');
+
+    if (!card) {
+      return;
+    }
+
+    card.querySelector('.qa-kpi-value').textContent = valor;
+
+    var texto = card.querySelector('.qa-kpi-detail');
+    if (texto && detalhe) {
+      texto.textContent = detalhe;
+    }
+
+    if (ativo !== undefined) {
+      card.classList.toggle('active', ativo);
+      card.classList.toggle('muted', !ativo);
+    }
+
+    return card;
+  }
+
+  function atualizarTotais() {
+    var painel = document.querySelector('.qa-dashboard[data-qa-totais]');
+    var base;
+
+    try {
+      base = JSON.parse(painel.getAttribute('data-qa-totais'));
+    } catch (erro) {
+      return;
+    }
+
+    var t = {};
+    Object.keys(base).forEach(function (chave) {
+      t[chave] = base[chave];
+    });
+
+    var manuais = 0;
+    var deMelhorias = 0;
+
+    testesManuais.concat(melhorias).forEach(function (item) {
+      var conta = { Passou: 'passed', Falhou: 'failed', Pulado: 'skipped' }[
+        item.resultado
+      ];
+
+      if (!conta) {
+        return;
+      }
+
+      t[conta] += 1;
+      t.total += 1;
+
+      if (melhorias.indexOf(item) === -1) {
+        manuais += 1;
+      } else {
+        deMelhorias += 1;
+      }
+    });
+
+    var executados = t.passed + t.failed + t.error;
+    var taxa = executados
+      ? Math.round((t.passed / executados) * 10000) / 100
+      : 0;
+    var status = statusDaExecucao(t, taxa);
+    var partesDoTotal = [];
+
+    if (manuais || deMelhorias) {
+      partesDoTotal.push(base.total + ' automatizados');
+      if (manuais) {
+        partesDoTotal.push(manuais + plural(manuais, ' manual', ' manuais'));
+      }
+      if (deMelhorias) {
+        partesDoTotal.push(
+          deMelhorias + plural(deMelhorias, ' melhoria', ' melhorias')
+        );
+      }
+    }
+
+    trocarClasseDeStatus(
+      preencherCard(
+        'taxa',
+        formatarTaxa(taxa),
+        executados
+          ? t.passed + ' de ' + executados + ' executados'
+          : 'Sem resultados'
+      ),
+      status[0]
+    );
+    preencherCard(
+      'total',
+      t.total,
+      partesDoTotal.length ? partesDoTotal.join(' · ') : 'Testes na execução'
+    );
+    preencherCard('passou', t.passed);
+    preencherCard('falhou', t.failed, '', t.failed > 0);
+    preencherCard('pulados', t.skipped, '', t.skipped > 0);
+
+    trocarClasseDeStatus(
+      document.querySelector('.qa-dashboard-status .qa-status-dot'),
+      status[0]
+    );
+
+    var rotulo = document.querySelector('.qa-dashboard-status .qa-status');
+    trocarClasseDeStatus(rotulo, status[0]);
+    if (rotulo) {
+      rotulo.textContent = ROTULOS_STATUS[status[0]];
+    }
+
+    var descricao = document.querySelector('.qa-dashboard-status small');
+    if (descricao) {
+      descricao.textContent = status[1];
+    }
+
+    var alerta = document.querySelector('.qa-execution-alert');
+    trocarClasseDeStatus(alerta, status[0]);
+
+    if (alerta) {
+      alerta.querySelector('.qa-execution-alert-content strong').textContent =
+        resumoDaExecucao(t);
+      alerta.querySelector('.qa-execution-alert-rate strong').textContent =
+        formatarTaxa(taxa);
     }
   }
 
@@ -686,6 +951,18 @@
     return campo;
   }
 
+  // Observação do tester: várias linhas.
+  function campoObservacao(valor) {
+    var campo = criar('textarea', 'qa-manual-campo qa-manual-obs');
+
+    campo.rows = 2;
+    campo.value = valor || '';
+    campo.placeholder = 'Observação do tester';
+    campo.setAttribute('data-chave', 'obs');
+
+    return campo;
+  }
+
   function etiqueta(classe, valor, vazio) {
     var elemento = criar('span', classe, valor || vazio);
 
@@ -696,7 +973,9 @@
 
   // Conteúdo de cada célula, pela coluna do cabeçalho (vale para
   // qualquer ordem de colunas).
-  function celulaManual(coluna, teste) {
+  // eMelhoria: linha do bloco Melhorias (Status pode ficar vazio; o
+  // campo de texto descreve a melhoria).
+  function celulaManual(coluna, teste, eMelhoria) {
     var tipo = coluna.getAttribute('data-column-type');
     var campo = coluna.getAttribute('data-campo');
     var celula = criar('td');
@@ -711,7 +990,8 @@
               'resultado',
               RESULTADOS_MANUAIS,
               teste.resultado,
-              'qa-manual-campo qa-manual-resultado'
+              'qa-manual-campo qa-manual-resultado',
+              eMelhoria ? 'Selecionar' : ''
             )
       );
     } else if (tipo === 'testId') {
@@ -723,10 +1003,14 @@
               'teste',
               teste.teste,
               'qa-manual-campo qa-manual-teste',
-              'CT000 · Descrição do teste'
+              eMelhoria
+                ? 'Descreva a melhoria (tela, comportamento esperado...)'
+                : 'CT000 · Descrição do teste'
             )
       );
-      celula.appendChild(criar('div', 'qa-test-path', 'Teste manual'));
+      celula.appendChild(
+        criar('div', 'qa-test-path', eMelhoria ? 'Melhoria' : 'Teste manual')
+      );
     } else if (campo) {
       celula.className = 'col-classificacao';
       celula.appendChild(
@@ -745,17 +1029,21 @@
             )
       );
     } else if (tipo === 'duration') {
-      celula.className = 'col-duration';
+      // Nos blocos manuais, a coluna Duração vira "Obs. Tester".
+      celula.className = 'col-obs';
       celula.appendChild(
         fixo
-          ? document.createTextNode(teste.duracao || '—')
-          : campoTexto(
-              'duracao',
-              teste.duracao,
-              'qa-manual-campo qa-manual-duracao',
-              '00:00:00'
-            )
+          ? criar('div', 'qa-obs-fixa', teste.obs || '—')
+          : campoObservacao(teste.obs)
       );
+
+      // "Ver": a observação inteira numa janela (texto longo fica cortado
+      // na célula). Só aparece com texto.
+      var ver = criar('button', 'qa-obs-ver', 'Ver');
+      ver.type = 'button';
+      ver.title = 'Ver a observação inteira';
+      ver.hidden = !teste.obs;
+      celula.appendChild(ver);
     } else if (coluna === coluna.parentNode.lastElementChild) {
       celula.className = 'col-links';
       celula.appendChild(evidenciasManuais(teste, fixo));
@@ -764,26 +1052,29 @@
     return celula;
   }
 
-  function linhaManual(teste, colunas) {
+  function linhaManual(teste, colunas, eMelhoria) {
     var linha = criar('tr', 'qa-manual-row');
 
     linha.setAttribute('data-id', teste.id);
     colunas.forEach(function (coluna) {
-      linha.appendChild(celulaManual(coluna, teste));
+      linha.appendChild(celulaManual(coluna, teste, eMelhoria));
     });
 
     return linha;
   }
 
   // Cabeçalho da tabela manual: as colunas da tabela dos automatizados,
-  // sem a ordenação do pytest-html.
+  // sem a ordenação do pytest-html; Duração vira "Obs. Tester".
   function colunasManuais() {
     return Array.prototype.slice
       .call(document.querySelectorAll('#results-table-head th'))
       .map(function (original) {
         var coluna = criar('th', original.className.replace('sortable', ''));
 
-        coluna.textContent = original.textContent.trim();
+        coluna.textContent =
+          original.getAttribute('data-column-type') === 'duration'
+            ? 'Obs. Tester'
+            : original.textContent.trim();
         ['data-column-type', 'data-campo'].forEach(function (atributo) {
           if (original.hasAttribute(atributo)) {
             coluna.setAttribute(atributo, original.getAttribute(atributo));
@@ -872,14 +1163,77 @@
       atualizarContagemAutomatizados();
     }
 
-    if (
-      !document.querySelector('.qa-bloco-manuais') &&
-      !(CLASSIFICACAO_FIXA && !testesManuais.length)
-    ) {
-      var bloco = criar('section', 'qa-bloco-manuais');
+    var manuais = document.querySelector('.qa-bloco-manuais');
 
-      desenharTestesManuais(bloco);
-      tabela.insertAdjacentElement('afterend', bloco);
+    if (!manuais && !(CLASSIFICACAO_FIXA && !testesManuais.length)) {
+      manuais = criar('section', 'qa-bloco-manuais');
+
+      desenharTestesManuais(manuais);
+      tabela.insertAdjacentElement('afterend', manuais);
+    }
+
+    if (
+      !document.querySelector('.qa-bloco-melhorias') &&
+      !(CLASSIFICACAO_FIXA && !melhorias.length)
+    ) {
+      var blocoMelhorias = criar('section', 'qa-bloco-melhorias');
+
+      desenharMelhorias(blocoMelhorias);
+      (manuais || tabela).insertAdjacentElement('afterend', blocoMelhorias);
+    }
+  }
+
+  // === Melhorias ===
+  function desenharMelhorias(bloco) {
+    while (bloco.firstChild) {
+      bloco.removeChild(bloco.firstChild);
+    }
+
+    bloco.appendChild(titulo('', 'Melhorias', '(' + melhorias.length + ')'));
+
+    if (melhorias.length) {
+      var tabela = criar('table', 'qa-manuais-tabela qa-melhorias-tabela');
+      var cabecalho = criar('thead');
+      var linhaDoCabecalho = criar('tr');
+      var corpo = criar('tbody');
+      var colunas = colunasManuais();
+
+      colunas.forEach(function (coluna) {
+        if (coluna.getAttribute('data-column-type') === 'testId') {
+          coluna.textContent = 'Melhoria';
+        }
+
+        linhaDoCabecalho.appendChild(coluna);
+      });
+      cabecalho.appendChild(linhaDoCabecalho);
+      tabela.appendChild(cabecalho);
+
+      melhorias.forEach(function (melhoria) {
+        corpo.appendChild(linhaManual(melhoria, colunas, true));
+      });
+      tabela.appendChild(corpo);
+      bloco.appendChild(tabela);
+    } else {
+      bloco.appendChild(
+        criar(
+          'p',
+          'qa-manuais-vazio',
+          'Nenhuma melhoria. Use o botão abaixo para incluir uma.'
+        )
+      );
+    }
+
+    if (!CLASSIFICACAO_FIXA) {
+      var acoes = criar('div', 'qa-manuais-acoes');
+      var adicionar = criar(
+        'button',
+        'qa-adicionar-teste qa-adicionar-melhoria',
+        '+ Adicionar melhoria'
+      );
+
+      adicionar.type = 'button';
+      acoes.appendChild(adicionar);
+      bloco.appendChild(acoes);
     }
   }
 
@@ -908,24 +1262,53 @@
     }
   }
 
+  // O item (teste manual ou melhoria) da linha onde está o elemento.
   function testeManualDa(elemento) {
     var linha = elemento.closest ? elemento.closest('tr.qa-manual-row') : null;
     var id = linha ? linha.getAttribute('data-id') : null;
 
-    return testesManuais.filter(function (teste) {
-      return teste.id === id;
+    return testesManuais.concat(melhorias).filter(function (item) {
+      return item.id === id;
     })[0];
   }
 
   function redesenharTestesManuais() {
     var bloco = document.querySelector('.qa-bloco-manuais');
+    var blocoMelhorias = document.querySelector('.qa-bloco-melhorias');
 
     if (bloco) {
       desenharTestesManuais(bloco);
     }
+
+    if (blocoMelhorias) {
+      desenharMelhorias(blocoMelhorias);
+    }
+  }
+
+  function focarUltimo(seletor) {
+    var campos = document.querySelectorAll(seletor);
+
+    if (campos.length) {
+      campos[campos.length - 1].focus();
+    }
   }
 
   document.addEventListener('click', function (evento) {
+    if (evento.target.closest('.qa-adicionar-melhoria')) {
+      melhorias.push({
+        id: 'r' + Date.now(),
+        resultado: '',
+        teste: '',
+        categoria: '',
+        tipo: '',
+        obs: '',
+      });
+      gravarTestesManuais();
+      redesenharTestesManuais();
+      focarUltimo('.qa-melhorias-tabela .qa-manual-teste');
+      return;
+    }
+
     if (evento.target.closest('.qa-adicionar-teste')) {
       testesManuais.push({
         id: 'm' + Date.now(),
@@ -933,30 +1316,46 @@
         teste: '',
         categoria: '',
         tipo: '',
-        duracao: '',
+        obs: '',
       });
       gravarTestesManuais();
       redesenharTestesManuais();
-
-      var campos = document.querySelectorAll('.qa-manual-teste');
-      if (campos.length) {
-        campos[campos.length - 1].focus();
-      }
+      focarUltimo('.qa-bloco-manuais .qa-manual-teste');
       return;
     }
 
     var remover = evento.target.closest('.qa-manual-remover');
     var teste = remover ? testeManualDa(remover) : null;
+    var eMelhoria = melhorias.indexOf(teste) !== -1;
 
-    if (teste && window.confirm('Remover este teste manual?')) {
+    if (
+      teste &&
+      window.confirm(
+        eMelhoria ? 'Remover esta melhoria?' : 'Remover este teste manual?'
+      )
+    ) {
       (teste.evidencias || []).forEach(function (evidencia) {
         apagarArquivo(evidencia.id);
       });
       testesManuais = testesManuais.filter(function (outro) {
         return outro !== teste;
       });
+      melhorias = melhorias.filter(function (outra) {
+        return outra !== teste;
+      });
       gravarTestesManuais();
       redesenharTestesManuais();
+      return;
+    }
+
+    var verObs = evento.target.closest('.qa-obs-ver');
+    var comObs = verObs ? testeManualDa(verObs) : null;
+
+    if (comObs) {
+      abrirTexto(
+        'Obs. Tester' + (comObs.teste ? ' · ' + comObs.teste : ''),
+        'data:text/plain;charset=utf-8,' + encodeURIComponent(comObs.obs || '')
+      );
       return;
     }
 
@@ -1062,9 +1461,10 @@
       : lerArquivo(evidencia.id);
   }
 
-  function manuaisComArquivos() {
+  // A lista (testes manuais ou melhorias) com os arquivos embutidos.
+  function comArquivos(lista) {
     return Promise.all(
-      testesManuais.map(function (teste) {
+      lista.map(function (teste) {
         return Promise.all(
           (teste.evidencias || []).map(function (evidencia) {
             return dadosDaEvidencia(evidencia).then(function (dados) {
@@ -1503,7 +1903,7 @@
     '<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>';
 
   // Célula Evidências da linha manual: as evidências anexadas, o botão de
-  // anexar e, na ponta direita, a lixeira do teste.
+  // anexar e, na ponta direita, a lixeira da linha (teste ou melhoria).
   function evidenciasManuais(teste, fixo) {
     var caixa = criar('div', 'qa-manual-evidencias');
     var lista = criar('div', 'qa-evidencias-lista');
@@ -1531,11 +1931,7 @@
     });
 
     if (!fixo) {
-      var anexar = criar(
-        'button',
-        'qa-evidencia-anexar',
-        '+ Anexar evidências'
-      );
+      var anexar = criar('button', 'qa-evidencia-anexar', '+ Anexar');
 
       anexar.type = 'button';
       anexar.title = 'Imagens, vídeos ou PDF (pode escolher vários)';
@@ -1548,8 +1944,8 @@
       var lixeira = criar('button', 'qa-manual-remover');
 
       lixeira.type = 'button';
-      lixeira.title = 'Remover teste manual';
-      lixeira.setAttribute('aria-label', 'Remover teste manual');
+      lixeira.title = 'Remover linha';
+      lixeira.setAttribute('aria-label', 'Remover linha');
       lixeira.innerHTML = ICONE_LIXEIRA;
       caixa.appendChild(lixeira);
     } else if (!(teste.evidencias || []).length) {
@@ -1570,6 +1966,14 @@
 
     teste[chave] = campo.value;
     campo.setAttribute('data-valor', campo.value);
+
+    if (chave === 'obs') {
+      var ver = campo.parentNode.querySelector('.qa-obs-ver');
+      if (ver) {
+        ver.hidden = !campo.value.trim();
+      }
+    }
+
     gravarTestesManuais();
   }
 
@@ -1602,6 +2006,7 @@
     prepararBotaoTema();
     prepararBotaoBaixar();
     aoMudarAPagina();
+    atualizarTotais();
   }
 
   if (document.readyState === 'loading') {

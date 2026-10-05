@@ -1,4 +1,5 @@
 import html
+import json
 from collections.abc import Mapping
 from typing import Any
 
@@ -306,6 +307,7 @@ def _build_kpi_card(
     label: str,
     value: Any,
     detail: str = "",
+    chave: str = "",
 ) -> str:
     """
     Monta um card compacto de indicador.
@@ -317,8 +319,9 @@ def _build_kpi_card(
             f"<span class='qa-kpi-detail'>{_safe_text(detail)}</span>"
         )
 
+    # data-qa-kpi: o report.js atualiza o card com os testes manuais.
     return f"""
-        <div class="qa-kpi-card {css_class}">
+        <div class="qa-kpi-card {css_class}" data-qa-kpi="{chave}">
             <span class="qa-kpi-label">
                 {_safe_text(label)}
             </span>
@@ -799,39 +802,63 @@ def build_dashboard_html(
             _build_kpi_card(
                 css_class=(f"success {status_class}"),
                 label="Taxa de sucesso",
+                chave="taxa",
                 value=_format_rate(success_rate),
                 detail=success_detail,
             ),
             _build_kpi_card(
                 css_class="total",
                 label="Total",
+                chave="total",
                 value=total,
                 detail="Testes na execução",
             ),
             _build_kpi_card(
                 css_class="passed",
                 label="Passou",
+                chave="passou",
                 value=passed,
                 detail="Cenários aprovados",
             ),
             _build_kpi_card(
                 css_class=("failed active" if failed else "failed muted"),
                 label="Falhou",
+                chave="falhou",
                 value=failed,
                 detail="Falhas funcionais",
             ),
             _build_kpi_card(
                 css_class=("error active" if error else "error muted"),
                 label="Execução",
+                chave="erro",
                 value=error,
                 detail="Erros técnicos",
             ),
             _build_kpi_card(
                 css_class=("skipped active" if skipped else "skipped muted"),
                 label="Pulados",
+                chave="pulados",
                 value=skipped,
                 detail="Testes não executados",
             ),
+        )
+    )
+
+    # Totais da automação para o report.js somar os testes manuais e as
+    # melhorias (com as mesmas regras de _get_status_meta e
+    # _build_summary_text) sem perder a base.
+    totais_automacao = html.escape(
+        json.dumps(
+            {
+                "total": total,
+                "passed": passed,
+                "failed": failed,
+                "error": error,
+                "skipped": skipped,
+                "criticas": criticas,
+                "saudavel": HEALTHY_THRESHOLD,
+                "instavel": UNSTABLE_THRESHOLD,
+            }
         )
     )
 
@@ -843,7 +870,7 @@ def build_dashboard_html(
 
     return f"""
         {_SCRIPT_TEMA_INICIAL}
-        <div class="qa-dashboard">
+        <div class="qa-dashboard" data-qa-totais="{totais_automacao}">
             <header class="qa-dashboard-header">
                 <div class="qa-dashboard-title">
                     <span class="qa-dashboard-eyebrow">

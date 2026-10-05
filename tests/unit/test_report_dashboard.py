@@ -140,6 +140,34 @@ def test_dashboard_tem_botao_de_baixar_html():
     assert "Baixar HTML" in html
 
 
+def test_dashboard_leva_os_totais_para_somar_os_testes_manuais():
+    # O report.js soma testes manuais e melhorias a estes totais.
+    import html as html_lib
+    import json
+    import re
+
+    painel = build_dashboard_html(
+        {"total": 3, "passed": 1, "failed": 1, "skipped": 1, "criticas": 1}
+    )
+
+    totais = json.loads(
+        html_lib.unescape(re.search(r'data-qa-totais="([^"]+)"', painel)[1])
+    )
+
+    assert totais == {
+        "total": 3,
+        "passed": 1,
+        "failed": 1,
+        "error": 0,
+        "skipped": 1,
+        "criticas": 1,
+        "saudavel": 90,
+        "instavel": 70,
+    }
+    for chave in ("taxa", "total", "passou", "falhou", "erro", "pulados"):
+        assert f'data-qa-kpi="{chave}"' in painel
+
+
 # === Histórico ===
 def test_historico_sem_anteriores_avisa_primeira_execucao():
     html = _build_historico_html({"tem_anteriores": False})

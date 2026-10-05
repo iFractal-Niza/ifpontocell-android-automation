@@ -268,11 +268,13 @@ def test_colunas_de_classificacao_entram_apos_teste():
 
     pytest_html_results_table_header(cabecalho)
 
-    # Teste, Status (era Result), Categoria, Tipo, Duração, Evidências.
+    # Teste, Status (era Result), Categoria, Tipo, Status apont.,
+    # Duração, Evidências.
     assert cabecalho[:2] == ["<th>Test</th>", "<th>Status</th>"]
     assert "Categoria do erro" in cabecalho[2]
     assert "Tipo de erro" in cabecalho[3]
-    assert cabecalho[4:] == ["<th>D</th>", "<th>L</th>"]
+    assert "Status apont." in cabecalho[4]
+    assert cabecalho[5:] == ["<th>D</th>", "<th>L</th>"]
     # As opções vão no cabeçalho, para as linhas de teste manual.
     assert "&quot;Cr\\u00edtico&quot;" in cabecalho[2]
     assert "&quot;Marca\\u00e7\\u00e3o de Ponto&quot;" in cabecalho[3]
@@ -283,9 +285,11 @@ def test_linha_com_falha_ganha_as_listas():
 
     pytest_html_results_table_row(_report(failed=True), linha)
 
-    assert len(linha) == 6
+    assert len(linha) == 7
     assert 'data-campo="categoria"' in linha[2]
     assert 'data-campo="tipo"' in linha[3]
+    assert 'data-campo="apontamento"' in linha[4]
+    assert 'value="Correção não realizada"' in linha[4]
     for opcao in ("Baixo", "Moderado", "Crítico"):
         assert f'value="{opcao}"' in linha[2]
     assert 'value="Marcação de Ponto"' in linha[3]
@@ -301,7 +305,7 @@ def test_linha_poe_o_teste_antes_do_status():
 
     assert linha[0] == '<td class="col-testId">t.py::test_x</td>'
     assert linha[1] == '<td class="col-result">Failed</td>'
-    assert linha[4:] == _linha_original()[2:]
+    assert linha[5:] == _linha_original()[2:]
 
 
 def test_linha_sem_falha_fica_com_traco():
@@ -309,8 +313,8 @@ def test_linha_sem_falha_fica_com_traco():
 
     pytest_html_results_table_row(_report(failed=False), linha)
 
-    assert len(linha) == 6
-    assert "<select" not in linha[2] + linha[3]
+    assert len(linha) == 7
+    assert "<select" not in linha[2] + linha[3] + linha[4]
     assert "—" in linha[2]
 
 
@@ -330,7 +334,7 @@ def test_pdf_tira_as_colunas_de_classificacao():
     cabecalho = ["<th>Result</th>", "<th>Test</th>"]
     pytest_html_results_table_header(cabecalho)
 
-    sem = linha[:2] + linha[4:]
+    sem = linha[:2] + linha[5:]
     assert _sem_classificacao("".join(linha)) == "".join(sem)
     assert _sem_classificacao("".join(cabecalho)) == (
         "<th>Test</th><th>Status</th>"
