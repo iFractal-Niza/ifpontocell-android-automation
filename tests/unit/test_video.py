@@ -108,3 +108,60 @@ def test_qual_video_fica(modo, excinfo, guarda):
 
 def test_opcao_padrao_e_so_das_falhas(pytestconfig):
     assert pytestconfig.getoption(video.OPCAO) in video.MODOS
+
+
+# === Compressão pelo ffmpeg ===
+def _ffmpeg_que_grava(conteudo: bytes):
+    def run(comando, **kwargs):
+        with open(comando[-1], "wb") as saida:
+            saida.write(conteudo)
+
+    return run
+
+
+def test_comprime_quando_o_resultado_e_menor(monkeypatch):
+    original = b"x" * 1000
+    monkeypatch.setattr(video.shutil, "which", lambda nome: "/bin/ffmpeg")
+    monkeypatch.setattr(video.subprocess, "run", _ffmpeg_que_grava(b"menor"))
+
+    assert video.comprimir_video(original) == b"menor"
+
+
+def test_mantem_o_original_se_a_compressao_nao_compensa(monkeypatch):
+    monkeypatch.setattr(video.shutil, "which", lambda nome: "/bin/ffmpeg")
+    monkeypatch.setattr(
+        video.subprocess, "run", _ffmpeg_que_grava(b"maior" * 10)
+    )
+
+    assert video.comprimir_video(b"curto") == b"curto"
+
+
+def test_sem_ffmpeg_mantem_o_original(monkeypatch):
+    monkeypatch.setattr(video.shutil, "which", lambda nome: None)
+    run = Mock()
+    monkeypatch.setattr(video.subprocess, "run", run)
+
+    assert video.comprimir_video(VIDEO) == VIDEO
+    run.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "erro",
+    [
+        video.subprocess.CalledProcessError(1, "ffmpeg", stderr=b"quebrou"),
+        video.subprocess.TimeoutExpired("ffmpeg", 120),
+    ],
+)
+def test_falha_do_ffmpeg_mantem_o_original(monkeypatch, erro):
+    monkeypatch.setattr(video.shutil, "which", lambda nome: "/bin/ffmpeg")
+    monkeypatch.setattr(video.subprocess, "run", Mock(side_effect=erro))
+
+    assert video.comprimir_video(VIDEO) == VIDEO
+
+
+def test_comando_reduz_para_720_sem_ampliar():
+    comando = video.comando_de_compressao("in.mp4", "out.mp4")
+
+    assert comando[comando.index("-vf") + 1] == "scale='min(720,iw)':-2"
+    assert "-an" in comando
+    assert comando[-1] == "out.mp4"

@@ -223,7 +223,7 @@ make report-pdf    # exporta para PDF
 make clear         # limpa reports, histórico, vídeos e caches
 ```
 
-O report traz o dashboard da execução, o histórico (falhas novas, recorrentes, instáveis), print e árvore da tela na falha e o vídeo dos testes que falharam (`adb screenrecord`, sem ffmpeg; até 3 min por teste).
+O report traz o dashboard da execução, o histórico (falhas novas, recorrentes, instáveis), print e árvore da tela na falha e o vídeo dos testes que falharam (`adb screenrecord`, sem ffmpeg; até 3 min por teste). O vídeo guardado é comprimido pelo `ffmpeg` do computador (720 px de largura, 30 fps, H.264, sem áudio) para não pesar o report; sem `ffmpeg`, fica o original.
 
 ---
 
