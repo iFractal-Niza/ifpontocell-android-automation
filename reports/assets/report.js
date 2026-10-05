@@ -889,56 +889,68 @@
   // === Cards dos blocos manuais: Corrigido, Não corrigido, Melhorias ===
   // Segunda linha de cards, alinhada à primeira; só aparece com algum
   // teste manual ou melhoria. Mesma estrutura do _build_kpi_card.
-  // Melhoria implementada / não implementada contam a coluna Status
-  // apont. nas três tabelas (automatizados, manuais e melhorias).
-  var CARDS_MANUAIS = [
-    ['corrigido', 'passed', 'Corrigido', 'Retestados e aprovados'],
-    ['nao-corrigido', 'failed', 'Não corrigido', 'O problema continua'],
-    ['melhorias', 'success', 'Qtd melhorias', 'Melhorias registradas'],
+  // Duas linhas de cards, centralizadas abaixo da primeira:
+  // - status dos testes manuais e das melhorias (com algum item);
+  // - coluna Status apont. nas três tabelas (com algum apontamento).
+  var LINHAS_DE_CARDS = [
     [
-      'melhoria-implementada',
-      'passed',
-      'Melhoria implementada',
-      'Status apont.',
+      'qa-kpi-grid--manuais',
+      [
+        ['corrigido', 'passed', 'Corrigido', 'Retestados e aprovados'],
+        ['nao-corrigido', 'failed', 'Não corrigido', 'O problema continua'],
+        ['melhorias', 'success', 'Qtd melhorias', 'Melhorias registradas'],
+      ],
     ],
     [
-      'melhoria-nao-implementada',
-      'failed',
-      'Melhoria não implementada',
-      'Status apont.',
+      'qa-kpi-grid--apontamentos',
+      [
+        ['melhoria-implementada', 'passed', 'Melhoria implementada', ''],
+        ['melhoria-nao-implementada', 'failed', 'Melhoria não implementada', ''],
+        ['correcao-realizada', 'passed', 'Correção realizada', ''],
+        ['correcao-nao-realizada', 'failed', 'Correção não realizada', ''],
+      ],
     ],
   ];
 
-  // Cria a linha (e os cards que faltarem: uma cópia baixada antes pode
-  // ter só parte deles).
+  // Cria as linhas e os cards que faltarem (uma cópia baixada antes pode
+  // ter só parte deles; card em outra linha é movido para a certa).
   function garantirCardsManuais() {
-    var linha = document.querySelector('.qa-kpi-grid--manuais');
-    var principal = document.querySelector('.qa-kpi-grid');
+    var anterior = document.querySelector('.qa-kpi-grid');
 
-    if (!linha) {
-      if (!principal) {
-        return null;
-      }
-
-      linha = criar('section', 'qa-kpi-grid qa-kpi-grid--manuais');
-      principal.insertAdjacentElement('afterend', linha);
+    if (!anterior) {
+      return false;
     }
 
-    CARDS_MANUAIS.forEach(function (definicao) {
-      if (linha.querySelector('[data-qa-kpi="' + definicao[0] + '"]')) {
-        return;
+    LINHAS_DE_CARDS.forEach(function (definicaoDaLinha) {
+      var linha = document.querySelector('.' + definicaoDaLinha[0]);
+
+      if (!linha) {
+        linha = criar('section', 'qa-kpi-grid ' + definicaoDaLinha[0]);
+        anterior.insertAdjacentElement('afterend', linha);
       }
 
-      var card = criar('div', 'qa-kpi-card ' + definicao[1]);
+      linha.classList.add('qa-kpi-grid--extra');
 
-      card.setAttribute('data-qa-kpi', definicao[0]);
-      card.appendChild(criar('span', 'qa-kpi-label', definicao[2]));
-      card.appendChild(criar('strong', 'qa-kpi-value', '0'));
-      card.appendChild(criar('span', 'qa-kpi-detail', definicao[3]));
-      linha.appendChild(card);
+      definicaoDaLinha[1].forEach(function (definicao) {
+        var card = document.querySelector('[data-qa-kpi="' + definicao[0] + '"]');
+
+        if (!card) {
+          card = criar('div', 'qa-kpi-card ' + definicao[1]);
+          card.setAttribute('data-qa-kpi', definicao[0]);
+          card.appendChild(criar('span', 'qa-kpi-label', definicao[2]));
+          card.appendChild(criar('strong', 'qa-kpi-value', '0'));
+          card.appendChild(
+            criar('span', 'qa-kpi-detail', definicao[3] || 'Status apont.')
+          );
+        }
+
+        linha.appendChild(card);
+      });
+
+      anterior = linha;
     });
 
-    return linha;
+    return true;
   }
 
   // Valores da coluna Status apont. nas três tabelas. Automatizados: o
@@ -961,9 +973,7 @@
   }
 
   function atualizarCardsManuais() {
-    var linha = garantirCardsManuais();
-
-    if (!linha) {
+    if (!garantirCardsManuais()) {
       return;
     }
 
@@ -975,25 +985,8 @@
     };
     var corrigidos = contar('Corrigido');
     var naoCorrigidos = contar('Não corrigido');
-    var apontados = apontamentos();
-    var contarApontamento = function (valor) {
-      return apontados.filter(function (apontado) {
-        return apontado === valor;
-      }).length;
-    };
-    var implementadas = contarApontamento('Melhoria implementada');
-    var naoImplementadas = contarApontamento('Melhoria não implementada');
 
-    linha.hidden = !itens.length && !implementadas && !naoImplementadas;
-
-    preencherCard('melhoria-implementada', implementadas, '', implementadas > 0);
-    preencherCard(
-      'melhoria-nao-implementada',
-      naoImplementadas,
-      '',
-      naoImplementadas > 0
-    );
-
+    document.querySelector('.qa-kpi-grid--manuais').hidden = !itens.length;
     preencherCard('corrigido', corrigidos, '', corrigidos > 0);
     preencherCard('nao-corrigido', naoCorrigidos, '', naoCorrigidos > 0);
     preencherCard(
@@ -1004,6 +997,25 @@
         : 'Nenhuma melhoria registrada',
       melhorias.length > 0
     );
+
+    var apontados = apontamentos();
+    var algum = false;
+
+    [
+      ['melhoria-implementada', 'Melhoria implementada'],
+      ['melhoria-nao-implementada', 'Melhoria não implementada'],
+      ['correcao-realizada', 'Correção realizada'],
+      ['correcao-nao-realizada', 'Correção não realizada'],
+    ].forEach(function (card) {
+      var quantidade = apontados.filter(function (valor) {
+        return valor === card[1];
+      }).length;
+
+      algum = algum || quantidade > 0;
+      preencherCard(card[0], quantidade, '', quantidade > 0);
+    });
+
+    document.querySelector('.qa-kpi-grid--apontamentos').hidden = !algum;
   }
 
   // === Qualidade por fluxo com os testes manuais ===

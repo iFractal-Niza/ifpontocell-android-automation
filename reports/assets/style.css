@@ -686,8 +686,9 @@ body {
   white-space: normal;
 }
 
-/* Segunda linha (Corrigido, Não corrigido, Qtd melhorias; report.js). */
-.qa-kpi-grid--manuais {
+/* Linhas extras de cards (report.js): status dos testes manuais e
+   Status apont. */
+.qa-kpi-grid--extra {
   display: flex;
   justify-content: center;
   margin-top: 10px;
@@ -696,11 +697,11 @@ body {
 /* Centralizada, com a largura de um card da linha de cima (6 colunas e
    5 espaços de 10px). Nas telas em que a linha de cima quebra, volta à
    mesma grade dela (@media abaixo). */
-.qa-kpi-grid--manuais .qa-kpi-card {
+.qa-kpi-grid--extra .qa-kpi-card {
   flex: 0 0 calc((100% - 50px) / 6);
 }
 
-.qa-kpi-grid--manuais[hidden] {
+.qa-kpi-grid--extra[hidden] {
   display: none;
 }
 
@@ -1663,7 +1664,7 @@ body {
  * RESPONSIVIDADE
  ******************************/
 @media (max-width: 1180px) {
-  .qa-kpi-grid--manuais {
+  .qa-kpi-grid--extra {
     display: grid;
   }
 
