@@ -6,6 +6,8 @@ manuais, totais e fluxos recalculados, blocos de cards e a cópia do
 """
 
 import base64
+import shutil
+import subprocess
 
 import pytest
 
@@ -461,3 +463,86 @@ def test_previstos_entram_sem_status_e_uma_vez_so(
     ).select_option("Passou")
     jornada = pagina.page.locator(".qa-flow-row", has_text="JORNADA E2E")
     assert jornada.locator(".qa-flow-summary strong").inner_text() == "2/3"
+
+
+def test_copia_grande_avisa_o_tamanho(abrir, report_padrao, tmp_path):
+    pagina = abrir(report_padrao)
+    _baixar(pagina, tmp_path)
+    assert not any("MB" in texto for texto in pagina.dialogos)
+
+    # O limite real é 25 MB; o teste o reduz para não gerar uma cópia
+    # desse tamanho.
+    pagina.page.evaluate("window.QA_LIMITE_EMAIL_MB = 0.01")
+    _baixar(pagina, tmp_path)
+
+    assert any("MB" in texto and "Drive" in texto for texto in pagina.dialogos)
+
+
+_TAMANHOS_NO_BANCO = """() => new Promise(resolver => {
+  const pedido = indexedDB.open('qa-report-evidencias', 1);
+  pedido.onsuccess = () => {
+    const leitura = pedido.result.transaction('arquivos')
+      .objectStore('arquivos').getAll();
+    leitura.onsuccess = () => resolver(leitura.result.map(x => x.length));
+  };
+})"""
+
+
+def _gerar_video(destino, *opcoes):
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", *opcoes, str(destino)],
+        check=True,
+    )
+    return destino
+
+
+def _video_manual_e_comprimido(abrir, report, video):
+    """
+    Anexa um vídeo com áudio a um teste manual e confere que o guardado
+    ficou bem menor. Uma taxa que o codificador do navegador não aceita
+    faria a compressão cair no original, sem erro aparente.
+    """
+    pagina = abrir(report)
+    linha = pagina.adicionar(ct="CT900", status="Falhou")
+
+    with pagina.page.expect_file_chooser() as escolha:
+        linha.locator(".qa-evidencia-anexar").click()
+    escolha.value.set_files(str(video))
+    pagina.page.wait_for_selector(".qa-evidencia-abrir", timeout=60000)
+
+    (guardado,) = pagina.page.evaluate(_TAMANHOS_NO_BANCO)
+    # data URL em base64: 4/3 do arquivo.
+    assert guardado * 3 / 4 < video.stat().st_size / 2
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="sem ffmpeg")
+def test_video_manual_com_audio_e_comprimido(abrir, report_padrao, tmp_path):
+    # webm (VP8 + Opus): o Chromium do Playwright não toca H.264; grava
+    # em webm (Opus).
+    video = _gerar_video(
+        tmp_path / "tela.webm",
+        "-f", "lavfi", "-i", "testsrc2=size=720x1280:rate=30:duration=2",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+        "-c:v", "libvpx", "-b:v", "6M", "-deadline", "realtime",
+        "-cpu-used", "8", "-c:a", "libopus", "-shortest",
+    )  # fmt: skip
+
+    _video_manual_e_comprimido(abrir, report_padrao, video)
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="sem ffmpeg")
+def test_video_manual_do_iphone_e_comprimido_no_chrome(
+    abrir_no_chrome, report_padrao, tmp_path
+):
+    # Como uma gravação de tela do iPhone (H.264 + AAC, 1206x2622): o
+    # Chrome grava em mp4 (H.264 + AAC). Foi assim que o áudio a
+    # 64 kbit/s quebrou o AAC no meio da gravação.
+    video = _gerar_video(
+        tmp_path / "tela.mp4",
+        "-f", "lavfi", "-i", "testsrc2=size=1206x2622:rate=30:duration=3",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "15",
+        "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest",
+    )  # fmt: skip
+
+    _video_manual_e_comprimido(abrir_no_chrome, report_padrao, video)

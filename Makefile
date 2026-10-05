@@ -193,7 +193,7 @@ help:
 	@echo ""
 	@echo "=== Testes ==="
 	@echo "  make unit                  Roda os testes unitários (sem emulador, ~1s)"
-	@echo "  make test-report           Testa o report no navegador (report.js, ~15s)"
+	@echo "  make test-report           Testa o report no navegador (report.js, ~45s)"
 	@echo "  make smoke                 Roda testes smoke em ordem lógica"
 	@echo "  make regression            Roda testes regression em ordem lógica"
 	@echo "  make onboarding            Roda testes de onboarding"

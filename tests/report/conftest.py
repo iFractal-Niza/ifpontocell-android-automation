@@ -182,11 +182,17 @@ class Pagina:
     def __init__(self, contexto, caminho: Path):
         self.contexto = contexto
         self.erros: list[str] = []
+        self.dialogos: list[str] = []
         self.page = contexto.new_page()
         self.page.on("pageerror", lambda erro: self.erros.append(str(erro)))
-        self.page.on("dialog", lambda dialogo: dialogo.accept())
+        self.page.on("dialog", self._aceitar)
         self.page.goto(caminho.as_uri())
         self.page.wait_for_selector("tr.collapsible")
+
+    def _aceitar(self, dialogo):
+        """Aceita confirmações e avisos, guardando o texto."""
+        self.dialogos.append(dialogo.message)
+        dialogo.accept()
 
     def abrir_outro(self, caminho: Path) -> "Pagina":
         """Outro report no mesmo navegador (mesmos dados salvos)."""
@@ -230,6 +236,26 @@ def webkit(instancia_playwright):
     instancia = instancia_playwright.webkit.launch()
     yield instancia
     instancia.close()
+
+
+@pytest.fixture(scope="session")
+def chrome(instancia_playwright):
+    """
+    O Google Chrome instalado (o Chromium do Playwright não grava mp4 com
+    AAC, que é o que o Chrome usa ao comprimir vídeo). Sem ele, pula.
+    """
+    try:
+        instancia = instancia_playwright.chromium.launch(channel="chrome")
+    except Exception:
+        pytest.skip("Google Chrome não instalado")
+
+    yield instancia
+    instancia.close()
+
+
+@pytest.fixture
+def abrir_no_chrome(chrome):
+    yield from _abridor(chrome)
 
 
 @pytest.fixture

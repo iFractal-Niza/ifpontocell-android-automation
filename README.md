@@ -198,7 +198,7 @@ Dois terminais, um servidor Appium: `make smoke` e `make smoke DEVICE=real`. Cad
 
 ```bash
 make unit                 # unitários (~1s, sem emulador)
-make test-report          # o report no navegador (report.js; Chromium e WebKit, ~15s)
+make test-report          # o report no navegador (report.js; Chromium, WebKit e Chrome, ~45s)
 make run                  # suíte completa em ordem lógica
 make evidencias           # suíte completa, vídeo de todos e os testes manuais no report
 make smoke                # testes smoke

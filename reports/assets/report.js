@@ -553,13 +553,13 @@
       comArquivos(melhorias),
     ])
       .then(function (listas) {
-        baixarArquivo(
-          new Blob([htmlDaCopia(listas[0], listas[1])], {
-            type: 'text/html;charset=utf-8',
-          }),
-          nomeDaCopia()
-        );
+        var copia = new Blob([htmlDaCopia(listas[0], listas[1])], {
+          type: 'text/html;charset=utf-8',
+        });
+
+        baixarArquivo(copia, nomeDaCopia());
         marcarPendente(false);
+        avisarTamanhoDaCopia(copia.size);
       })
       .catch(function () {
         window.alert(
@@ -570,6 +570,29 @@
         botao.disabled = false;
         botao.textContent = texto;
       });
+  }
+
+  // E-mail (Gmail, Outlook) costuma limitar anexos a 25 MB. A cópia sai
+  // de qualquer jeito; acima disso, o aviso sugere o Drive.
+  // window.QA_LIMITE_EMAIL_MB: só para os testes, que não geram 25 MB.
+  var LIMITE_EMAIL_MB = 25;
+
+  function avisarTamanhoDaCopia(bytes) {
+    var limite = window.QA_LIMITE_EMAIL_MB || LIMITE_EMAIL_MB;
+    var megas = bytes / (1024 * 1024);
+
+    if (megas <= limite) {
+      return;
+    }
+
+    window.alert(
+      'A cópia tem ' +
+        megas.toFixed(1).replace('.', ',') +
+        ' MB. E-mail costuma limitar anexos a ' +
+        LIMITE_EMAIL_MB +
+        ' MB: prefira enviar pelo Drive. Para diminuir, tire anexos ' +
+        'manuais grandes (vídeos, principalmente).'
+    );
   }
 
   function baixarArquivo(conteudo, nome) {
@@ -2667,7 +2690,11 @@
   var IMAGEM_MAXIMA = { largura: 1280, altura: 1600 };
   var QUALIDADE_JPEG = 0.8;
   var VIDEO_LARGURA_MAXIMA = 720;
-  var VIDEO_BITS_POR_SEGUNDO = 1500000;
+  // No máximo ~4,4 MB por minuto: gravação de tela segue legível, e a
+  // cópia do "Baixar HTML" (que embute os anexos) não estoura o e-mail.
+  // Áudio fica em 96 kbit/s: abaixo disso, o AAC do Chrome falha no meio
+  // da gravação (e o vídeo ficaria sem compressão).
+  var VIDEO_BITS_POR_SEGUNDO = 500000;
   var AUDIO_BITS_POR_SEGUNDO = 96000;
 
   function trocarExtensao(nome, extensao) {
