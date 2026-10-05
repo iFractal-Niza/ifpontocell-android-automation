@@ -227,6 +227,8 @@ O report traz o dashboard da execução, o histórico (falhas novas, recorrentes
 
 Nas linhas de falha, as colunas **Categoria do erro** (Baixo, Moderado, Crítico) e **Tipo de erro** têm uma lista para escolher. A escolha é salva na hora, no navegador: reabrindo o mesmo arquivo no mesmo navegador, ela volta. Para enviar ao time, use o botão **Baixar HTML** no topo do dashboard: ele baixa uma cópia (`<report>_classificado.html`) com as escolhas gravadas no próprio arquivo, só leitura, e com todas as evidências. O PDF não mostra essas colunas. As opções ficam em `CATEGORIAS_DE_ERRO` e `TIPOS_DE_ERRO`, em `observability/pytest_report.py`.
 
+O botão **+ Adicionar teste manual**, abaixo da tabela, inclui uma linha para um teste feito fora da automação: resultado, CT e descrição, categoria, tipo e duração, editáveis na própria linha (e **Remover** para tirar). Ficam salvas no navegador como a classificação e vão na cópia do **Baixar HTML**, só leitura. Não entram nos números do dashboard nem no PDF.
+
 ---
 
 ## Qualidade de código

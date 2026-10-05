@@ -1,5 +1,6 @@
 import base64
 import html
+import json
 import os
 import re
 from datetime import datetime
@@ -765,10 +766,19 @@ def montar_celula_classificacao(
 
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_header(cells) -> None:
-    for deslocamento, (_, titulo, _) in enumerate(COLUNAS_DE_CLASSIFICACAO):
+    """
+    Cabeçalho das colunas de classificação. Leva as opções (data-opcoes)
+    para o report.js montar as listas dos testes manuais, que existem
+    mesmo quando nenhum teste falhou.
+    """
+    for deslocamento, (campo, titulo, opcoes) in enumerate(
+        COLUNAS_DE_CLASSIFICACAO
+    ):
         cells.insert(
             POSICAO_CLASSIFICACAO + deslocamento,
-            f'<th class="col-classificacao">{html.escape(titulo)}</th>',
+            f'<th class="col-classificacao" data-campo="{campo}" '
+            f'data-opcoes="{html.escape(json.dumps(list(opcoes)))}">'
+            f"{html.escape(titulo)}</th>",
         )
 
 

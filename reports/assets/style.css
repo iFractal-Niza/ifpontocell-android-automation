@@ -1020,13 +1020,13 @@ body {
  * Categoria e Tipo do erro: listas editáveis nas linhas de falha (salvas
  * no navegador pelo report.js). A categoria ganha a cor da gravidade.
  */
-.col-classificacao {
+#results-table .col-classificacao {
   width: 150px;
+  text-align: center;
 }
 
 .qa-sem-erro {
   color: var(--text-muted) !important;
-  text-align: center;
 }
 
 .qa-classificacao {
@@ -1079,8 +1079,93 @@ body {
   cursor: default;
 }
 
+/*
+ * Testes manuais (botão "+", report.js): campos editáveis na própria
+ * linha; na cópia do "Baixar HTML", texto fixo.
+ */
+.qa-manual-campo {
+  width: 100%;
+  max-width: 190px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9em;
+}
+
+.qa-manual-campo:focus {
+  border-color: var(--teal);
+  outline: none;
+}
+
+.qa-manual-teste {
+  max-width: none;
+  font-weight: 700;
+}
+
+.qa-manual-duracao {
+  max-width: 100px;
+}
+
+.qa-manual-resultado {
+  max-width: 110px;
+  font-weight: 700;
+}
+
+.qa-manual-resultado[data-valor='Passou'] {
+  color: var(--green);
+}
+
+.qa-manual-resultado[data-valor='Falhou'] {
+  color: var(--red);
+}
+
+.qa-manual-resultado[data-valor='Pulado'] {
+  color: var(--amber);
+}
+
+.qa-manual-remover {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.qa-manual-remover:hover {
+  border-color: var(--red-line);
+  color: var(--red);
+}
+
+.qa-manuais-acoes {
+  margin: 10px 0 0;
+}
+
+.qa-adicionar-teste {
+  padding: 7px 14px;
+  border: 1px dashed var(--teal-line);
+  border-radius: var(--radius-pill);
+  background: var(--teal-soft);
+  color: var(--teal);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.qa-adicionar-teste:hover {
+  border-style: solid;
+  border-color: var(--teal);
+}
+
 /* As opções abertas seguem o tema, não a cor da gravidade. */
-.qa-classificacao option {
+.qa-classificacao option,
+.qa-manual-campo option {
   background: var(--bg-surface);
   color: var(--text-primary);
   font-weight: 400;

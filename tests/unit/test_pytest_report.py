@@ -271,6 +271,9 @@ def test_colunas_de_classificacao_entram_apos_teste():
     assert "Categoria do erro" in cabecalho[2]
     assert "Tipo de erro" in cabecalho[3]
     assert cabecalho[4] == "<th>D</th>"
+    # As opções vão no cabeçalho, para as linhas de teste manual.
+    assert "&quot;Cr\\u00edtico&quot;" in cabecalho[2]
+    assert "&quot;Marca\\u00e7\\u00e3o de Ponto&quot;" in cabecalho[3]
 
 
 def test_linha_com_falha_ganha_as_listas():

@@ -42,7 +42,7 @@ _COLUNAS = {
 # Categoria e Tipo do erro: preenchidas no navegador (salvas lá pelo
 # report.js, não no HTML), então no PDF sairiam sempre vazias. Saem do PDF.
 _CELULA_CLASSIFICACAO = re.compile(
-    r'<t([hd]) class="col-classificacao[^"]*">.*?</t\1>',
+    r'<t([hd]) class="col-classificacao[^"]*"[^>]*>.*?</t\1>',
     flags=re.DOTALL,
 )
 

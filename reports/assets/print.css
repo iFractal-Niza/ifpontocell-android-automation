@@ -484,7 +484,8 @@ a {
     font-size: 7px !important;
 }
 
-/* O botão de baixar não tem uso no PDF. */
-.qa-baixar-html {
+/* Botões de baixar e de teste manual não têm uso no PDF. */
+.qa-baixar-html,
+.qa-manuais-acoes {
     display: none !important;
 }

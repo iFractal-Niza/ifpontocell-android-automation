@@ -401,7 +401,9 @@
   // recebe o valor salvo.
   function restaurarClassificacoes() {
     document
-      .querySelectorAll('select.qa-classificacao:not([data-restaurada])')
+      .querySelectorAll(
+        'select.qa-classificacao[data-teste]:not([data-restaurada])'
+      )
       .forEach(function (lista) {
         var valor = lerClassificacao(lista);
 
@@ -422,7 +424,11 @@
   document.addEventListener('change', function (evento) {
     var lista = evento.target;
 
-    if (lista.classList && lista.classList.contains('qa-classificacao')) {
+    if (
+      lista.classList &&
+      lista.classList.contains('qa-classificacao') &&
+      lista.hasAttribute('data-teste')
+    ) {
       gravarClassificacao(lista);
       marcarClassificacao(lista);
     }
@@ -448,7 +454,7 @@
     }
 
     document
-      .querySelectorAll('select.qa-classificacao')
+      .querySelectorAll('select.qa-classificacao[data-teste]')
       .forEach(function (lista) {
         if (lista.value) {
           valores[idClassificacao(lista)] = lista.value;
@@ -456,6 +462,12 @@
       });
 
     return valores;
+  }
+
+  // JSON seguro dentro da tag script: um "<" no texto vira \u003c, e
+  // um fechamento de tag digitado num campo não encerra o script.
+  function paraScript(valor) {
+    return JSON.stringify(valor).replace(/</g, '\\u003c');
   }
 
   function nomeDaCopia() {
@@ -473,7 +485,9 @@
     var copia = document.documentElement.cloneNode(true);
 
     copia
-      .querySelectorAll('#results-table > tbody, .qa-lightbox')
+      .querySelectorAll(
+        '#results-table > tbody, .qa-lightbox, .qa-manuais-acoes'
+      )
       .forEach(function (elemento) {
         elemento.remove();
       });
@@ -481,7 +495,9 @@
     var fixa = document.createElement('script');
     fixa.textContent =
       'window.QA_CLASSIFICACAO_FIXA = ' +
-      JSON.stringify(classificacoesEscolhidas()).replace(/</g, '\\u003c') +
+      paraScript(classificacoesEscolhidas()) +
+      ';\nwindow.QA_TESTES_MANUAIS_FIXOS = ' +
+      paraScript(testesManuais) +
       ';';
 
     var cabeca = copia.querySelector('head');
@@ -524,8 +540,308 @@
     });
   }
 
+  // === Testes manuais ===
+  // Linhas acrescentadas à mão (botão "+"), para testes feitos fora da
+  // automação. Salvas no navegador como a classificação; a cópia do
+  // "Baixar HTML" as leva gravadas, só leitura. O pytest-html recria a
+  // tabela ao ordenar e filtrar: as linhas manuais ficam num tbody
+  // próprio, no fim, recolocado a cada vez. Não entram no dashboard nem
+  // no PDF.
+  var CHAVE_MANUAIS = 'qa-manuais:' + location.pathname;
+  var RESULTADOS_MANUAIS = ['Passou', 'Falhou', 'Pulado'];
+  var testesManuais = lerTestesManuais();
+
+  function lerTestesManuais() {
+    if (CLASSIFICACAO_FIXA) {
+      return window.QA_TESTES_MANUAIS_FIXOS || [];
+    }
+
+    try {
+      return JSON.parse(localStorage.getItem(CHAVE_MANUAIS) || '[]');
+    } catch (erro) {
+      return [];
+    }
+  }
+
+  function gravarTestesManuais() {
+    try {
+      if (testesManuais.length) {
+        localStorage.setItem(CHAVE_MANUAIS, JSON.stringify(testesManuais));
+      } else {
+        localStorage.removeItem(CHAVE_MANUAIS);
+      }
+    } catch (erro) {
+      // Sem armazenamento: as linhas valem só enquanto a página está aberta.
+    }
+  }
+
+  // Opções de Categoria e Tipo: vêm no cabeçalho (pytest_report.py).
+  function opcoesDaColuna(campo) {
+    var coluna = document.querySelector(
+      '#results-table-head th[data-campo="' + campo + '"]'
+    );
+
+    try {
+      return JSON.parse(coluna.getAttribute('data-opcoes')) || [];
+    } catch (erro) {
+      return [];
+    }
+  }
+
+  function criar(tag, classe, texto) {
+    var elemento = document.createElement(tag);
+
+    if (classe) {
+      elemento.className = classe;
+    }
+
+    if (texto) {
+      elemento.textContent = texto;
+    }
+
+    return elemento;
+  }
+
+  function campoLista(chave, opcoes, valor, classe, vazio) {
+    var lista = criar('select', classe);
+
+    lista.setAttribute('data-chave', chave);
+
+    if (vazio) {
+      lista.appendChild(new Option(vazio, ''));
+    }
+
+    opcoes.forEach(function (opcao) {
+      lista.appendChild(new Option(opcao, opcao));
+    });
+
+    lista.value = valor || '';
+    lista.setAttribute('data-valor', lista.value);
+
+    return lista;
+  }
+
+  function campoTexto(chave, valor, classe, dica) {
+    var campo = criar('input', classe);
+
+    campo.type = 'text';
+    campo.value = valor || '';
+    campo.placeholder = dica;
+    campo.setAttribute('data-chave', chave);
+
+    return campo;
+  }
+
+  function etiqueta(classe, valor, vazio) {
+    var elemento = criar('span', classe, valor || vazio);
+
+    elemento.setAttribute('data-valor', valor || '');
+
+    return elemento;
+  }
+
+  // Conteúdo de cada célula, pela coluna do cabeçalho (vale para
+  // qualquer ordem de colunas).
+  function celulaManual(coluna, teste) {
+    var tipo = coluna.getAttribute('data-column-type');
+    var campo = coluna.getAttribute('data-campo');
+    var celula = criar('td');
+    var fixo = !!CLASSIFICACAO_FIXA;
+
+    if (tipo === 'result') {
+      celula.className = 'col-result';
+      celula.appendChild(
+        fixo
+          ? etiqueta('qa-manual-resultado', teste.resultado, '—')
+          : campoLista(
+              'resultado',
+              RESULTADOS_MANUAIS,
+              teste.resultado,
+              'qa-manual-campo qa-manual-resultado'
+            )
+      );
+    } else if (tipo === 'testId') {
+      celula.className = 'col-testId';
+      celula.appendChild(
+        fixo
+          ? criar('div', 'qa-test-title', teste.teste || '—')
+          : campoTexto(
+              'teste',
+              teste.teste,
+              'qa-manual-campo qa-manual-teste',
+              'CT000 · Descrição do teste'
+            )
+      );
+      celula.appendChild(criar('div', 'qa-test-path', 'Teste manual'));
+    } else if (campo) {
+      celula.className = 'col-classificacao';
+      celula.appendChild(
+        fixo
+          ? etiqueta(
+              'qa-classificacao qa-classificacao--fixa',
+              teste[campo],
+              'Não classificado'
+            )
+          : campoLista(
+              campo,
+              opcoesDaColuna(campo),
+              teste[campo],
+              'qa-manual-campo qa-classificacao',
+              'Selecionar'
+            )
+      );
+    } else if (tipo === 'duration') {
+      celula.className = 'col-duration';
+      celula.appendChild(
+        fixo
+          ? document.createTextNode(teste.duracao || '—')
+          : campoTexto(
+              'duracao',
+              teste.duracao,
+              'qa-manual-campo qa-manual-duracao',
+              '00:00:00'
+            )
+      );
+    } else if (!fixo && coluna === coluna.parentNode.lastElementChild) {
+      celula.className = 'col-links';
+
+      var remover = criar('button', 'qa-manual-remover', 'Remover');
+      remover.type = 'button';
+      celula.appendChild(remover);
+    }
+
+    return celula;
+  }
+
+  function linhaManual(teste, colunas) {
+    var linha = criar('tr', 'qa-manual-row');
+
+    linha.setAttribute('data-id', teste.id);
+    colunas.forEach(function (coluna) {
+      linha.appendChild(celulaManual(coluna, teste));
+    });
+
+    return linha;
+  }
+
+  function desenharTestesManuais(corpo) {
+    var colunas = Array.prototype.slice.call(
+      document.querySelectorAll('#results-table-head th')
+    );
+
+    while (corpo.firstChild) {
+      corpo.removeChild(corpo.firstChild);
+    }
+
+    testesManuais.forEach(function (teste) {
+      corpo.appendChild(linhaManual(teste, colunas));
+    });
+  }
+
+  function garantirTestesManuais() {
+    var tabela = document.getElementById('results-table');
+
+    if (!tabela || !tabela.querySelector('#results-table-head th')) {
+      return;
+    }
+
+    var corpo = tabela.querySelector('tbody.qa-manuais');
+
+    if (!corpo) {
+      corpo = criar('tbody', 'qa-manuais');
+      desenharTestesManuais(corpo);
+      tabela.appendChild(corpo);
+    } else if (corpo !== tabela.lastElementChild) {
+      tabela.appendChild(corpo);
+    }
+
+    if (!CLASSIFICACAO_FIXA && !document.querySelector('.qa-manuais-acoes')) {
+      var acoes = criar('div', 'qa-manuais-acoes');
+      var adicionar = criar(
+        'button',
+        'qa-adicionar-teste',
+        '+ Adicionar teste manual'
+      );
+
+      adicionar.type = 'button';
+      acoes.appendChild(adicionar);
+      tabela.insertAdjacentElement('afterend', acoes);
+    }
+  }
+
+  function testeManualDa(elemento) {
+    var linha = elemento.closest ? elemento.closest('tr.qa-manual-row') : null;
+    var id = linha ? linha.getAttribute('data-id') : null;
+
+    return testesManuais.filter(function (teste) {
+      return teste.id === id;
+    })[0];
+  }
+
+  function redesenharTestesManuais() {
+    var corpo = document.querySelector('#results-table tbody.qa-manuais');
+
+    if (corpo) {
+      desenharTestesManuais(corpo);
+    }
+  }
+
+  document.addEventListener('click', function (evento) {
+    if (evento.target.closest('.qa-adicionar-teste')) {
+      testesManuais.push({
+        id: 'm' + Date.now(),
+        resultado: 'Falhou',
+        teste: '',
+        categoria: '',
+        tipo: '',
+        duracao: '',
+      });
+      gravarTestesManuais();
+      redesenharTestesManuais();
+
+      var campos = document.querySelectorAll('.qa-manual-teste');
+      if (campos.length) {
+        campos[campos.length - 1].focus();
+      }
+      return;
+    }
+
+    var remover = evento.target.closest('.qa-manual-remover');
+    var teste = remover ? testeManualDa(remover) : null;
+
+    if (teste && window.confirm('Remover este teste manual?')) {
+      testesManuais = testesManuais.filter(function (outro) {
+        return outro !== teste;
+      });
+      gravarTestesManuais();
+      redesenharTestesManuais();
+    }
+  });
+
+  function atualizarTesteManual(evento) {
+    var campo = evento.target;
+    var chave = campo.getAttribute && campo.getAttribute('data-chave');
+    var teste = chave ? testeManualDa(campo) : null;
+
+    if (!teste) {
+      return;
+    }
+
+    teste[chave] = campo.value;
+    campo.setAttribute('data-valor', campo.value);
+    gravarTestesManuais();
+  }
+
+  document.addEventListener('input', atualizarTesteManual);
+  document.addEventListener('change', atualizarTesteManual);
+
+  function aoMudarAPagina() {
+    restaurarClassificacoes();
+    garantirTestesManuais();
+  }
+
   if (window.MutationObserver) {
-    new MutationObserver(restaurarClassificacoes).observe(
+    new MutationObserver(aoMudarAPagina).observe(
       document.documentElement,
       { childList: true, subtree: true }
     );
@@ -543,7 +859,7 @@
     traduzirColunas();
     prepararBotaoTema();
     prepararBotaoBaixar();
-    restaurarClassificacoes();
+    aoMudarAPagina();
   }
 
   if (document.readyState === 'loading') {
