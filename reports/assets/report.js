@@ -316,9 +316,18 @@
         : null;
       var status = linha ? linha.querySelector('.col-result') : null;
 
+      if (!status || evento.target === status) {
+        return;
+      }
+
+      // A lista de classificação não expande a linha (nem deixa o clique
+      // chegar ao pytest-html).
+      if (evento.target.closest('.qa-classificacao')) {
+        evento.stopPropagation();
+        return;
+      }
+
       if (
-        !status ||
-        evento.target === status ||
         evento.target.closest('a, button, input, video') ||
         String(window.getSelection ? window.getSelection() : '')
       ) {
@@ -331,6 +340,78 @@
     true
   );
 
+  // === Classificação do erro (Categoria e Tipo) ===
+  // Salva no navegador, por arquivo de report e por teste: reabrindo o
+  // mesmo arquivo neste navegador, as escolhas voltam. Não vai junto
+  // quando o HTML é enviado a outra pessoa.
+  var PREFIXO_CLASSIFICACAO = 'qa-classificacao:' + location.pathname + ':';
+
+  function chaveClassificacao(lista) {
+    return (
+      PREFIXO_CLASSIFICACAO +
+      lista.getAttribute('data-teste') +
+      ':' +
+      lista.getAttribute('data-campo')
+    );
+  }
+
+  function lerClassificacao(lista) {
+    try {
+      return localStorage.getItem(chaveClassificacao(lista)) || '';
+    } catch (erro) {
+      return '';
+    }
+  }
+
+  function gravarClassificacao(lista) {
+    try {
+      if (lista.value) {
+        localStorage.setItem(chaveClassificacao(lista), lista.value);
+      } else {
+        localStorage.removeItem(chaveClassificacao(lista));
+      }
+    } catch (erro) {
+      // Sem armazenamento (ex.: navegação privada): só não salva.
+    }
+  }
+
+  function marcarClassificacao(lista) {
+    lista.setAttribute('data-valor', lista.value);
+  }
+
+  // O pytest-html recria as linhas ao ordenar e filtrar: toda lista nova
+  // recebe o valor salvo.
+  function restaurarClassificacoes() {
+    document
+      .querySelectorAll('select.qa-classificacao:not([data-restaurada])')
+      .forEach(function (lista) {
+        var valor = lerClassificacao(lista);
+
+        if (valor) {
+          lista.value = valor;
+        }
+
+        marcarClassificacao(lista);
+        lista.setAttribute('data-restaurada', '');
+      });
+  }
+
+  document.addEventListener('change', function (evento) {
+    var lista = evento.target;
+
+    if (lista.classList && lista.classList.contains('qa-classificacao')) {
+      gravarClassificacao(lista);
+      marcarClassificacao(lista);
+    }
+  });
+
+  if (window.MutationObserver) {
+    new MutationObserver(restaurarClassificacoes).observe(
+      document.documentElement,
+      { childList: true, subtree: true }
+    );
+  }
+
   document.addEventListener('keydown', function (evento) {
     if (evento.key === 'Escape') {
       fecharImagem();
@@ -342,6 +423,7 @@
     traduzirTextos();
     traduzirColunas();
     prepararBotaoTema();
+    restaurarClassificacoes();
   }
 
   if (document.readyState === 'loading') {

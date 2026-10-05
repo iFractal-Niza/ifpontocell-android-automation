@@ -225,6 +225,8 @@ make clear         # limpa reports, histórico, vídeos e caches
 
 O report traz o dashboard da execução, o histórico (falhas novas, recorrentes, instáveis), print e árvore da tela na falha e o vídeo dos testes que falharam (`adb screenrecord`, sem ffmpeg; até 3 min por teste). O vídeo guardado é comprimido pelo `ffmpeg` do computador (720 px de largura, 30 fps, H.264, sem áudio) para não pesar o report; sem `ffmpeg`, fica o original.
 
+Nas linhas de falha, as colunas **Categoria do erro** (Baixo, Moderado, Crítico) e **Tipo de erro** têm uma lista para escolher. A escolha é salva na hora, no navegador: reabrindo o mesmo arquivo no mesmo navegador, ela volta. Não vai junto quando o HTML é enviado a outra pessoa, e não aparece no PDF. As opções ficam em `CATEGORIAS_DE_ERRO` e `TIPOS_DE_ERRO`, em `observability/pytest_report.py`.
+
 ---
 
 ## Qualidade de código

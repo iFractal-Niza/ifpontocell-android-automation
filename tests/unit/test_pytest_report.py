@@ -10,7 +10,10 @@ from types import SimpleNamespace
 from observability.pytest_report import (
     corrigir_troca_de_video,
     marcar_pulados,
+    montar_celula_classificacao,
     obter_driver_ativo,
+    pytest_html_results_table_header,
+    pytest_html_results_table_row,
     pytest_unconfigure,
 )
 
@@ -239,3 +242,81 @@ def test_unconfigure_corrige_o_html_gravado(tmp_path):
     )
 
     assert "    videoEl.load()\n" in relatorio.read_text(encoding="utf-8")
+
+
+# === Classificação do erro (Categoria e Tipo) ===
+def _report(failed: bool, nodeid="t.py::test_x"):
+    return SimpleNamespace(nodeid=nodeid, failed=failed)
+
+
+def _linha_original():
+    return [
+        '<td class="col-result">Failed</td>',
+        '<td class="col-testId">t.py::test_x</td>',
+        '<td class="col-duration">1s</td>',
+        '<td class="col-links"></td>',
+    ]
+
+
+def test_colunas_de_classificacao_entram_apos_teste():
+    cabecalho = [
+        "<th>Result</th>",
+        "<th>Test</th>",
+        "<th>D</th>",
+        "<th>L</th>",
+    ]
+
+    pytest_html_results_table_header(cabecalho)
+
+    assert "Categoria do erro" in cabecalho[2]
+    assert "Tipo de erro" in cabecalho[3]
+    assert cabecalho[4] == "<th>D</th>"
+
+
+def test_linha_com_falha_ganha_as_listas():
+    linha = _linha_original()
+
+    pytest_html_results_table_row(_report(failed=True), linha)
+
+    assert len(linha) == 6
+    assert 'data-campo="categoria"' in linha[2]
+    assert 'data-campo="tipo"' in linha[3]
+    for opcao in ("Baixo", "Moderado", "Crítico"):
+        assert f'value="{opcao}"' in linha[2]
+    assert 'value="Marcação de Ponto"' in linha[3]
+    assert 'data-teste="t.py::test_x"' in linha[2]
+    # Uma linha só: o pytest-html lê a célula com regex sem quebra.
+    assert "\n" not in linha[2] + linha[3]
+
+
+def test_linha_sem_falha_fica_com_traco():
+    linha = _linha_original()
+
+    pytest_html_results_table_row(_report(failed=False), linha)
+
+    assert len(linha) == 6
+    assert "<select" not in linha[2] + linha[3]
+    assert "—" in linha[2]
+
+
+def test_nodeid_e_escapado_no_atributo():
+    celula = montar_celula_classificacao(
+        "tipo", "Tipo de erro", ("Outro",), 't.py::test_x["a"]', True
+    )
+
+    assert 'data-teste="t.py::test_x[&quot;a&quot;]"' in celula
+
+
+def test_pdf_tira_as_colunas_de_classificacao():
+    from scripts.export_report_pdf import _sem_classificacao
+
+    linha = _linha_original()
+    pytest_html_results_table_row(_report(failed=True), linha)
+    cabecalho = ["<th>Result</th>", "<th>Test</th>"]
+    pytest_html_results_table_header(cabecalho)
+
+    sem = linha[:2] + linha[4:]
+    assert _sem_classificacao("".join(linha)) == "".join(sem)
+    assert _sem_classificacao("".join(cabecalho)) == (
+        "<th>Result</th><th>Test</th>"
+    )

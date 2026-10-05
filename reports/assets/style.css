@@ -985,6 +985,69 @@ body {
   cursor: pointer;
 }
 
+/*
+ * Categoria e Tipo do erro: listas editáveis nas linhas de falha (salvas
+ * no navegador pelo report.js). A categoria ganha a cor da gravidade.
+ */
+.col-classificacao {
+  width: 150px;
+}
+
+.qa-sem-erro {
+  color: var(--text-muted) !important;
+  text-align: center;
+}
+
+.qa-classificacao {
+  width: 100%;
+  max-width: 190px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.qa-classificacao:focus {
+  border-color: var(--teal);
+  outline: none;
+}
+
+.qa-classificacao[data-valor=''] {
+  color: var(--text-muted);
+}
+
+.qa-classificacao[data-valor='Baixo'] {
+  border-color: var(--green-line);
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 700;
+}
+
+.qa-classificacao[data-valor='Moderado'] {
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-weight: 700;
+}
+
+.qa-classificacao[data-valor='Crítico'] {
+  border-color: var(--red-line);
+  background: var(--red-soft);
+  color: var(--red);
+  font-weight: 700;
+}
+
+/* As opções abertas seguem o tema, não a cor da gravidade. */
+.qa-classificacao option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
 /* Ressalvas: testes pulados e o motivo de cada um. */
 .qa-caveat-list {
   margin: 0;

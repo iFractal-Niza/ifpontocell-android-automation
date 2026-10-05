@@ -39,6 +39,18 @@ _COLUNAS = {
 }
 
 
+# Categoria e Tipo do erro: preenchidas no navegador (salvas lá pelo
+# report.js, não no HTML), então no PDF sairiam sempre vazias. Saem do PDF.
+_CELULA_CLASSIFICACAO = re.compile(
+    r'<t([hd]) class="col-classificacao[^"]*">.*?</t\1>',
+    flags=re.DOTALL,
+)
+
+
+def _sem_classificacao(html_tabela: str) -> str:
+    return _CELULA_CLASSIFICACAO.sub("", html_tabela)
+
+
 def obter_ultimo_report_html() -> Path:
     """
     Retorna o relatório HTML mais recente.
@@ -316,11 +328,13 @@ def _renderizar_resultados_estaticos(
             )
         ).lower()
 
-        linhas = "".join(
-            str(item)
-            for item in teste.get(
-                "resultsTableRow",
-                [],
+        linhas = _sem_classificacao(
+            "".join(
+                str(item)
+                for item in teste.get(
+                    "resultsTableRow",
+                    [],
+                )
             )
         )
 
@@ -391,7 +405,9 @@ def _materializar_report_para_pdf(
 
     html_text = pattern.sub(
         lambda match: (
-            _traduzir_colunas(match.group(1)) + resultados + match.group(3)
+            _traduzir_colunas(_sem_classificacao(match.group(1)))
+            + resultados
+            + match.group(3)
         ),
         html_text,
         count=1,

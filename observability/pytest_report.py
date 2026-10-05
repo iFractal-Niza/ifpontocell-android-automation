@@ -707,12 +707,80 @@ def montar_celula_teste(
     )
 
 
+# === Classificação do erro (Categoria e Tipo) ===
+# Preenchida por quem analisa o report, nas linhas de falha: listas
+# editáveis, salvas no navegador (report.js). Ficam logo após a coluna
+# Teste.
+CATEGORIAS_DE_ERRO = ("Baixo", "Moderado", "Crítico")
+
+TIPOS_DE_ERRO = (
+    "Texto / Digitação",
+    "Ordenação",
+    "Layout",
+    "Travamento / Crash",
+    "Elemento não exibido",
+    "Filtragem",
+    "Regra de Negócio",
+    "Marcação de Ponto",
+    "Cálculo",
+    "Outro",
+)
+
+COLUNAS_DE_CLASSIFICACAO = (
+    ("categoria", "Categoria do erro", CATEGORIAS_DE_ERRO),
+    ("tipo", "Tipo de erro", TIPOS_DE_ERRO),
+)
+
+# Posição das colunas novas: logo após Status (0) e Teste (1).
+POSICAO_CLASSIFICACAO = 2
+
+
+def montar_celula_classificacao(
+    campo: str,
+    titulo: str,
+    opcoes: tuple[str, ...],
+    nodeid: str,
+    com_erro: bool,
+) -> str:
+    """
+    Célula com a lista de opções, só nas linhas com erro; nas outras,
+    um traço. Em uma linha só, como a célula do teste.
+    """
+    if not com_erro:
+        return '<td class="col-classificacao qa-sem-erro">—</td>'
+
+    itens = '<option value="">Selecionar</option>' + "".join(
+        f'<option value="{html.escape(opcao)}">{html.escape(opcao)}</option>'
+        for opcao in opcoes
+    )
+
+    return (
+        '<td class="col-classificacao">'
+        f'<select class="qa-classificacao" data-campo="{campo}" '
+        f'data-teste="{html.escape(nodeid)}" '
+        f'aria-label="{html.escape(titulo)}">{itens}</select>'
+        "</td>"
+    )
+
+
+@pytest.hookimpl(optionalhook=True)
+def pytest_html_results_table_header(cells) -> None:
+    for deslocamento, (_, titulo, _) in enumerate(COLUNAS_DE_CLASSIFICACAO):
+        cells.insert(
+            POSICAO_CLASSIFICACAO + deslocamento,
+            f'<th class="col-classificacao">{html.escape(titulo)}</th>',
+        )
+
+
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_row(
     report,
     cells,
 ) -> None:
-    """Troca o nodeid da coluna Teste pelo título legível do teste."""
+    """
+    Troca o nodeid da coluna Teste pelo título legível do teste e
+    acrescenta as colunas de classificação do erro.
+    """
     if len(cells) < 2:
         return
 
@@ -720,6 +788,16 @@ def pytest_html_results_table_row(
         str(cells[1]),
         getattr(report, ATRIBUTO_TITULO, ""),
     )
+
+    for deslocamento, (campo, titulo, opcoes) in enumerate(
+        COLUNAS_DE_CLASSIFICACAO
+    ):
+        cells.insert(
+            POSICAO_CLASSIFICACAO + deslocamento,
+            montar_celula_classificacao(
+                campo, titulo, opcoes, report.nodeid, report.failed
+            ),
+        )
 
 
 # === Histórico ===
