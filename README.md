@@ -102,6 +102,7 @@ ifpontocell-android-automation/
 │   ├── app/                             # os testes de tela (CT001–CT037, como no iOS)
 │   ├── fixtures/                        # fixtures por assunto (plugins do conftest)
 │   ├── support/                         # flows, assertions, profile_resolver
+│   ├── report/                          # o report no navegador (make test-report)
 │   └── unit/                            # unitários (make unit, sem emulador)
 │
 └── utils/                               # logger, períodos, ponto, textos, report
@@ -197,6 +198,7 @@ Dois terminais, um servidor Appium: `make smoke` e `make smoke DEVICE=real`. Cad
 
 ```bash
 make unit                 # unitários (~1s, sem emulador)
+make test-report          # o report no navegador (report.js; Chromium e WebKit, ~15s)
 make run                  # suíte completa em ordem lógica
 make smoke                # testes smoke
 make regression
@@ -229,7 +231,7 @@ Nas linhas de falha, as colunas **Categoria do erro** (Baixo, Moderado, Crítico
 
 Os testes manuais ficam num bloco próprio, **Testes manuais**, abaixo do bloco **Testes automatizados**, com as mesmas colunas. O botão **+ Adicionar teste manual** inclui uma linha para um teste feito fora da automação: resultado, CT e descrição, categoria, tipo, status do apontamento e **Obs. Tester** (observação livre, no lugar da Duração; **Ver** abre a observação inteira), editáveis na própria linha (a lixeira, na ponta da coluna Evidências, tira a linha). **+ Anexar evidências** aceita vários arquivos de uma vez (imagens, vídeos ou PDF), que abrem ao clicar no nome. Ao anexar, o navegador comprime: imagem até 1280×1600 em JPEG 80%; vídeo regravado em 720 px de largura, com o áudio (leva a duração do vídeo; o botão mostra o andamento; se o navegador não deixar capturar o som, o vídeo fica sem compressão). Se não ficar menor, vai o original; o limite é 50 MB por arquivo, já comprimido. As linhas ficam salvas no navegador (os arquivos, no IndexedDB) e vão na cópia do **Baixar HTML**, só leitura, com os arquivos embutidos. Os que têm Status entram nos totais do dashboard (taxa de sucesso, cards, status e resumo, recalculados na página com as mesmas regras); com **Fluxo** preenchido (o **+ Fluxo** discreto abaixo do CT abre o campo, com sugestões dos fluxos do report), somam também no card de mesmo nome em **Qualidade por fluxo**, ou criam um card novo. Com algum fluxo informado, as linhas ficam ordenadas por fluxo (as do mesmo fluxo juntas, separadas por uma borda; as sem fluxo no fim), e o nome adota a grafia de um fluxo já existente ("teste ricadio" vira "Teste Ricadio"). Não entram no PDF.
 
-Nos testes manuais e nas melhorias, o Status também tem **Corrigido** (retestado e aprovado; conta como aprovado) e **Não corrigido** (conta como falha). Os dois têm card próprio numa segunda linha do dashboard, junto com **Qtd melhorias** (todas as melhorias registradas); essa linha só aparece com algum teste manual ou melhoria. Abaixo, outra linha conta a coluna **Status apont.** nas três tabelas: **Melhoria implementada**, **Melhoria não implementada**, **Correção realizada** e **Correção não realizada**; ela só aparece com algum apontamento.
+Nos testes manuais e nas melhorias, o Status também tem **Corrigido** (retestado e aprovado; conta como aprovado) e **Não corrigido** (conta como falha). Abaixo dos cards principais, dois blocos recolhíveis (fechados por padrão; o navegador lembra quais ficaram abertos), com um resumo na barra: **Testes manuais** (Passou, Falhou, Corrigido, Não corrigido e, da coluna **Status apont.** dos testes, Correção realizada e não realizada) e **Melhorias** (Qtd melhorias, Corrigido, Não corrigido e, do **Status apont.** nas três tabelas, Melhoria implementada e não implementada). Cada bloco só aparece com algo a mostrar.
 
 O bloco **Melhorias** (botão **+ Adicionar melhoria**), abaixo dos testes manuais, registra sugestões encontradas nos testes, com as mesmas colunas dos testes manuais (Melhoria no lugar de Teste): implementada, a melhoria também é testada e pode falhar. Começa sem Status; com Status, entra nos totais do dashboard. Mesmo funcionamento dos testes manuais (anexos comprimidos, salvo no navegador, levado na cópia do **Baixar HTML**).
 

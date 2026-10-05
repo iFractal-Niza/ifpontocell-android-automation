@@ -158,7 +158,7 @@ DEBUG_TARGET = $(if $(test),$(test),$(FULL_SUITE))
         check-venv check-config check-test-data check-app check-devices \
         check-appium check-mobile \
         doctor impact appium appium-servers lint format \
-        run debug unit smoke regression \
+        run debug unit test-report smoke regression \
         ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto status ponto registro-geo jornada holerite informe humor ass-espelho sobre dados-pessoais privacidade alterar-pin alterar-senha-sistema zerar-dados \
         api \
         clear limpar-historico report report-pdf renumerar-ct \
@@ -193,6 +193,7 @@ help:
 	@echo ""
 	@echo "=== Testes ==="
 	@echo "  make unit                  Roda os testes unitários (sem emulador, ~1s)"
+	@echo "  make test-report           Testa o report no navegador (report.js, ~15s)"
 	@echo "  make smoke                 Roda testes smoke em ordem lógica"
 	@echo "  make regression            Roda testes regression em ordem lógica"
 	@echo "  make onboarding            Roda testes de onboarding"
@@ -472,6 +473,13 @@ falhas: check-mobile
 # fora os reports das execuções reais.
 unit: check-venv
 	@$(PYTEST) $(UNIT_TESTS) -q -p no:observability.pytest_report $(PYTEST_FLAGS)
+
+# O report no navegador (Playwright: Chromium e WebKit, o motor do Safari):
+# monta um report de exemplo e confere o report.js. Fora do make unit e do
+# pre-commit porque abre navegador; rodar ao mexer em reports/assets ou no
+# dashboard. Sem emulador, sem Appium.
+test-report: check-venv
+	@$(PYTEST) $(TESTS)/report -q -p no:observability.pytest_report
 
 # === Testes por marker ===
 # Inclui os que consomem massa (assinatura do espelho); merge-dev e

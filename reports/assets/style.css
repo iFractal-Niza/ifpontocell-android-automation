@@ -686,8 +686,60 @@ body {
   white-space: normal;
 }
 
-/* Linhas extras de cards (report.js): status dos testes manuais e
-   Status apont. */
+/* Blocos recolhíveis "Testes manuais" e "Melhorias" (report.js):
+   barra com o resumo; os cards aparecem ao abrir. */
+.qa-kpi-grupo {
+  margin-top: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-tint);
+}
+
+.qa-kpi-grupo[hidden] {
+  display: none;
+}
+
+.qa-kpi-grupo > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.qa-kpi-grupo > summary::-webkit-details-marker {
+  display: none;
+}
+
+.qa-kpi-grupo > summary::before {
+  content: "▸";
+  color: var(--teal);
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+
+.qa-kpi-grupo[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.qa-kpi-grupo-titulo {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.qa-kpi-grupo-resumo {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.qa-kpi-grupo > .qa-kpi-grid--extra {
+  margin: 0;
+  padding: 0 14px 14px;
+}
+
 .qa-kpi-grid--extra {
   display: flex;
   justify-content: center;
