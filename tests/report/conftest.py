@@ -24,14 +24,14 @@ sync_api = pytest.importorskip(
 from observability.pytest_report import PROJECT_ROOT  # noqa: E402
 
 # Um teste que falha (com árvore e print) e um que passa.
-_AMOSTRA = '''
+_AMOSTRA = """
 def test_falha():
     assert False
 
 
 def test_passa():
     pass
-'''
+"""
 
 # PNG 1x1, para o print da falha.
 _PNG = (
