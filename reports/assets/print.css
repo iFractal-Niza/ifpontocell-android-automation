@@ -140,11 +140,6 @@ body > p:first-of-type {
     font-size: 10px !important;
 }
 
-.qa-execution-alert-rate strong {
-    font-size: 14px !important;
-}
-
-
 /* WeasyPrint lida melhor com flex neste trecho
    do que com o grid do dashboard original. */
 

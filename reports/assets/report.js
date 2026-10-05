@@ -681,12 +681,14 @@
       : arredondada.toFixed(2).replace('.', ',') + '%';
   }
 
-  function statusDaExecucao(t, taxa) {
+  // criticoPelaTaxa: false num fluxo (num fluxo de um teste, uma falha
+  // já é 0%), como no build_fluxo_html_card.
+  function statusDaExecucao(t, taxa, criticoPelaTaxa) {
     if (t.total === 0 || t.skipped >= t.total) {
       return 'neutral';
     }
 
-    if (t.criticas > 0 || taxa < t.instavel) {
+    if (t.criticas > 0 || (criticoPelaTaxa !== false && taxa < t.instavel)) {
       return 'failed';
     }
 
@@ -826,7 +828,9 @@
     var partesDoTotal = [];
 
     if (manuais || deMelhorias) {
-      partesDoTotal.push(base.total + ' automatizados');
+      partesDoTotal.push(
+        base.total + plural(base.total, ' automatizado', ' automatizados')
+      );
       if (manuais) {
         partesDoTotal.push(manuais + plural(manuais, ' manual', ' manuais'));
       }
@@ -862,8 +866,217 @@
     if (alerta) {
       alerta.querySelector('.qa-execution-alert-content strong').textContent =
         resumoDaExecucao(t);
-      alerta.querySelector('.qa-execution-alert-rate strong').textContent =
-        formatarTaxa(taxa);
+    }
+
+    atualizarFluxos(base);
+  }
+
+  // === Qualidade por fluxo com os testes manuais ===
+  // Cada card do Python traz os números do fluxo em data-qa-fluxo. Itens
+  // com Status e Fluxo somam no card de mesmo nome (sem diferenciar
+  // maiúsculas); nome novo vira um card novo (data-qa-fluxo-manual),
+  // refeito a cada mudança.
+  function chaveDeFluxo(nome) {
+    return String(nome || '').trim().toLowerCase();
+  }
+
+  function preencherFluxo(card, base, extra, limites) {
+    var n = {
+      ok: base.ok + extra.ok,
+      fail: base.fail + extra.fail,
+      error: base.error,
+      skip: base.skip + extra.skip,
+    };
+    var total = n.ok + n.fail + n.error + n.skip;
+    var executados = n.ok + n.fail + n.error;
+    var taxa = executados ? Math.round((n.ok / executados) * 10000) / 100 : 0;
+    var classe = statusDaExecucao(
+      {
+        total: total,
+        skipped: n.skip,
+        failed: n.fail,
+        error: n.error,
+        criticas: base.critico,
+        saudavel: limites.saudavel,
+        instavel: limites.instavel,
+      },
+      taxa,
+      false
+    );
+    var itens = card.querySelectorAll('.qa-flow-meta-item strong');
+
+    card.querySelector('.qa-flow-summary strong').textContent =
+      n.ok + '/' + total;
+    itens[0].textContent = formatarTaxa(taxa);
+    card.querySelector('.qa-flow-meta-item.passed strong').textContent = n.ok;
+    card.querySelector('.qa-flow-meta-item.failed strong').textContent =
+      n.fail;
+    card.querySelector('.qa-flow-meta-item.error strong').textContent =
+      n.error;
+    card.querySelector('.qa-flow-meta-item.skipped strong').textContent =
+      n.skip;
+
+    var barra = card.querySelector('.qa-flow-progress-bar');
+    var progresso = card.querySelector('.qa-flow-progress');
+
+    barra.setAttribute('aria-valuenow', taxa);
+    progresso.style.width = taxa + '%';
+    trocarClasseDeStatus(progresso, classe);
+  }
+
+  // Mesma estrutura do build_fluxo_html_card (sem Duração: o teste
+  // manual não tem).
+  function cardDeFluxo(nome) {
+    var card = criar('article', 'qa-flow-row');
+    var principal = criar('div', 'qa-flow-main');
+    var cabecalho = criar('div', 'qa-flow-heading');
+    var resumo = criar('div', 'qa-flow-summary');
+    var meta = criar('div', 'qa-flow-meta');
+    var barra = criar('div', 'qa-flow-progress-bar');
+
+    cabecalho.appendChild(criar('span', 'qa-flow-title', nome.toUpperCase()));
+    resumo.appendChild(criar('strong'));
+    resumo.appendChild(criar('span', '', 'testes aprovados'));
+    principal.appendChild(cabecalho);
+    principal.appendChild(resumo);
+
+    [
+      ['', 'Sucesso'],
+      ['passed', 'Passou'],
+      ['failed', 'Falhou'],
+      ['error', 'Execução'],
+      ['skipped', 'Pulados'],
+    ].forEach(function (item) {
+      var bloco = criar('span', ('qa-flow-meta-item ' + item[0]).trim());
+
+      bloco.appendChild(criar('span', '', item[1]));
+      bloco.appendChild(criar('strong'));
+      meta.appendChild(bloco);
+    });
+
+    barra.setAttribute('role', 'progressbar');
+    barra.setAttribute('aria-label', 'Taxa de sucesso do fluxo ' + nome);
+    barra.setAttribute('aria-valuemin', '0');
+    barra.setAttribute('aria-valuemax', '100');
+    barra.appendChild(criar('div', 'qa-flow-progress'));
+
+    card.appendChild(principal);
+    card.appendChild(meta);
+    card.appendChild(barra);
+    card.setAttribute('data-qa-fluxo-manual', '');
+
+    return card;
+  }
+
+  // Sugestões do campo Fluxo: os fluxos do report e os já digitados.
+  function atualizarSugestoesDeFluxo(nomes) {
+    var lista = document.getElementById('qa-fluxos-sugeridos');
+
+    if (!lista) {
+      lista = criar('datalist');
+      lista.id = 'qa-fluxos-sugeridos';
+      document.body.appendChild(lista);
+    }
+
+    while (lista.firstChild) {
+      lista.removeChild(lista.firstChild);
+    }
+
+    nomes.forEach(function (nome) {
+      lista.appendChild(new Option(nome));
+    });
+  }
+
+  function atualizarFluxos(limites) {
+    var secao = document.querySelector('.qa-fluxos');
+    var lista = secao ? secao.querySelector('.qa-flow-list') : null;
+
+    if (!lista) {
+      return;
+    }
+
+    lista.querySelectorAll('[data-qa-fluxo-manual]').forEach(function (card) {
+      card.remove();
+    });
+
+    var somas = {};
+    var ordem = [];
+
+    testesManuais.concat(melhorias).forEach(function (item) {
+      var conta = { Passou: 'ok', Falhou: 'fail', Pulado: 'skip' }[
+        item.resultado
+      ];
+      var chave = chaveDeFluxo(item.fluxo);
+
+      if (!conta || !chave) {
+        return;
+      }
+
+      if (!somas[chave]) {
+        somas[chave] = { nome: item.fluxo.trim(), ok: 0, fail: 0, skip: 0 };
+        ordem.push(chave);
+      }
+
+      somas[chave][conta] += 1;
+    });
+
+    var nomes = [];
+    var vistos = {};
+
+    lista.querySelectorAll('.qa-flow-row[data-qa-fluxo]').forEach(function (
+      card
+    ) {
+      var base;
+
+      try {
+        base = JSON.parse(card.getAttribute('data-qa-fluxo'));
+      } catch (erro) {
+        return;
+      }
+
+      var chave = chaveDeFluxo(base.nome);
+
+      preencherFluxo(
+        card,
+        base,
+        somas[chave] || { ok: 0, fail: 0, skip: 0 },
+        limites
+      );
+      nomes.push(base.nome.toUpperCase());
+      vistos[chave] = true;
+    });
+
+    ordem.forEach(function (chave) {
+      if (vistos[chave]) {
+        return;
+      }
+
+      var card = cardDeFluxo(somas[chave].nome);
+
+      lista.appendChild(card);
+      preencherFluxo(
+        card,
+        { ok: 0, fail: 0, error: 0, skip: 0, critico: 0 },
+        somas[chave],
+        limites
+      );
+      nomes.push(somas[chave].nome.toUpperCase());
+    });
+
+    testesManuais.concat(melhorias).forEach(function (item) {
+      var chave = chaveDeFluxo(item.fluxo);
+
+      if (chave && !vistos[chave] && ordem.indexOf(chave) === -1) {
+        ordem.push(chave);
+        nomes.push(item.fluxo.trim().toUpperCase());
+      }
+    });
+
+    atualizarSugestoesDeFluxo(nomes);
+
+    var vazio = secao.querySelector('.qa-empty-state');
+    if (vazio) {
+      vazio.hidden = lista.children.length > 0;
     }
   }
 
@@ -924,6 +1137,66 @@
     return campo;
   }
 
+  // Fluxo recolhido: só um "+ Fluxo" discreto (ou "Fluxo: X", se já
+  // tiver); o clique abre o campo, e sair dele recolhe de novo.
+  function textoDoFluxo(fluxo) {
+    return fluxo && fluxo.trim() ? 'Fluxo: ' + fluxo.trim() : '+ Fluxo';
+  }
+
+  function campoFluxo(valor, origem) {
+    var caixa = criar('div', 'qa-fluxo');
+    var botao = criar('button', 'qa-fluxo-botao', textoDoFluxo(valor));
+    var campo = campoTexto(
+      'fluxo',
+      valor,
+      'qa-manual-campo qa-manual-fluxo',
+      'Fluxo (ex.: Jornada E2E)'
+    );
+
+    botao.type = 'button';
+    botao.title = origem + ': fluxo em Qualidade por fluxo';
+    botao.classList.toggle('qa-fluxo-botao--preenchido', !!(valor || '').trim());
+    campo.setAttribute('list', 'qa-fluxos-sugeridos');
+    campo.hidden = true;
+
+    caixa.appendChild(botao);
+    caixa.appendChild(campo);
+
+    return caixa;
+  }
+
+  document.addEventListener('click', function (evento) {
+    var botao = evento.target.closest('.qa-fluxo-botao');
+
+    if (!botao) {
+      return;
+    }
+
+    var campo = botao.parentNode.querySelector('.qa-manual-fluxo');
+
+    botao.hidden = true;
+    campo.hidden = false;
+    campo.focus();
+  });
+
+  document.addEventListener('focusout', function (evento) {
+    var campo = evento.target;
+
+    if (!campo.classList || !campo.classList.contains('qa-manual-fluxo')) {
+      return;
+    }
+
+    var botao = campo.parentNode.querySelector('.qa-fluxo-botao');
+
+    botao.textContent = textoDoFluxo(campo.value);
+    botao.classList.toggle(
+      'qa-fluxo-botao--preenchido',
+      !!campo.value.trim()
+    );
+    botao.hidden = false;
+    campo.hidden = true;
+  });
+
   // Observação do tester: várias linhas.
   function campoObservacao(valor) {
     var campo = criar('textarea', 'qa-manual-campo qa-manual-obs');
@@ -981,9 +1254,21 @@
                 : 'CT000 · Descrição do teste'
             )
       );
-      celula.appendChild(
-        criar('div', 'qa-test-path', eMelhoria ? 'Melhoria' : 'Teste manual')
-      );
+      var origem = eMelhoria ? 'Melhoria' : 'Teste manual';
+
+      // Fluxo: soma o item no card de mesmo nome em Qualidade por fluxo
+      // (ou cria um card novo).
+      if (fixo) {
+        celula.appendChild(
+          criar(
+            'div',
+            'qa-test-path',
+            origem + (teste.fluxo ? ' · Fluxo: ' + teste.fluxo : '')
+          )
+        );
+      } else {
+        celula.appendChild(campoFluxo(teste.fluxo, origem));
+      }
     } else if (campo) {
       celula.className = 'col-classificacao';
       celula.appendChild(
@@ -1275,6 +1560,7 @@
         categoria: '',
         tipo: '',
         obs: '',
+        fluxo: '',
       });
       gravarTestesManuais();
       redesenharTestesManuais();
@@ -1290,6 +1576,7 @@
         categoria: '',
         tipo: '',
         obs: '',
+        fluxo: '',
       });
       gravarTestesManuais();
       redesenharTestesManuais();

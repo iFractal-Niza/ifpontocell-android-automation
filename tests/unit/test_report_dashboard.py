@@ -170,17 +170,12 @@ def test_dashboard_leva_os_totais_para_somar_os_testes_manuais():
 
 
 # === Histórico ===
-def test_historico_sem_anteriores_avisa_primeira_execucao():
-    html = _build_historico_html({"tem_anteriores": False})
-
-    assert "Primeira execução registrada" in html
+def test_historico_some_na_primeira_execucao():
+    assert _build_historico_html({"tem_anteriores": False}) == ""
 
 
-def test_historico_sem_novidades_e_uma_linha():
-    html = _build_historico_html({"tem_anteriores": True})
-
-    assert "Sem falhas novas e sem testes instáveis" in html
-    assert "qa-caveat-list" not in html
+def test_historico_some_sem_novidades():
+    assert _build_historico_html({"tem_anteriores": True}) == ""
 
 
 def test_historico_lista_novas_recorrentes_e_instaveis():
@@ -276,6 +271,37 @@ def test_resumo_concorda_com_falha_e_erro(falhas, erros, esperado):
     )
 
     assert esperado in html
+
+
+def test_fluxo_leva_os_numeros_para_somar_os_testes_manuais():
+    import html as html_lib
+    import json
+    import re
+
+    from utils.report_dashboard import build_fluxo_html_card
+
+    card = build_fluxo_html_card(
+        "jornada e2e", {"ok": 2, "fail": 1, "skip": 1, "critico": 1}
+    )
+    dados = json.loads(
+        html_lib.unescape(re.search(r'data-qa-fluxo="([^"]+)"', card)[1])
+    )
+
+    assert dados == {
+        "nome": "jornada e2e",
+        "ok": 2,
+        "fail": 1,
+        "error": 0,
+        "skip": 1,
+        "critico": 1,
+    }
+
+
+def test_sem_fluxo_a_lista_existe_para_os_testes_manuais():
+    html = build_dashboard_html({"total": 0})
+
+    assert "Nenhum fluxo foi identificado" in html
+    assert 'class="qa-flow-list"' in html
 
 
 def test_resumo_diz_se_algum_teste_do_smoke_falhou():

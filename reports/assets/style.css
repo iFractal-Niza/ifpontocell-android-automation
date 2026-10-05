@@ -587,7 +587,7 @@ body {
  ******************************/
 .qa-execution-alert {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   margin-bottom: 14px;
@@ -669,25 +669,6 @@ body {
   display: block;
   color: var(--text-primary);
   font-size: 14px;
-}
-
-.qa-execution-alert-rate {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  min-width: 92px;
-}
-
-.qa-execution-alert-rate span {
-  color: var(--text-muted);
-  font-size: 10px;
-  text-transform: uppercase;
-}
-
-.qa-execution-alert-rate strong {
-  color: var(--text-primary);
-  font-size: 20px;
-  font-weight: 800;
 }
 
 /******************************
@@ -1052,6 +1033,49 @@ body {
 .qa-manual-teste {
   max-width: none;
   font-weight: 700;
+}
+
+.qa-fluxo {
+  margin-top: 3px;
+}
+
+.qa-manual-fluxo {
+  max-width: 240px;
+  font-size: 0.85em;
+}
+
+.qa-manual-fluxo[hidden],
+.qa-fluxo-botao[hidden] {
+  display: none;
+}
+
+/* "+ Fluxo" discreto; com fluxo, "Fluxo: X" em destaque leve. */
+.qa-fluxo-botao {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.qa-fluxo-botao:hover {
+  color: var(--teal);
+  text-decoration: underline;
+  opacity: 1;
+}
+
+.qa-fluxo-botao--preenchido {
+  color: var(--teal);
+  font-weight: 700;
+  opacity: 1;
+}
+
+/* Some quando os testes manuais criam um fluxo (report.js). */
+.qa-empty-state[hidden] {
+  display: none;
 }
 
 .qa-manual-obs {
@@ -1638,16 +1662,6 @@ body {
     table-layout: auto;
   }
 
-  .qa-execution-alert {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .qa-execution-alert-rate {
-    grid-column: 1 / -1;
-    align-items: flex-start;
-    padding-left: 46px;
-  }
-
   .qa-kpi-grid {
     grid-template-columns: repeat(2, minmax(130px, 1fr));
   }
@@ -1848,12 +1862,6 @@ body {
 
 .qa-historico-item.recorrente .qa-caveat-flow {
   color: var(--orange);
-}
-
-.qa-historico-vazio {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 12px;
 }
 
 /* Desempenho: testes mais demorados (informativo, sem cor de alerta). */

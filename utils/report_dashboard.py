@@ -406,8 +406,22 @@ def build_fluxo_html_card(
             </span>
         """
 
+    # Números do fluxo para o report.js somar os testes manuais.
+    dados_do_fluxo = html.escape(
+        json.dumps(
+            {
+                "nome": fluxo,
+                "ok": passed,
+                "fail": failed,
+                "error": error,
+                "skip": skipped,
+                "critico": _to_int(dados.get("critico")),
+            }
+        )
+    )
+
     return f"""
-        <article class="qa-flow-row">
+        <article class="qa-flow-row" data-qa-fluxo="{dados_do_fluxo}">
             <div class="qa-flow-main">
                 <div class="qa-flow-heading">
                     <span class="qa-flow-title">
@@ -477,9 +491,10 @@ def _build_flows_html(
     Preserva a ordem de inserção para refletir a ordem real
     de execução da suíte.
     """
+    # qa-fluxos: o report.js acrescenta os fluxos dos testes manuais.
     if not fluxos:
         return """
-            <section class="qa-section">
+            <section class="qa-section qa-fluxos">
                 <div class="qa-section-header">
                     <div>
                         <span class="qa-section-eyebrow">
@@ -492,6 +507,8 @@ def _build_flows_html(
                 <div class="qa-empty-state">
                     Nenhum fluxo foi identificado nesta execução.
                 </div>
+
+                <div class="qa-flow-list"></div>
             </section>
         """
 
@@ -504,7 +521,7 @@ def _build_flows_html(
     )
 
     return f"""
-        <section class="qa-section">
+        <section class="qa-section qa-fluxos">
             <div class="qa-section-header">
                 <div>
                     <span class="qa-section-eyebrow">
@@ -567,7 +584,8 @@ def _itens_historico(classe: str, rotulo: str, textos: list[str]) -> str:
 def _build_historico_html(historico: Any) -> str:
     """
     Comparação com as execuções anteriores: falhas novas, falhas que já
-    vinham de antes e testes instáveis. Sem nada disso, uma linha só.
+    vinham de antes e testes instáveis. Sem nada disso (inclusive na
+    primeira execução), a seção não aparece: deixa o dashboard limpo.
     """
     if not isinstance(historico, Mapping) or not historico:
         return ""
@@ -580,24 +598,18 @@ def _build_historico_html(historico: Any) -> str:
     ]
     instaveis = list(historico.get("instaveis") or [])
 
-    if not historico.get("tem_anteriores"):
-        corpo = (
-            '<p class="qa-historico-vazio">Primeira execução registrada: '
-            "as próximas mostram falhas novas e testes instáveis.</p>"
-        )
-    elif not (novas or recorrentes or instaveis):
-        corpo = (
-            '<p class="qa-historico-vazio">Sem falhas novas e sem testes '
-            "instáveis nas últimas execuções.</p>"
-        )
-    else:
-        corpo = (
-            '<ul class="qa-caveat-list">'
-            + _itens_historico("nova", "Falha nova", novas)
-            + _itens_historico("recorrente", "Já falhava", recorrentes)
-            + _itens_historico("instavel", "Instável", instaveis)
-            + "</ul>"
-        )
+    if not historico.get("tem_anteriores") or not (
+        novas or recorrentes or instaveis
+    ):
+        return ""
+
+    corpo = (
+        '<ul class="qa-caveat-list">'
+        + _itens_historico("nova", "Falha nova", novas)
+        + _itens_historico("recorrente", "Já falhava", recorrentes)
+        + _itens_historico("instavel", "Instável", instaveis)
+        + "</ul>"
+    )
 
     return f"""
         <section class="qa-section">
@@ -937,13 +949,6 @@ def build_dashboard_html(
 
                     <strong>
                         {_safe_text(summary)}
-                    </strong>
-                </div>
-
-                <div class="qa-execution-alert-rate">
-                    <span>Resultado</span>
-                    <strong>
-                        {_format_rate(success_rate)}
                     </strong>
                 </div>
             </section>
