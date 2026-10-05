@@ -612,7 +612,22 @@
   // a melhoria também é testada e pode falhar. Começa sem Status.
   var CHAVE_MANUAIS = 'qa-manuais:' + location.pathname;
   var CHAVE_MELHORIAS = 'qa-melhorias:' + location.pathname;
-  var RESULTADOS_MANUAIS = ['Passou', 'Falhou', 'Pulado'];
+  // Corrigido (retestado, passou) conta como aprovado; Não corrigido (o
+  // problema continua), como falha. Os dois também têm card próprio.
+  var RESULTADOS_MANUAIS = [
+    'Passou',
+    'Falhou',
+    'Pulado',
+    'Corrigido',
+    'Não corrigido',
+  ];
+  var CONTA_DO_STATUS = {
+    Passou: 'passed',
+    Falhou: 'failed',
+    Pulado: 'skipped',
+    Corrigido: 'passed',
+    'Não corrigido': 'failed',
+  };
   var testesManuais = lerLista(CHAVE_MANUAIS, window.QA_TESTES_MANUAIS_FIXOS);
   var melhorias = lerLista(CHAVE_MELHORIAS, window.QA_MELHORIAS_FIXAS).map(
     function (melhoria) {
@@ -802,9 +817,7 @@
     var deMelhorias = 0;
 
     testesManuais.concat(melhorias).forEach(function (item) {
-      var conta = { Passou: 'passed', Falhou: 'failed', Pulado: 'skipped' }[
-        item.resultado
-      ];
+      var conta = CONTA_DO_STATUS[item.resultado];
 
       if (!conta) {
         return;
@@ -859,6 +872,7 @@
     preencherCard('passou', t.passed);
     preencherCard('falhou', t.failed, '', t.failed > 0);
     preencherCard('pulados', t.skipped, '', t.skipped > 0);
+    atualizarCardsManuais();
 
     var alerta = document.querySelector('.qa-execution-alert');
     trocarClasseDeStatus(alerta, status);
@@ -869,6 +883,75 @@
     }
 
     atualizarFluxos(base);
+  }
+
+  // === Cards dos blocos manuais: Corrigido, Não corrigido, Melhorias ===
+  // Segunda linha de cards, alinhada à primeira; só aparece com algum
+  // teste manual ou melhoria. Mesma estrutura do _build_kpi_card.
+  var CARDS_MANUAIS = [
+    ['corrigido', 'passed', 'Corrigido', 'Retestados e aprovados'],
+    ['nao-corrigido', 'failed', 'Não corrigido', 'O problema continua'],
+    ['melhorias', 'success', 'Qtd melhorias', 'Melhorias registradas'],
+  ];
+
+  function garantirCardsManuais() {
+    var linha = document.querySelector('.qa-kpi-grid--manuais');
+
+    if (linha) {
+      return linha;
+    }
+
+    var principal = document.querySelector('.qa-kpi-grid');
+
+    if (!principal) {
+      return null;
+    }
+
+    linha = criar('section', 'qa-kpi-grid qa-kpi-grid--manuais');
+
+    CARDS_MANUAIS.forEach(function (definicao) {
+      var card = criar('div', 'qa-kpi-card ' + definicao[1]);
+
+      card.setAttribute('data-qa-kpi', definicao[0]);
+      card.appendChild(criar('span', 'qa-kpi-label', definicao[2]));
+      card.appendChild(criar('strong', 'qa-kpi-value', '0'));
+      card.appendChild(criar('span', 'qa-kpi-detail', definicao[3]));
+      linha.appendChild(card);
+    });
+
+    principal.insertAdjacentElement('afterend', linha);
+
+    return linha;
+  }
+
+  function atualizarCardsManuais() {
+    var linha = garantirCardsManuais();
+
+    if (!linha) {
+      return;
+    }
+
+    var itens = testesManuais.concat(melhorias);
+    var contar = function (status) {
+      return itens.filter(function (item) {
+        return item.resultado === status;
+      }).length;
+    };
+    var corrigidos = contar('Corrigido');
+    var naoCorrigidos = contar('Não corrigido');
+
+    linha.hidden = !itens.length;
+
+    preencherCard('corrigido', corrigidos, '', corrigidos > 0);
+    preencherCard('nao-corrigido', naoCorrigidos, '', naoCorrigidos > 0);
+    preencherCard(
+      'melhorias',
+      melhorias.length,
+      melhorias.length
+        ? plural(melhorias.length, 'Melhoria registrada', 'Melhorias registradas')
+        : 'Nenhuma melhoria registrada',
+      melhorias.length > 0
+    );
   }
 
   // === Qualidade por fluxo com os testes manuais ===
@@ -1003,8 +1086,8 @@
     var ordem = [];
 
     testesManuais.concat(melhorias).forEach(function (item) {
-      var conta = { Passou: 'ok', Falhou: 'fail', Pulado: 'skip' }[
-        item.resultado
+      var conta = { passed: 'ok', failed: 'fail', skipped: 'skip' }[
+        CONTA_DO_STATUS[item.resultado]
       ];
       var chave = chaveDeFluxo(item.fluxo);
 

@@ -680,6 +680,21 @@ body {
   gap: 10px;
 }
 
+/* Origem do Total (automatizados, manuais, melhorias): quebra em vez de
+   cortar com "...". */
+.qa-kpi-card[data-qa-kpi='total'] .qa-kpi-detail {
+  white-space: normal;
+}
+
+/* Segunda linha (Corrigido, Não corrigido, Qtd melhorias; report.js). */
+.qa-kpi-grid--manuais {
+  margin-top: 10px;
+}
+
+.qa-kpi-grid--manuais[hidden] {
+  display: none;
+}
+
 .qa-kpi-card {
   position: relative;
   min-width: 0;
@@ -1138,6 +1153,14 @@ body {
 
 .qa-manual-resultado[data-valor='Pulado'] {
   color: var(--amber);
+}
+
+.qa-manual-resultado[data-valor='Corrigido'] {
+  color: var(--green);
+}
+
+.qa-manual-resultado[data-valor='Não corrigido'] {
+  color: var(--red);
 }
 
 /* Evidências da linha manual: arquivos e "+ Anexar" à esquerda,
