@@ -325,14 +325,15 @@ body > p:first-of-type {
     font-weight: 700 !important;
 }
 
+/* Teste, Status, Duração, Evidências. */
 #results-table th:nth-child(1),
 #results-table td:nth-child(1) {
-    width: 9% !important;
+    width: 58% !important;
 }
 
 #results-table th:nth-child(2),
 #results-table td:nth-child(2) {
-    width: 58% !important;
+    width: 9% !important;
 }
 
 #results-table th:nth-child(3),

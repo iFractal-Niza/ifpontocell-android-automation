@@ -732,8 +732,14 @@ COLUNAS_DE_CLASSIFICACAO = (
     ("tipo", "Tipo de erro", TIPOS_DE_ERRO),
 )
 
-# Posição das colunas novas: logo após Status (0) e Teste (1).
+# Ordem da tabela: Teste, Status, Categoria do erro, Tipo de erro,
+# Duração, Evidências. O pytest-html entrega Result, Test, Duration,
+# Links: Teste e Status trocam de lugar e a classificação entra depois.
 POSICAO_CLASSIFICACAO = 2
+
+
+def _teste_antes_do_status(cells: list) -> None:
+    cells[0], cells[1] = cells[1], cells[0]
 
 
 def montar_celula_classificacao(
@@ -767,10 +773,17 @@ def montar_celula_classificacao(
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_results_table_header(cells) -> None:
     """
-    Cabeçalho das colunas de classificação. Leva as opções (data-opcoes)
-    para o report.js montar as listas dos testes manuais, que existem
-    mesmo quando nenhum teste falhou.
+    Cabeçalho: Teste antes de Status (a coluna Result, renomeada) e as
+    colunas de classificação. Estas levam as opções (data-opcoes) para o
+    report.js montar as listas dos testes manuais, que existem mesmo
+    quando nenhum teste falhou.
     """
+    if len(cells) < 2:
+        return
+
+    cells[0] = str(cells[0]).replace(">Result</th>", ">Status</th>")
+    _teste_antes_do_status(cells)
+
     for deslocamento, (campo, titulo, opcoes) in enumerate(
         COLUNAS_DE_CLASSIFICACAO
     ):
@@ -788,8 +801,8 @@ def pytest_html_results_table_row(
     cells,
 ) -> None:
     """
-    Troca o nodeid da coluna Teste pelo título legível do teste e
-    acrescenta as colunas de classificação do erro.
+    Troca o nodeid da coluna Teste pelo título legível do teste, põe o
+    Teste antes do Status e acrescenta as colunas de classificação.
     """
     if len(cells) < 2:
         return
@@ -798,6 +811,7 @@ def pytest_html_results_table_row(
         str(cells[1]),
         getattr(report, ATRIBUTO_TITULO, ""),
     )
+    _teste_antes_do_status(cells)
 
     for deslocamento, (campo, titulo, opcoes) in enumerate(
         COLUNAS_DE_CLASSIFICACAO

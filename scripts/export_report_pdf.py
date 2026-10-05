@@ -32,11 +32,33 @@ _RESULT_ORDER = {
 # O WeasyPrint não executa o reports/assets/report.js, que traduz as
 # colunas no HTML: no PDF a tradução é feita aqui.
 _COLUNAS = {
-    "Result": "Resultado",
+    "Result": "Status",
     "Test": "Teste",
     "Duration": "Duração",
     "Links": "Evidências",
 }
+
+# Valores da coluna Status (no HTML, traduzidos pelo report.js).
+_STATUS = {
+    "Passed": "Passou",
+    "Failed": "Falhou",
+    "Skipped": "Pulado",
+    "Error": "Erro",
+    "XFailed": "Falha esperada",
+    "XPassed": "Aprovação inesperada",
+    "Rerun": "Reexecutado",
+}
+
+_CELULA_STATUS = re.compile(r'(<td class="col-result">)(\w+)(</td>)')
+
+
+def _traduzir_status(linha_html: str) -> str:
+    return _CELULA_STATUS.sub(
+        lambda m: (
+            m.group(1) + _STATUS.get(m.group(2), m.group(2)) + m.group(3)
+        ),
+        linha_html,
+    )
 
 
 # Categoria e Tipo do erro: preenchidas no navegador (salvas lá pelo
@@ -328,12 +350,14 @@ def _renderizar_resultados_estaticos(
             )
         ).lower()
 
-        linhas = _sem_classificacao(
-            "".join(
-                str(item)
-                for item in teste.get(
-                    "resultsTableRow",
-                    [],
+        linhas = _traduzir_status(
+            _sem_classificacao(
+                "".join(
+                    str(item)
+                    for item in teste.get(
+                        "resultsTableRow",
+                        [],
+                    )
                 )
             )
         )

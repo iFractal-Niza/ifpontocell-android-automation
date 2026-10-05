@@ -268,9 +268,11 @@ def test_colunas_de_classificacao_entram_apos_teste():
 
     pytest_html_results_table_header(cabecalho)
 
+    # Teste, Status (era Result), Categoria, Tipo, Duração, Evidências.
+    assert cabecalho[:2] == ["<th>Test</th>", "<th>Status</th>"]
     assert "Categoria do erro" in cabecalho[2]
     assert "Tipo de erro" in cabecalho[3]
-    assert cabecalho[4] == "<th>D</th>"
+    assert cabecalho[4:] == ["<th>D</th>", "<th>L</th>"]
     # As opções vão no cabeçalho, para as linhas de teste manual.
     assert "&quot;Cr\\u00edtico&quot;" in cabecalho[2]
     assert "&quot;Marca\\u00e7\\u00e3o de Ponto&quot;" in cabecalho[3]
@@ -290,6 +292,16 @@ def test_linha_com_falha_ganha_as_listas():
     assert 'data-teste="t.py::test_x"' in linha[2]
     # Uma linha só: o pytest-html lê a célula com regex sem quebra.
     assert "\n" not in linha[2] + linha[3]
+
+
+def test_linha_poe_o_teste_antes_do_status():
+    linha = _linha_original()
+
+    pytest_html_results_table_row(_report(failed=True), linha)
+
+    assert linha[0] == '<td class="col-testId">t.py::test_x</td>'
+    assert linha[1] == '<td class="col-result">Failed</td>'
+    assert linha[4:] == _linha_original()[2:]
 
 
 def test_linha_sem_falha_fica_com_traco():
@@ -321,5 +333,16 @@ def test_pdf_tira_as_colunas_de_classificacao():
     sem = linha[:2] + linha[4:]
     assert _sem_classificacao("".join(linha)) == "".join(sem)
     assert _sem_classificacao("".join(cabecalho)) == (
-        "<th>Result</th><th>Test</th>"
+        "<th>Test</th><th>Status</th>"
+    )
+
+
+def test_pdf_traduz_o_status():
+    from scripts.export_report_pdf import _traduzir_status
+
+    assert _traduzir_status(
+        '<td class="col-testId">x</td><td class="col-result">Failed</td>'
+    ) == ('<td class="col-testId">x</td><td class="col-result">Falhou</td>')
+    assert _traduzir_status('<td class="col-result">Novo</td>') == (
+        '<td class="col-result">Novo</td>'
     )

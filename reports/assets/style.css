@@ -1028,6 +1028,20 @@ body {
   border-color: var(--teal);
 }
 
+/* Dica do pytest-html ao passar o mouse no Status, traduzida. As linhas
+   manuais não têm detalhes para abrir: sem dica. */
+.col-result:hover::after {
+  content: " (ocultar detalhes)";
+}
+
+.col-result.collapsed:hover::after {
+  content: " (ver detalhes)";
+}
+
+.qa-manuais-tabela .col-result:hover::after {
+  content: none;
+}
+
 /* A linha inteira expande o teste (report.js), não só a coluna Status. */
 .collapsible td {
   cursor: pointer;

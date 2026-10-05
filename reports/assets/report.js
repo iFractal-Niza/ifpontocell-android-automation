@@ -30,8 +30,33 @@
     retried: 'Repetidos'
   };
 
+  // Valores da coluna Status, como nos testes manuais. Só o texto na
+  // tela: o pytest-html filtra e ordena pelo valor original, guardado
+  // nos dados dele.
+  var STATUS = {
+    Passed: 'Passou',
+    Failed: 'Falhou',
+    Skipped: 'Pulado',
+    Error: 'Erro',
+    XFailed: 'Falha esperada',
+    XPassed: 'Aprovação inesperada',
+    Rerun: 'Reexecutado'
+  };
+
+  function traduzirStatus() {
+    document
+      .querySelectorAll('#results-table td.col-result')
+      .forEach(function (celula) {
+        var traducao = STATUS[celula.textContent.trim()];
+
+        if (traducao) {
+          celula.textContent = traducao;
+        }
+      });
+  }
+
   var COLUNAS = {
-    Result: 'Resultado',
+    Result: 'Status',
     Test: 'Teste',
     Duration: 'Duração',
     Links: 'Evidências'
@@ -1087,6 +1112,7 @@
   var QUALIDADE_JPEG = 0.8;
   var VIDEO_LARGURA_MAXIMA = 720;
   var VIDEO_BITS_POR_SEGUNDO = 1500000;
+  var AUDIO_BITS_POR_SEGUNDO = 96000;
 
   function trocarExtensao(nome, extensao) {
     return nome.replace(/\.[^.]*$/, '') + '.' + extensao;
@@ -1143,19 +1169,22 @@
     });
   }
 
+  // Formato com vídeo e áudio: mp4 (H.264 + AAC) quando o navegador
+  // grava mp4, senão webm (VP9 + Opus).
   function formatoDeVideo() {
     if (
       !window.MediaRecorder ||
-      !HTMLCanvasElement.prototype.captureStream
+      !HTMLCanvasElement.prototype.captureStream ||
+      !(window.AudioContext || window.webkitAudioContext)
     ) {
       return '';
     }
 
     return (
       [
-        'video/mp4;codecs=avc1',
+        'video/mp4;codecs=avc1,mp4a.40.2',
         'video/mp4',
-        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp9,opus',
         'video/webm',
       ].filter(function (formato) {
         return MediaRecorder.isTypeSupported(formato);
@@ -1163,9 +1192,12 @@
     );
   }
 
-  // Vídeo: regravado no navegador em 720 px de largura, sem áudio (mp4
-  // quando o navegador grava mp4, senão webm). O navegador só regrava
-  // tocando o vídeo: demora a duração dele.
+  // Vídeo: regravado no navegador em 720 px de largura, com o áudio. O
+  // navegador só regrava tocando o vídeo: demora a duração dele. A imagem
+  // é desenhada quadro a quadro num canvas; o áudio vai do vídeo para a
+  // gravação pela Web Audio API, sem sair no alto-falante. Se o navegador
+  // não deixar tocar com som (o Safari exige um clique recente), fica o
+  // original, para não perder o áudio.
   function comprimirVideo(arquivo, aoProgredir) {
     var formato = formatoDeVideo();
 
@@ -1179,15 +1211,23 @@
       var partes = [];
       var terminou = false;
 
+      var audio = null;
+
       function concluir(resultado) {
         if (!terminou) {
           terminou = true;
           URL.revokeObjectURL(endereco);
+
+          if (audio) {
+            audio.close();
+          }
+
           resolver(resultado);
         }
       }
 
-      video.muted = true;
+      // Com som: o áudio é desviado para a gravação (não toca).
+      video.muted = false;
       video.playsInline = true;
       video.preload = 'auto';
 
@@ -1210,10 +1250,26 @@
         var gravador;
 
         try {
-          gravador = new MediaRecorder(tela.captureStream(30), {
-            mimeType: formato,
-            videoBitsPerSecond: VIDEO_BITS_POR_SEGUNDO,
-          });
+          var Contexto = window.AudioContext || window.webkitAudioContext;
+
+          audio = new Contexto();
+
+          var saidaDeAudio = audio.createMediaStreamDestination();
+          audio.createMediaElementSource(video).connect(saidaDeAudio);
+
+          gravador = new MediaRecorder(
+            new MediaStream(
+              tela
+                .captureStream(30)
+                .getVideoTracks()
+                .concat(saidaDeAudio.stream.getAudioTracks())
+            ),
+            {
+              mimeType: formato,
+              videoBitsPerSecond: VIDEO_BITS_POR_SEGUNDO,
+              audioBitsPerSecond: AUDIO_BITS_POR_SEGUNDO,
+            }
+          );
         } catch (erro) {
           concluir(null);
           return;
@@ -1262,8 +1318,11 @@
         };
 
         gravador.start(1000);
-        video
-          .play()
+        audio
+          .resume()
+          .then(function () {
+            return video.play();
+          })
           .then(agendar)
           .catch(function () {
             gravador.onstop = null;
@@ -1518,6 +1577,7 @@
   document.addEventListener('change', atualizarTesteManual);
 
   function aoMudarAPagina() {
+    traduzirStatus();
     restaurarClassificacoes();
     garantirTestesManuais();
   }
