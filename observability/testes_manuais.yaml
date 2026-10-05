@@ -11,10 +11,11 @@
 #   um fluxo do report, como "Registro de ponto", soma no card dele; um
 #   nome novo cria um card).
 #
+# Acrescente os testes abaixo destes comentários, cada um começando com
+# "- " (hífen e espaço), e "descricao" e "fluxo" alinhados com o "ct".
+#
 # Exemplo:
 #
 # - ct: CT900
 #   descricao: Exporta o espelho de ponto em PDF
 #   fluxo: Espelho de ponto
-
-[]
