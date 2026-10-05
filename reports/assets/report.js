@@ -342,25 +342,43 @@
 
   // === Classificação do erro (Categoria e Tipo) ===
   // Salva no navegador, por arquivo de report e por teste: reabrindo o
-  // mesmo arquivo neste navegador, as escolhas voltam. Não vai junto
-  // quando o HTML é enviado a outra pessoa.
+  // mesmo arquivo neste navegador, as escolhas voltam. Para enviar a
+  // outra pessoa, o botão "Baixar HTML" gera uma cópia com as escolhas
+  // gravadas no próprio arquivo (QA_CLASSIFICACAO_FIXA), só leitura.
   var PREFIXO_CLASSIFICACAO = 'qa-classificacao:' + location.pathname + ':';
+  var CLASSIFICACAO_FIXA = window.QA_CLASSIFICACAO_FIXA || null;
 
-  function chaveClassificacao(lista) {
+  // "<nodeid>:<campo>": identifica a lista no armazenamento e na cópia.
+  function idClassificacao(lista) {
     return (
-      PREFIXO_CLASSIFICACAO +
-      lista.getAttribute('data-teste') +
-      ':' +
-      lista.getAttribute('data-campo')
+      lista.getAttribute('data-teste') + ':' + lista.getAttribute('data-campo')
     );
   }
 
+  function chaveClassificacao(lista) {
+    return PREFIXO_CLASSIFICACAO + idClassificacao(lista);
+  }
+
   function lerClassificacao(lista) {
+    if (CLASSIFICACAO_FIXA) {
+      return CLASSIFICACAO_FIXA[idClassificacao(lista)] || '';
+    }
+
     try {
       return localStorage.getItem(chaveClassificacao(lista)) || '';
     } catch (erro) {
       return '';
     }
+  }
+
+  // Na cópia só leitura, a lista vira uma etiqueta com o valor.
+  function fixarClassificacao(lista, valor) {
+    var etiqueta = document.createElement('span');
+
+    etiqueta.className = 'qa-classificacao qa-classificacao--fixa';
+    etiqueta.setAttribute('data-valor', valor);
+    etiqueta.textContent = valor || 'Não classificado';
+    lista.replaceWith(etiqueta);
   }
 
   function gravarClassificacao(lista) {
@@ -387,6 +405,11 @@
       .forEach(function (lista) {
         var valor = lerClassificacao(lista);
 
+        if (CLASSIFICACAO_FIXA) {
+          fixarClassificacao(lista, valor);
+          return;
+        }
+
         if (valor) {
           lista.value = valor;
         }
@@ -404,6 +427,102 @@
       marcarClassificacao(lista);
     }
   });
+
+  // === Baixar HTML com a classificação ===
+  // Tudo o que foi escolhido neste report, inclusive em linhas que o
+  // filtro escondeu (não estão na página, só no armazenamento).
+  function classificacoesEscolhidas() {
+    var valores = {};
+
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var chave = localStorage.key(i);
+
+        if (chave && chave.indexOf(PREFIXO_CLASSIFICACAO) === 0) {
+          valores[chave.slice(PREFIXO_CLASSIFICACAO.length)] =
+            localStorage.getItem(chave);
+        }
+      }
+    } catch (erro) {
+      // Sem armazenamento: fica só o que está na página.
+    }
+
+    document
+      .querySelectorAll('select.qa-classificacao')
+      .forEach(function (lista) {
+        if (lista.value) {
+          valores[idClassificacao(lista)] = lista.value;
+        }
+      });
+
+    return valores;
+  }
+
+  function nomeDaCopia() {
+    var arquivo = decodeURIComponent(
+      location.pathname.split('/').pop() || 'report.html'
+    );
+
+    return arquivo.replace(/\.html?$/i, '') + '_classificado.html';
+  }
+
+  // A página aberta, com as escolhas gravadas. Sai a tabela já montada:
+  // o pytest-html remonta tudo ao abrir, a partir dos dados do arquivo,
+  // e ela repetiria os prints e o vídeo (o arquivo dobraria de tamanho).
+  function htmlDaCopia() {
+    var copia = document.documentElement.cloneNode(true);
+
+    copia
+      .querySelectorAll('#results-table > tbody, .qa-lightbox')
+      .forEach(function (elemento) {
+        elemento.remove();
+      });
+
+    var fixa = document.createElement('script');
+    fixa.textContent =
+      'window.QA_CLASSIFICACAO_FIXA = ' +
+      JSON.stringify(classificacoesEscolhidas()).replace(/</g, '\\u003c') +
+      ';';
+
+    var cabeca = copia.querySelector('head');
+    cabeca.insertBefore(fixa, cabeca.firstChild);
+
+    return '<!DOCTYPE html>\n' + copia.outerHTML;
+  }
+
+  function baixarHtml() {
+    var arquivo = new Blob([htmlDaCopia()], {
+      type: 'text/html;charset=utf-8',
+    });
+    var endereco = URL.createObjectURL(arquivo);
+    var link = document.createElement('a');
+
+    link.href = endereco;
+    link.download = nomeDaCopia();
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(function () {
+      URL.revokeObjectURL(endereco);
+    }, 1000);
+  }
+
+  // Na cópia, o botão vira o aviso de que ela é só leitura.
+  function prepararBotaoBaixar() {
+    document.querySelectorAll('[data-qa-baixar]').forEach(function (botao) {
+      if (CLASSIFICACAO_FIXA) {
+        var aviso = document.createElement('span');
+
+        aviso.className = 'qa-baixar-html qa-baixar-html--fixo';
+        aviso.textContent = 'Somente leitura';
+        botao.replaceWith(aviso);
+        return;
+      }
+
+      botao.addEventListener('click', baixarHtml);
+    });
+  }
 
   if (window.MutationObserver) {
     new MutationObserver(restaurarClassificacoes).observe(
@@ -423,6 +542,7 @@
     traduzirTextos();
     traduzirColunas();
     prepararBotaoTema();
+    prepararBotaoBaixar();
     restaurarClassificacoes();
   }
 

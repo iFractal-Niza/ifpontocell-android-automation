@@ -579,6 +579,37 @@ body {
   font-size: 13px;
 }
 
+/* Botão "Baixar HTML" ao lado do status (na cópia: "Somente leitura"). */
+.qa-dashboard-lateral {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qa-baixar-html {
+  padding: 7px 14px;
+  border: 1px solid var(--teal-line);
+  border-radius: var(--radius-pill);
+  background: var(--teal-soft);
+  color: var(--teal);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.qa-baixar-html:hover {
+  border-color: var(--teal);
+}
+
+.qa-baixar-html--fixo {
+  border-color: var(--border);
+  background: var(--surface-tint);
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .qa-dashboard-status {
   display: flex;
   align-items: flex-start;
@@ -1041,6 +1072,13 @@ body {
   font-weight: 700;
 }
 
+/* Cópia só leitura: a escolha vira etiqueta. */
+.qa-classificacao--fixa {
+  display: inline-block;
+  width: auto;
+  cursor: default;
+}
+
 /* As opções abertas seguem o tema, não a cor da gravidade. */
 .qa-classificacao option {
   background: var(--bg-surface);
@@ -1458,6 +1496,12 @@ body {
   .controls {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .qa-dashboard-lateral {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
   }
 
   .qa-dashboard-status {

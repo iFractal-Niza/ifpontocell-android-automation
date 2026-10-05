@@ -879,17 +879,28 @@ def build_dashboard_html(
                     </div>
                 </div>
 
-                <div class="qa-dashboard-status">
-                    <span class="qa-status-dot {status_class}"></span>
+                <div class="qa-dashboard-lateral">
+                    <button
+                        type="button"
+                        class="qa-baixar-html"
+                        data-qa-baixar
+                        title="Cópia do report com a classificação, só leitura"
+                    >
+                        Baixar HTML
+                    </button>
 
-                    <div>
-                        <span class="qa-status {status_class}">
-                            {status_label}
-                        </span>
+                    <div class="qa-dashboard-status">
+                        <span class="qa-status-dot {status_class}"></span>
 
-                        <small>
-                            {_safe_text(status_description)}
-                        </small>
+                        <div>
+                            <span class="qa-status {status_class}">
+                                {status_label}
+                            </span>
+
+                            <small>
+                                {_safe_text(status_description)}
+                            </small>
+                        </div>
                     </div>
                 </div>
             </header>

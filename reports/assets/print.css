@@ -483,3 +483,8 @@ a {
 .qa-demorado-nota {
     font-size: 7px !important;
 }
+
+/* O botão de baixar não tem uso no PDF. */
+.qa-baixar-html {
+    display: none !important;
+}

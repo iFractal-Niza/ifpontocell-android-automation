@@ -132,6 +132,14 @@ def test_dashboard_tem_botao_de_tema_e_aplica_o_tema_salvo_antes():
     assert html.index("qa-report-tema") < html.index('class="qa-dashboard"')
 
 
+def test_dashboard_tem_botao_de_baixar_html():
+    # O report.js liga o clique (ou troca por "Somente leitura" na cópia).
+    html = build_dashboard_html({"total": 1, "passed": 1, "success_rate": 100})
+
+    assert "data-qa-baixar" in html
+    assert "Baixar HTML" in html
+
+
 # === Histórico ===
 def test_historico_sem_anteriores_avisa_primeira_execucao():
     html = _build_historico_html({"tem_anteriores": False})
