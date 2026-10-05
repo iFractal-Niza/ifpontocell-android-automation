@@ -202,7 +202,33 @@ a:hover {
 .qa-manuais-tabela th,
 .qa-manuais-tabela td {
   padding: 5px;
+}
+
+/* Colunas centralizadas, menos Teste (título e caminho, à esquerda) e a
+   linha expandida do teste (log, prints e vídeo). */
+#results-table th,
+#results-table td,
+.qa-manuais-tabela th,
+.qa-manuais-tabela td {
+  text-align: center;
+}
+
+#results-table th[data-column-type='testId'],
+#results-table td.col-testId,
+#results-table td.extra,
+.qa-manuais-tabela th[data-column-type='testId'],
+.qa-manuais-tabela td.col-testId {
   text-align: left;
+}
+
+/* O texto dentro das listas e da Obs. Tester também fica no centro
+   (text-align-last: listas no Chrome; o Safari mantém à esquerda). O
+   campo do CT, na coluna Teste, segue à esquerda. */
+#results-table td:not(.col-testId) select,
+.qa-manuais-tabela td:not(.col-testId) select,
+.qa-manuais-tabela td:not(.col-testId) textarea {
+  text-align: center;
+  text-align-last: center;
 }
 
 #results-table th,
@@ -323,8 +349,7 @@ span.skipped {
 
   .qa-dashboard-header,
   .qa-kpi-grid,
-  .qa-flow-list,
-  .qa-trend-grid {
+  .qa-flow-list {
     display: block !important;
   }
 
@@ -386,10 +411,6 @@ span.skipped {
 
   .qa-flow-progress {
     background: #7aaeb1 !important;
-  }
-
-  .qa-trend-item {
-    margin-bottom: 8px !important;
   }
 
   .qa-footer {
@@ -960,7 +981,7 @@ body {
 .col-links .col-links__extra {
   display: block;
   width: fit-content;
-  margin: 0 0 6px;
+  margin: 0 auto 6px;
   padding: 3px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -1269,12 +1290,14 @@ body {
 }
 
 .qa-evidencias-lista {
+  flex: 1;
   min-width: 0;
 }
 
 .qa-evidencia-manual {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   margin: 0 0 6px;
 }
@@ -1570,149 +1593,6 @@ body {
 }
 
 /******************************
- * HISTÓRICO (CSS pronta, mas report_dashboard.py ainda não gera
- * nenhum elemento .qa-trend-*. Mantido para quando essa seção for
- * implementada — não afeta nada hoje, é só peso morto até lá.)
- ******************************/
-.qa-trend-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
-  gap: 9px;
-  margin-top: 0;
-}
-
-.qa-trend-item,
-.qa-trend-item.healthy,
-.qa-trend-item.unstable,
-.qa-trend-item.failed,
-.qa-trend-item.neutral {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: linear-gradient(180deg, var(--bg-surface-alt), var(--bg-surface));
-  color: var(--text-secondary) !important;
-  box-shadow: var(--shadow-card);
-}
-
-.qa-trend-item.latest {
-  background: var(--teal-soft);
-  border-radius: var(--radius-md);
-  box-shadow: inset 0 0 0 1px var(--teal-line);
-}
-
-.qa-trend-item.latest .qa-trend-chart {
-  box-shadow: none;
-}
-
-.qa-trend-item.latest::after {
-  content: "ATUAL";
-  position: absolute;
-  top: -7px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 1px 6px;
-  border-radius: var(--radius-pill);
-  background: var(--bg-surface);
-  border: 1px solid var(--teal-line);
-  color: var(--teal);
-  font-size: 6px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  white-space: nowrap;
-  z-index: 2;
-}
-
-.qa-trend-chart {
-  display: flex;
-  align-items: flex-end;
-  width: 24px;
-  height: 62px;
-  margin-bottom: 8px;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: var(--bg-elevated);
-}
-
-.qa-trend-bar {
-  width: 100%;
-  min-height: 3px;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-}
-
-.qa-trend-bar.healthy {
-  background: linear-gradient(180deg, var(--teal), var(--green));
-}
-
-.qa-trend-bar.unstable {
-  background: var(--amber);
-}
-
-.qa-trend-bar.failed {
-  background: var(--red);
-}
-
-.qa-trend-bar.neutral {
-  background: var(--text-muted);
-}
-
-.qa-trend-rate,
-.qa-trend-date,
-.qa-trend-result,
-.qa-trend-status {
-  display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.qa-trend-rate {
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.qa-trend-date {
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 9px;
-}
-
-.qa-trend-result {
-  margin-top: 4px;
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 700;
-}
-
-.qa-trend-status {
-  margin-top: 3px;
-  font-size: 8px;
-  font-weight: 800;
-}
-
-.qa-trend-item.healthy .qa-trend-status {
-  color: var(--green);
-}
-
-.qa-trend-item.unstable .qa-trend-status {
-  color: var(--amber);
-}
-
-.qa-trend-item.failed .qa-trend-status {
-  color: var(--red);
-}
-
-.qa-trend-item.neutral .qa-trend-status {
-  color: var(--text-muted);
-}
-
-/******************************
  * RODAPÉ
  ******************************/
 .qa-footer {
@@ -1798,8 +1678,7 @@ body {
   }
 
   .qa-dashboard-lateral {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-wrap: wrap;
     width: 100%;
   }
 
@@ -1838,10 +1717,7 @@ body {
     flex-direction: column;
   }
 
-  .qa-trend-grid {
-    grid-template-columns: repeat(2, minmax(100px, 1fr));
   }
-}
 
 /******************************
  * IMAGEM AMPLIADA (report.js)
@@ -1916,7 +1792,6 @@ body {
  ******************************/
 .qa-theme-toggle {
   display: inline-flex;
-  margin-top: 8px;
   padding: 2px;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -1992,23 +1867,6 @@ body {
   font-size: 11px;
   white-space: pre-wrap;
   word-break: break-all;
-}
-
-/* Histórico: falhas novas, recorrentes e testes instáveis. */
-.qa-historico-item.nova {
-  border-left-color: var(--red);
-}
-
-.qa-historico-item.nova .qa-caveat-flow {
-  color: var(--red);
-}
-
-.qa-historico-item.recorrente {
-  border-left-color: var(--orange);
-}
-
-.qa-historico-item.recorrente .qa-caveat-flow {
-  color: var(--orange);
 }
 
 /* Desempenho: testes mais demorados (informativo, sem cor de alerta). */

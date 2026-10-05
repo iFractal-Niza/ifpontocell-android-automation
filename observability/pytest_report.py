@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from pytest_html import extras
 
-from observability import execution_metrics, historico, pastas
+from observability import execution_metrics, pastas
 from observability.contexto_execucao import coletar_contexto
 from observability.dashboard import (
     build_results_summary_html,
@@ -834,29 +834,6 @@ def pytest_html_results_table_row(
         )
 
 
-# === Histórico ===
-def registrar_no_historico(stats: dict) -> None:
-    """
-    Compara esta execução com as anteriores (falhas novas, recorrentes e
-    testes instáveis) e a grava no histórico. Não pode derrubar o report.
-    """
-    if not stats.get("por_teste"):
-        return
-
-    anteriores = historico.carregar()
-    atual = historico.montar_execucao(datetime.now(), stats["por_teste"])
-
-    stats["historico"] = historico.resumir(anteriores, atual).para_dashboard()
-
-    try:
-        historico.salvar(anteriores + [atual])
-    except OSError:
-        logger.exception(
-            "Não foi possível gravar o histórico de execuções",
-            extra={"event": "history_save_failed"},
-        )
-
-
 # === Dashboard HTML ===
 def _codificar_ascii_seguro(
     texto: str,
@@ -924,8 +901,6 @@ def pytest_html_results_summary(
         fim=datetime.now(),
         usa_app=execution_metrics.execucao_usa_app(),
     )
-
-    registrar_no_historico(execution_metrics.DASHBOARD_STATS)
 
     inline_css, html_block = build_results_summary_html(
         PROJECT_ROOT,

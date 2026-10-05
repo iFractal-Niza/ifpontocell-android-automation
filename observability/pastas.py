@@ -1,6 +1,6 @@
 """
-Pasta onde a execução grava o report, prints, vídeos, histórico e o
-aviso de pulados.
+Pasta onde a execução grava o report, prints, vídeos e o aviso de
+pulados.
 
 Padrão: reports/. Com IFPONTO_REPORTS_DIR (o Makefile define com
 DEVICE=..., ex.: reports/real), cada aparelho tem a sua: emulador e

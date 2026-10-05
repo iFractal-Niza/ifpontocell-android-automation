@@ -7,7 +7,6 @@ import pytest
 
 from utils.report_dashboard import (
     _build_demorados_html,
-    _build_historico_html,
     _calculate_flow_metrics,
     _get_status_meta,
     build_dashboard_html,
@@ -167,36 +166,6 @@ def test_dashboard_leva_os_totais_para_somar_os_testes_manuais():
     }
     for chave in ("taxa", "total", "passou", "falhou", "erro", "pulados"):
         assert f'data-qa-kpi="{chave}"' in painel
-
-
-# === Histórico ===
-def test_historico_some_na_primeira_execucao():
-    assert _build_historico_html({"tem_anteriores": False}) == ""
-
-
-def test_historico_some_sem_novidades():
-    assert _build_historico_html({"tem_anteriores": True}) == ""
-
-
-def test_historico_lista_novas_recorrentes_e_instaveis():
-    html = _build_historico_html(
-        {
-            "tem_anteriores": True,
-            "falhas_novas": ["CT014 · Holerite"],
-            "falhas_recorrentes": [
-                {"titulo": "CT020 · Assinar", "desde": "01/10"}
-            ],
-            "instaveis": ["CT009 · Registro"],
-        }
-    )
-
-    assert "Falha nova" in html and "CT014 · Holerite" in html
-    assert "Já falhava" in html and "falha desde 01/10" in html
-    assert "Instável" in html and "CT009 · Registro" in html
-
-
-def test_sem_historico_nao_gera_nada():
-    assert _build_historico_html({}) == ""
 
 
 def _duracoes(**segundos) -> dict:

@@ -22,15 +22,9 @@ def _new_stats_dict() -> dict:
         "criticas": 0,
         # Um item por teste pulado: nodeid, título, fluxo e motivo.
         "pulados": [],
-        # Resultado final de cada teste: {nodeid: {"status", "titulo"}}
-        # (o mais grave entre as fases), para o histórico.
-        "por_teste": {},
         # Tempo de cada teste somando as fases (preparação, chamada e
         # finalização): {nodeid: {"titulo", "fluxo", "segundos"}}.
         "duracoes": {},
-        # Resumo do histórico (observability.historico); preenchido pelo
-        # plugin ao gerar o report.
-        "historico": {},
         # Pares (rótulo, valor) da identificação da execução; preenchido
         # pelo plugin ao gerar o report (observability.contexto_execucao).
         "contexto": [],
@@ -201,32 +195,6 @@ def extract_error_message(
     return lines[-1][:500]
 
 
-# === Status por teste ===
-# Do menos ao mais grave: um teste que passa na chamada e quebra no
-# teardown fica com "error".
-_GRAVIDADE = ("passed", "skipped", "failed", "error")
-
-
-def _registrar_status_do_teste(nodeid: str, outcome: str, titulo: str) -> None:
-    if outcome not in _GRAVIDADE:
-        return
-
-    por_teste = DASHBOARD_STATS["por_teste"]
-    anterior = por_teste.get(nodeid)
-
-    if anterior and _GRAVIDADE.index(anterior["status"]) >= _GRAVIDADE.index(
-        outcome
-    ):
-        return
-
-    por_teste[nodeid] = {
-        "status": outcome,
-        "titulo": titulo
-        or (anterior or {}).get("titulo")
-        or extract_titulo(nodeid),
-    }
-
-
 # === Duração ===
 def registrar_duracao(
     nodeid: str,
@@ -283,12 +251,10 @@ def update_dashboard_stats(
     Atualiza as métricas gerais e por fluxo após cada teste.
 
     'motivo' só é usado quando o teste foi pulado (lista de ressalvas);
-    'titulo' vai para as ressalvas e para o histórico; 'smoke' marca a
+    'titulo' vai para as ressalvas; 'smoke' marca a
     falha ou o erro como crítico.
     """
     fluxo = extract_fluxo(nodeid)
-
-    _registrar_status_do_teste(nodeid, outcome, titulo)
 
     logger.debug(
         "Iniciando atualização das métricas do dashboard",

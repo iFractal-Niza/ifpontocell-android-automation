@@ -568,65 +568,6 @@ def _build_contexto_html(
     """
 
 
-# === Histórico ===
-def _itens_historico(classe: str, rotulo: str, textos: list[str]) -> str:
-    return "".join(
-        f"""
-            <li class="qa-caveat-item qa-historico-item {classe}">
-                <div class="qa-caveat-flow">{_safe_text(rotulo)}</div>
-                <strong>{_safe_text(texto)}</strong>
-            </li>
-        """
-        for texto in textos
-    )
-
-
-def _build_historico_html(historico: Any) -> str:
-    """
-    Comparação com as execuções anteriores: falhas novas, falhas que já
-    vinham de antes e testes instáveis. Sem nada disso (inclusive na
-    primeira execução), a seção não aparece: deixa o dashboard limpo.
-    """
-    if not isinstance(historico, Mapping) or not historico:
-        return ""
-
-    novas = list(historico.get("falhas_novas") or [])
-    recorrentes = [
-        f"{item.get('titulo', '')} (falha desde {item.get('desde', '?')})"
-        for item in historico.get("falhas_recorrentes") or []
-        if isinstance(item, Mapping)
-    ]
-    instaveis = list(historico.get("instaveis") or [])
-
-    if not historico.get("tem_anteriores") or not (
-        novas or recorrentes or instaveis
-    ):
-        return ""
-
-    corpo = (
-        '<ul class="qa-caveat-list">'
-        + _itens_historico("nova", "Falha nova", novas)
-        + _itens_historico("recorrente", "Já falhava", recorrentes)
-        + _itens_historico("instavel", "Instável", instaveis)
-        + "</ul>"
-    )
-
-    return f"""
-        <section class="qa-section">
-            <div class="qa-section-header">
-                <div>
-                    <span class="qa-section-eyebrow">
-                        Histórico
-                    </span>
-                    <h3>Comparação com as execuções anteriores</h3>
-                </div>
-            </div>
-
-            {corpo}
-        </section>
-    """
-
-
 # === Testes mais demorados ===
 MAIS_DEMORADOS = 5
 
@@ -877,7 +818,6 @@ def build_dashboard_html(
 
     flows_html = _build_flows_html(fluxos)
     ressalvas_html = _build_ressalvas_html(dashboard_stats.get("pulados"))
-    historico_html = _build_historico_html(dashboard_stats.get("historico"))
     demorados_html = _build_demorados_html(dashboard_stats.get("duracoes"))
     contexto_html = _build_contexto_html(dashboard_stats.get("contexto"))
 
@@ -896,7 +836,9 @@ def build_dashboard_html(
                         Visão consolidada da qualidade da suíte
                         automatizada.
                     </p>
+                </div>
 
+                <div class="qa-dashboard-lateral">
                     <div
                         class="qa-theme-toggle"
                         role="group"
@@ -917,9 +859,7 @@ def build_dashboard_html(
                             Dark
                         </button>
                     </div>
-                </div>
 
-                <div class="qa-dashboard-lateral">
                     <button
                         type="button"
                         class="qa-baixar-html"
@@ -928,7 +868,6 @@ def build_dashboard_html(
                     >
                         Baixar HTML
                     </button>
-
                 </div>
             </header>
 
@@ -959,7 +898,6 @@ def build_dashboard_html(
 
             {ressalvas_html}
 
-            {historico_html}
 
             {flows_html}
 

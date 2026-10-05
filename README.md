@@ -2,7 +2,7 @@
 
 Framework de automação mobile do **ifPontoCell Android** com **Pytest + Appium + UiAutomator2**, organizado em Page Objects e executado pelo `Makefile`.
 
-A arquitetura é a mesma do projeto irmão `ifpontocell-ios-automation` (configuração tipada, env por aparelho, fixtures por assunto, pages em pastas por menu, report com histórico e vídeo). O que é específico do Android — e por quê — está em [DECISOES.md](DECISOES.md).
+A arquitetura é a mesma do projeto irmão `ifpontocell-ios-automation` (configuração tipada, env por aparelho, fixtures por assunto, pages em pastas por menu, report com vídeo). O que é específico do Android — e por quê — está em [DECISOES.md](DECISOES.md).
 
 ---
 
@@ -22,7 +22,7 @@ Validar os fluxos críticos do app Android com testes estáveis e diagnósticos 
 * Appium 2 + driver UiAutomator2
 * Appium Python Client / Selenium
 * Android SDK (adb, emulador)
-* pytest-html (report com dashboard, histórico e vídeo)
+* pytest-html (report com dashboard e vídeo)
 * ruff (lint e formatação, também no pre-commit)
 
 ---
@@ -77,7 +77,7 @@ ifpontocell-android-automation/
 │   ├── localizacao.py                   # localização simulada (set_location)
 │   └── privacy_services.py
 │
-├── observability/                       # report, dashboard, histórico, vídeo, CTs
+├── observability/                       # report, dashboard, vídeo, CTs
 │
 ├── pages/
 │   ├── android_locators.py              # android_id / android_text / ...
@@ -190,7 +190,7 @@ ANDROID_SYSTEM_PORT: "8200"       # 8201 no celular, para rodar os dois juntos
 
 ### Emulador e celular ao mesmo tempo
 
-Dois terminais, um servidor Appium: `make smoke` e `make smoke DEVICE=real`. Cada aparelho tem o seu report (`reports/emulator/`, `reports/real/`), histórico e cache do `make falhas`.
+Dois terminais, um servidor Appium: `make smoke` e `make smoke DEVICE=real`. Cada aparelho tem o seu report (`reports/emulator/`, `reports/real/`) e o seu cache do `make falhas`.
 
 ---
 
@@ -222,10 +222,10 @@ Variações: `DEVICE=real` (celular), `VIDEO=1` (vídeo de todos os testes; padr
 ```bash
 make report        # abre o último report
 make report-pdf    # exporta para PDF
-make clear         # limpa reports, histórico, vídeos e caches
+make clear         # limpa reports, vídeos e caches
 ```
 
-O report traz o dashboard da execução, o histórico (falhas novas, recorrentes, instáveis; a seção só aparece quando há alguma), print e árvore da tela na falha e o vídeo dos testes que falharam (`adb screenrecord`, sem ffmpeg; até 3 min por teste). O vídeo guardado é comprimido pelo `ffmpeg` do computador (720 px de largura, 30 fps, H.264, sem áudio) para não pesar o report; sem `ffmpeg`, fica o original.
+O report traz o dashboard da execução, print e árvore da tela na falha e o vídeo dos testes que falharam (`adb screenrecord`, sem ffmpeg; até 3 min por teste). O vídeo guardado é comprimido pelo `ffmpeg` do computador (720 px de largura, 30 fps, H.264, sem áudio) para não pesar o report; sem `ffmpeg`, fica o original.
 
 Nas linhas de falha, as colunas **Categoria do erro** (Baixo, Moderado, Crítico), **Tipo de erro** e **Status apont.** (andamento do apontamento: melhoria implementada ou não, correção realizada ou não) têm uma lista para escolher. A escolha é salva na hora, no navegador: reabrindo o mesmo arquivo no mesmo navegador, ela volta. Para enviar ao time, use o botão **Baixar HTML** no topo do dashboard: ele baixa uma cópia (`<report>_classificado.html`) com as escolhas gravadas no próprio arquivo, só leitura, e com todas as evidências. O PDF não mostra essas colunas. As opções ficam em `CATEGORIAS_DE_ERRO`, `TIPOS_DE_ERRO` e `STATUS_DE_APONTAMENTO`, em `observability/pytest_report.py`.
 

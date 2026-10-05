@@ -253,3 +253,16 @@ OK e dava timeout quando o alerta já tinha fechado.
 | `mobile: type` quando o `send_keys` falha | novo clique + `send_keys` |
 | valor do campo em `value`, do switch em `value` | `text` e `checked` |
 | voltar pela navBar (id, texto, seta nativa) | texto "VOLTAR" ou `driver.back()` |
+
+---
+
+## Histórico do report removido
+
+**Data:** 2026-10-05
+
+O dashboard deixou de comparar com as execuções anteriores (falhas novas,
+recorrentes e instáveis): a seção quase nunca era lida e o report ficou
+mais limpo sem ela. Saíram a seção, o `observability/historico.py`, o
+`history.json` e o `make limpar-historico`, como na automação iOS. Um
+`history.json` antigo que sobre na pasta do report não é mais lido (o
+`make clear` o apaga).

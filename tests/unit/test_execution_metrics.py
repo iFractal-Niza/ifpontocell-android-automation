@@ -144,21 +144,6 @@ def test_execucao_com_teste_de_tela_usa_app():
     assert execution_metrics.execucao_usa_app() is True
 
 
-def test_status_por_teste_fica_com_o_mais_grave():
-    # Passou na chamada e quebrou no teardown: fica "error".
-    nodeid = "tests/app/test_login.py::test_x"
-
-    execution_metrics.update_dashboard_stats(
-        nodeid, "passed", titulo="Login X"
-    )
-    execution_metrics.update_dashboard_stats(nodeid, "error")
-
-    assert execution_metrics.DASHBOARD_STATS["por_teste"][nodeid] == {
-        "status": "error",
-        "titulo": "Login X",
-    }
-
-
 def test_duracao_soma_as_fases_do_teste_e_do_fluxo():
     nodeid = "tests/app/test_holerite.py::test_holerite"
 

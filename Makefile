@@ -78,7 +78,6 @@ FULL_SUITE := \
 
 # Relatórios (REPORTS vem do DEVICE, em "Aparelho")
 SCREENSHOTS = $(REPORTS)/screenshots
-HISTORY_FILE = $(REPORTS)/history.json
 EXPORT_REPORT_PDF := scripts/export_report_pdf.py
 
 # === Arquivos locais (não versionados) ===
@@ -90,7 +89,7 @@ EXPORT_REPORT_PDF := scripts/export_report_pdf.py
 # Um env por aparelho: make <comando> usa o emulador (config/env.emulator.yaml,
 # reports/emulator/); make <comando> DEVICE=real, o celular (config/env.real.yaml,
 # reports/real/). Cada um com o seu usuário de teste, a sua pasta de report
-# (prints, vídeos, histórico) e o seu cache do make falhas: os dois rodam ao
+# (prints, vídeos) e o seu cache do make falhas: os dois rodam ao
 # mesmo tempo, em dois terminais.
 DEVICE ?= emulator
 ENV_FILE := config/env.$(DEVICE).yaml
@@ -161,7 +160,7 @@ DEBUG_TARGET = $(if $(test),$(test),$(FULL_SUITE))
         run debug unit test-report smoke regression \
         ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto status ponto registro-geo jornada holerite informe humor ass-espelho sobre dados-pessoais privacidade alterar-pin alterar-senha-sistema zerar-dados \
         api \
-        clear limpar-historico report report-pdf renumerar-ct \
+        clear report report-pdf renumerar-ct \
         git-status commit push update-dev update-feature start-feature \
         merge-dev merge-main merge-branch delete-branch
 
@@ -220,8 +219,7 @@ help:
 	@echo "  make api                   Roda testes de API"
 	@echo ""
 	@echo "=== Reports ==="
-	@echo "  make clear                 Limpa reports, histórico, vídeos e caches (todos os aparelhos; DEVICE=… só um)"
-	@echo "  make limpar-historico      Zera só o histórico (falhas novas, recorrentes e instáveis)"
+	@echo "  make clear                 Limpa reports, vídeos e caches (todos os aparelhos; DEVICE=… só um)"
 	@echo "  make report                Abre o último report HTML"
 	@echo "  make report-pdf            Exporta o último report HTML para PDF"
 	@echo "  make renumerar-ct          Mostra a renumeração dos CTs na ordem da suíte (aplicar=1 aplica)"
@@ -567,20 +565,15 @@ api: check-venv check-config check-test-data
 	$(call run_pytest_with_report,$(API_TESTS),$(PYTEST_FLAGS_CLEAN) $(PYTEST_FLAGS))
 
 # === Relatórios ===
-# Zera só o histórico do dashboard (reports/history.json); o resto fica.
-limpar-historico:
-	@rm -f $(HISTORY_FILE)
-	@echo "Histórico de execuções zerado ($(HISTORY_FILE))."
-
 # Sem DEVICE: limpa tudo (todos os aparelhos). Com DEVICE=…: só ele.
 # Fica a reports/assets (visual do report, versionado) e o appium.log
 # (o make appium pode estar escrevendo nele).
 clear:
 ifeq ($(origin DEVICE),command line)
-	@echo "Limpando reports, histórico e caches de $(DEVICE)..."
+	@echo "Limpando reports e caches de $(DEVICE)..."
 	@rm -rf $(REPORTS) .pytest_cache/$(DEVICE)
 else
-	@echo "Limpando reports, histórico e caches de todos os aparelhos..."
+	@echo "Limpando reports e caches de todos os aparelhos..."
 	@find reports -mindepth 1 -maxdepth 1 ! -name assets ! -name appium.log -exec rm -rf {} +
 	@rm -f reports/.pulados
 	@rm -rf .pytest_cache
