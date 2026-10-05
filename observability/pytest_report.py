@@ -242,6 +242,66 @@ def pytest_sessionfinish(session, exitstatus) -> None:
     marcar_pulados(execution_metrics.DASHBOARD_STATS.get("skipped", 0))
 
 
+# === Correção do JS do pytest-html ===
+# O app.js da lib só troca o src do <source> ao abrir outra mídia, sem
+# chamar load(); o navegador continua no vídeo anterior. Importante para
+# vídeos embutidos como data:video/mp4;base64,...
+_TROCA_SRC_VIDEO = re.compile(r"^([ \t]*)sourceEl\.src = media\.path\n", re.M)
+
+_RECARGA_VIDEO = (
+    "\n"
+    "{indent}// Força o navegador a recarregar o <source> quando a mídia"
+    " é trocada.\n"
+    "{indent}// Importante para vídeos embutidos como"
+    " data:video/mp4;base64,...\n"
+    "{indent}videoEl.load()\n"
+)
+
+
+def corrigir_troca_de_video(conteudo: str) -> str:
+    """Insere videoEl.load() após a troca do src do vídeo no app.js."""
+    if "videoEl.load()" in conteudo:
+        return conteudo
+
+    return _TROCA_SRC_VIDEO.sub(
+        lambda m: m.group(0) + _RECARGA_VIDEO.format(indent=m.group(1)),
+        conteudo,
+        count=1,
+    )
+
+
+def pytest_unconfigure(config) -> None:
+    """
+    Aplica corrigir_troca_de_video no HTML final.
+
+    Roda depois do pytest_sessionfinish do pytest-html, que é quando o
+    arquivo do relatório termina de ser gravado.
+    """
+    caminho = getattr(config.option, "htmlpath", None)
+    if not caminho or not os.path.exists(caminho):
+        return
+
+    try:
+        with open(caminho, encoding="utf-8") as entrada:
+            conteudo = entrada.read()
+
+        corrigido = corrigir_troca_de_video(conteudo)
+        if corrigido == conteudo:
+            if "videoEl.load()" not in conteudo:
+                logger.warning(
+                    "Trecho de troca de vídeo do pytest-html não encontrado.",
+                    extra={"event": "report_video_patch_not_found"},
+                )
+            return
+
+        with open(caminho, "w", encoding="utf-8") as saida:
+            saida.write(corrigido)
+    except OSError:
+        logger.warning(
+            "Não foi possível corrigir a troca de vídeo do relatório."
+        )
+
+
 def pytest_configure(
     config,
 ) -> None:

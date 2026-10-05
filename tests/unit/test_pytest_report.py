@@ -3,9 +3,16 @@ Descoberta do driver para o screenshot de falha
 (observability.pytest_report.obter_driver_ativo).
 """
 
+import re
+from pathlib import Path
 from types import SimpleNamespace
 
-from observability.pytest_report import marcar_pulados, obter_driver_ativo
+from observability.pytest_report import (
+    corrigir_troca_de_video,
+    marcar_pulados,
+    obter_driver_ativo,
+    pytest_unconfigure,
+)
 
 
 class _Driver:
@@ -218,3 +225,44 @@ def test_sem_pulados_apaga_o_aviso(tmp_path):
     marcar_pulados(0, str(arquivo))
 
     assert not arquivo.exists()
+
+
+# === Correção da troca de vídeo no app.js do pytest-html ===
+def _app_js_da_lib():
+    import pytest_html
+
+    return (
+        Path(pytest_html.__file__).parent / "resources" / "app.js"
+    ).read_text(encoding="utf-8")
+
+
+def test_troca_de_video_ganha_load_no_app_js_da_lib():
+    # Usa o app.js instalado: se uma versão nova da lib mudar o trecho,
+    # o teste avisa.
+    corrigido = corrigir_troca_de_video(_app_js_da_lib())
+
+    assert re.search(
+        r"sourceEl\.src = media\.path\n\n.*\n.*\n\s*videoEl\.load\(\)\n",
+        corrigido,
+    )
+
+
+def test_correcao_da_troca_de_video_nao_duplica():
+    uma_vez = corrigir_troca_de_video(_app_js_da_lib())
+
+    assert corrigir_troca_de_video(uma_vez) == uma_vez
+    assert uma_vez.count("videoEl.load()") == 1
+
+
+def test_unconfigure_corrige_o_html_gravado(tmp_path):
+    relatorio = tmp_path / "report.html"
+    relatorio.write_text(
+        "<script>\n    sourceEl.src = media.path\n</script>",
+        encoding="utf-8",
+    )
+
+    pytest_unconfigure(
+        SimpleNamespace(option=SimpleNamespace(htmlpath=str(relatorio)))
+    )
+
+    assert "    videoEl.load()\n" in relatorio.read_text(encoding="utf-8")
