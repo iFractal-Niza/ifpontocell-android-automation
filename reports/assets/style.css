@@ -688,7 +688,16 @@ body {
 
 /* Segunda linha (Corrigido, Não corrigido, Qtd melhorias; report.js). */
 .qa-kpi-grid--manuais {
+  display: flex;
+  justify-content: center;
   margin-top: 10px;
+}
+
+/* Centralizada, com a largura de um card da linha de cima (6 colunas e
+   5 espaços de 10px). Nas telas em que a linha de cima quebra, volta à
+   mesma grade dela (@media abaixo). */
+.qa-kpi-grid--manuais .qa-kpi-card {
+  flex: 0 0 calc((100% - 50px) / 6);
 }
 
 .qa-kpi-grid--manuais[hidden] {
@@ -1654,6 +1663,10 @@ body {
  * RESPONSIVIDADE
  ******************************/
 @media (max-width: 1180px) {
+  .qa-kpi-grid--manuais {
+    display: grid;
+  }
+
   .qa-kpi-grid {
     grid-template-columns: repeat(3, minmax(150px, 1fr));
   }
