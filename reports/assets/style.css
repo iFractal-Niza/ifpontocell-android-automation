@@ -185,30 +185,47 @@ a:hover {
 /******************************
  * RESULT TABLE (nativo pytest-html)
  ******************************/
-#results-table {
+/* .qa-manuais-tabela: a tabela dos testes manuais (report.js), igual. */
+#results-table,
+.qa-manuais-tabela {
   background: var(--bg-surface) !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-#results-table th {
+.qa-manuais-tabela {
+  width: 100%;
+  font-size: 12px;
+}
+
+.qa-manuais-tabela th,
+.qa-manuais-tabela td {
+  padding: 5px;
+  text-align: left;
+}
+
+#results-table th,
+.qa-manuais-tabela th {
   background: var(--table-head-bg) !important;
   color: var(--table-head-text) !important;
   border: 1px solid var(--border) !important;
   font-weight: 700;
 }
 
-#results-table td {
+#results-table td,
+.qa-manuais-tabela td {
   background: var(--bg-surface) !important;
   color: var(--text-secondary) !important;
   border: 1px solid var(--border) !important;
 }
 
-#results-table tr:nth-child(even) td {
+#results-table tr:nth-child(even) td,
+.qa-manuais-tabela tr:nth-child(even) td {
   background: var(--bg-surface-alt) !important;
 }
 
+.qa-manuais-tabela tr:hover td,
 #results-table tr:hover td {
   background: var(--row-hover) !important;
   transition: background 0.2s ease;
@@ -1020,7 +1037,8 @@ body {
  * Categoria e Tipo do erro: listas editáveis nas linhas de falha (salvas
  * no navegador pelo report.js). A categoria ganha a cor da gravidade.
  */
-#results-table .col-classificacao {
+#results-table .col-classificacao,
+.qa-manuais-tabela .col-classificacao {
   width: 150px;
   text-align: center;
 }
@@ -1203,6 +1221,29 @@ body {
   border-color: var(--red-line);
   background: var(--red-soft);
   color: var(--red);
+}
+
+/* Blocos "Testes automatizados" e "Testes manuais" (report.js). */
+.qa-bloco-titulo {
+  margin: 24px 0 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.qa-bloco-contagem {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.qa-manuais-vazio {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 .qa-manuais-acoes {

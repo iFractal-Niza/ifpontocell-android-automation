@@ -486,7 +486,8 @@
 
     copia
       .querySelectorAll(
-        '#results-table > tbody, .qa-lightbox, .qa-manuais-acoes'
+        '#results-table > tbody, .qa-lightbox, .qa-bloco-manuais, ' +
+          '.qa-titulo-automatizados'
       )
       .forEach(function (elemento) {
         elemento.remove();
@@ -570,12 +571,11 @@
   }
 
   // === Testes manuais ===
-  // Linhas acrescentadas à mão (botão "+"), para testes feitos fora da
-  // automação. Salvas no navegador como a classificação; a cópia do
-  // "Baixar HTML" as leva gravadas, só leitura. O pytest-html recria a
-  // tabela ao ordenar e filtrar: as linhas manuais ficam num tbody
-  // próprio, no fim, recolocado a cada vez. Não entram no dashboard nem
-  // no PDF.
+  // Testes feitos fora da automação, acrescentados à mão (botão "+"),
+  // num bloco próprio abaixo da tabela dos automatizados, com as mesmas
+  // colunas. Salvos no navegador como a classificação; a cópia do
+  // "Baixar HTML" os leva gravados, só leitura. Não entram no dashboard
+  // nem no PDF.
   var CHAVE_MANUAIS = 'qa-manuais:' + location.pathname;
   var RESULTADOS_MANUAIS = ['Passou', 'Falhou', 'Pulado'];
   var testesManuais = lerTestesManuais();
@@ -750,38 +750,72 @@
     return linha;
   }
 
-  function desenharTestesManuais(corpo) {
-    var colunas = Array.prototype.slice.call(
-      document.querySelectorAll('#results-table-head th')
-    );
+  // Cabeçalho da tabela manual: as colunas da tabela dos automatizados,
+  // sem a ordenação do pytest-html.
+  function colunasManuais() {
+    return Array.prototype.slice
+      .call(document.querySelectorAll('#results-table-head th'))
+      .map(function (original) {
+        var coluna = criar('th', original.className.replace('sortable', ''));
 
-    while (corpo.firstChild) {
-      corpo.removeChild(corpo.firstChild);
-    }
+        coluna.textContent = original.textContent.trim();
+        ['data-column-type', 'data-campo'].forEach(function (atributo) {
+          if (original.hasAttribute(atributo)) {
+            coluna.setAttribute(atributo, original.getAttribute(atributo));
+          }
+        });
 
-    testesManuais.forEach(function (teste) {
-      corpo.appendChild(linhaManual(teste, colunas));
-    });
+        return coluna;
+      });
   }
 
-  function garantirTestesManuais() {
-    var tabela = document.getElementById('results-table');
+  function titulo(classe, texto, contagem) {
+    var elemento = criar('h3', 'qa-bloco-titulo ' + classe, texto + ' ');
 
-    if (!tabela || !tabela.querySelector('#results-table-head th')) {
-      return;
+    elemento.appendChild(criar('span', 'qa-bloco-contagem', contagem));
+
+    return elemento;
+  }
+
+  function desenharTestesManuais(bloco) {
+    var colunas = colunasManuais();
+    var linhaDoCabecalho = criar('tr');
+
+    while (bloco.firstChild) {
+      bloco.removeChild(bloco.firstChild);
     }
 
-    var corpo = tabela.querySelector('tbody.qa-manuais');
+    bloco.appendChild(
+      titulo('', 'Testes manuais', '(' + testesManuais.length + ')')
+    );
 
-    if (!corpo) {
-      corpo = criar('tbody', 'qa-manuais');
-      desenharTestesManuais(corpo);
+    if (testesManuais.length) {
+      var tabela = criar('table', 'qa-manuais-tabela');
+      var cabecalho = criar('thead');
+      var corpo = criar('tbody', 'qa-manuais');
+
+      colunas.forEach(function (coluna) {
+        linhaDoCabecalho.appendChild(coluna);
+      });
+      cabecalho.appendChild(linhaDoCabecalho);
+      tabela.appendChild(cabecalho);
+
+      testesManuais.forEach(function (teste) {
+        corpo.appendChild(linhaManual(teste, colunas));
+      });
       tabela.appendChild(corpo);
-    } else if (corpo !== tabela.lastElementChild) {
-      tabela.appendChild(corpo);
+      bloco.appendChild(tabela);
+    } else {
+      bloco.appendChild(
+        criar(
+          'p',
+          'qa-manuais-vazio',
+          'Nenhum teste manual. Use o botão abaixo para incluir um.'
+        )
+      );
     }
 
-    if (!CLASSIFICACAO_FIXA && !document.querySelector('.qa-manuais-acoes')) {
+    if (!CLASSIFICACAO_FIXA) {
       var acoes = criar('div', 'qa-manuais-acoes');
       var adicionar = criar(
         'button',
@@ -791,7 +825,61 @@
 
       adicionar.type = 'button';
       acoes.appendChild(adicionar);
-      tabela.insertAdjacentElement('afterend', acoes);
+      bloco.appendChild(acoes);
+    }
+  }
+
+  // Título dos automatizados antes da tabela do pytest-html e o bloco
+  // dos manuais depois. Ficam fora da tabela: sobrevivem quando ela é
+  // recriada. Na cópia sem testes manuais, o bloco não aparece.
+  function garantirTestesManuais() {
+    var tabela = document.getElementById('results-table');
+
+    if (!tabela || !tabela.querySelector('#results-table-head th')) {
+      return;
+    }
+
+    if (!document.querySelector('.qa-titulo-automatizados')) {
+      tabela.insertAdjacentElement(
+        'beforebegin',
+        titulo('qa-titulo-automatizados', 'Testes automatizados', '')
+      );
+      atualizarContagemAutomatizados();
+    }
+
+    if (
+      !document.querySelector('.qa-bloco-manuais') &&
+      !(CLASSIFICACAO_FIXA && !testesManuais.length)
+    ) {
+      var bloco = criar('section', 'qa-bloco-manuais');
+
+      desenharTestesManuais(bloco);
+      tabela.insertAdjacentElement('afterend', bloco);
+    }
+  }
+
+  // Total da execução (do pytest-html), não o que o filtro mostra.
+  function atualizarContagemAutomatizados() {
+    var contagem = document.querySelector(
+      '.qa-titulo-automatizados .qa-bloco-contagem'
+    );
+    var total = 0;
+
+    // O número fica no span logo após cada filtro; rerun é repetição,
+    // não teste.
+    document
+      .querySelectorAll('.filters [data-test-result]')
+      .forEach(function (filtro) {
+        var rotulo = filtro.nextElementSibling;
+        var numero = rotulo ? parseInt(rotulo.textContent, 10) : 0;
+
+        if (filtro.getAttribute('data-test-result') !== 'rerun') {
+          total += isNaN(numero) ? 0 : numero;
+        }
+      });
+
+    if (contagem && total) {
+      contagem.textContent = '(' + total + ')';
     }
   }
 
@@ -805,10 +893,10 @@
   }
 
   function redesenharTestesManuais() {
-    var corpo = document.querySelector('#results-table tbody.qa-manuais');
+    var bloco = document.querySelector('.qa-bloco-manuais');
 
-    if (corpo) {
-      desenharTestesManuais(corpo);
+    if (bloco) {
+      desenharTestesManuais(bloco);
     }
   }
 
@@ -991,51 +1079,295 @@
     });
   }
 
-  function anexarArquivos(teste, arquivos) {
-    var grandes = arquivos.filter(function (arquivo) {
-      return arquivo.size > LIMITE_EVIDENCIA_MB * 1024 * 1024;
-    });
+  // === Compressão das evidências manuais ===
+  // Feita no navegador, ao anexar: a cópia do "Baixar HTML" embute os
+  // arquivos, e um print ou vídeo do celular em resolução cheia pesa
+  // muito. Se o resultado não ficar menor, vai o original.
+  var IMAGEM_MAXIMA = { largura: 1280, altura: 1600 };
+  var QUALIDADE_JPEG = 0.8;
+  var VIDEO_LARGURA_MAXIMA = 720;
+  var VIDEO_BITS_POR_SEGUNDO = 1500000;
 
-    if (grandes.length) {
-      window.alert(
-        'Ficaram de fora (acima de ' +
-          LIMITE_EVIDENCIA_MB +
-          ' MB): ' +
-          grandes
-            .map(function (arquivo) {
-              return arquivo.name;
-            })
-            .join(', ')
-      );
+  function trocarExtensao(nome, extensao) {
+    return nome.replace(/\.[^.]*$/, '') + '.' + extensao;
+  }
+
+  // Imagem: cabe em 1280x1600, em JPEG 80% (fundo branco para PNG com
+  // transparência). GIF e SVG ficam como estão.
+  function comprimirImagem(arquivo) {
+    if (!/^image\/(png|jpeg|webp|bmp)$/.test(arquivo.type)) {
+      return Promise.resolve(null);
     }
 
-    var aceitos = arquivos.filter(function (arquivo) {
-      return grandes.indexOf(arquivo) === -1;
+    return new Promise(function (resolver) {
+      var endereco = URL.createObjectURL(arquivo);
+      var imagem = new Image();
+
+      imagem.onload = function () {
+        var escala = Math.min(
+          1,
+          IMAGEM_MAXIMA.largura / imagem.naturalWidth,
+          IMAGEM_MAXIMA.altura / imagem.naturalHeight
+        );
+        var tela = document.createElement('canvas');
+
+        tela.width = Math.round(imagem.naturalWidth * escala);
+        tela.height = Math.round(imagem.naturalHeight * escala);
+
+        var pincel = tela.getContext('2d');
+        pincel.fillStyle = '#ffffff';
+        pincel.fillRect(0, 0, tela.width, tela.height);
+        pincel.drawImage(imagem, 0, 0, tela.width, tela.height);
+        URL.revokeObjectURL(endereco);
+
+        tela.toBlob(
+          function (comprimida) {
+            resolver(
+              comprimida
+                ? {
+                    conteudo: comprimida,
+                    nome: trocarExtensao(arquivo.name, 'jpg'),
+                  }
+                : null
+            );
+          },
+          'image/jpeg',
+          QUALIDADE_JPEG
+        );
+      };
+      imagem.onerror = function () {
+        URL.revokeObjectURL(endereco);
+        resolver(null);
+      };
+      imagem.src = endereco;
+    });
+  }
+
+  function formatoDeVideo() {
+    if (
+      !window.MediaRecorder ||
+      !HTMLCanvasElement.prototype.captureStream
+    ) {
+      return '';
+    }
+
+    return (
+      [
+        'video/mp4;codecs=avc1',
+        'video/mp4',
+        'video/webm;codecs=vp9',
+        'video/webm',
+      ].filter(function (formato) {
+        return MediaRecorder.isTypeSupported(formato);
+      })[0] || ''
+    );
+  }
+
+  // Vídeo: regravado no navegador em 720 px de largura, sem áudio (mp4
+  // quando o navegador grava mp4, senão webm). O navegador só regrava
+  // tocando o vídeo: demora a duração dele.
+  function comprimirVideo(arquivo, aoProgredir) {
+    var formato = formatoDeVideo();
+
+    if (!formato) {
+      return Promise.resolve(null);
+    }
+
+    return new Promise(function (resolver) {
+      var endereco = URL.createObjectURL(arquivo);
+      var video = document.createElement('video');
+      var partes = [];
+      var terminou = false;
+
+      function concluir(resultado) {
+        if (!terminou) {
+          terminou = true;
+          URL.revokeObjectURL(endereco);
+          resolver(resultado);
+        }
+      }
+
+      video.muted = true;
+      video.playsInline = true;
+      video.preload = 'auto';
+
+      video.onerror = function () {
+        concluir(null);
+      };
+
+      video.onloadedmetadata = function () {
+        var escala = Math.min(1, VIDEO_LARGURA_MAXIMA / video.videoWidth);
+        var tela = document.createElement('canvas');
+
+        // Dimensões pares: exigência dos codificadores de vídeo.
+        tela.width = Math.max(2, Math.round((video.videoWidth * escala) / 2) * 2);
+        tela.height = Math.max(
+          2,
+          Math.round((video.videoHeight * escala) / 2) * 2
+        );
+
+        var pincel = tela.getContext('2d');
+        var gravador;
+
+        try {
+          gravador = new MediaRecorder(tela.captureStream(30), {
+            mimeType: formato,
+            videoBitsPerSecond: VIDEO_BITS_POR_SEGUNDO,
+          });
+        } catch (erro) {
+          concluir(null);
+          return;
+        }
+
+        gravador.ondataavailable = function (evento) {
+          if (evento.data && evento.data.size) {
+            partes.push(evento.data);
+          }
+        };
+        gravador.onstop = function () {
+          var tipo = formato.split(';')[0];
+
+          concluir({
+            conteudo: new Blob(partes, { type: tipo }),
+            nome: trocarExtensao(
+              arquivo.name,
+              tipo === 'video/mp4' ? 'mp4' : 'webm'
+            ),
+          });
+        };
+
+        function desenhar() {
+          pincel.drawImage(video, 0, 0, tela.width, tela.height);
+
+          if (video.duration && isFinite(video.duration)) {
+            aoProgredir(Math.min(1, video.currentTime / video.duration));
+          }
+
+          if (!video.ended && !video.paused) {
+            agendar();
+          }
+        }
+
+        function agendar() {
+          if (video.requestVideoFrameCallback) {
+            video.requestVideoFrameCallback(desenhar);
+          } else {
+            requestAnimationFrame(desenhar);
+          }
+        }
+
+        video.onended = function () {
+          desenhar();
+          gravador.stop();
+        };
+
+        gravador.start(1000);
+        video
+          .play()
+          .then(agendar)
+          .catch(function () {
+            gravador.onstop = null;
+            gravador.stop();
+            concluir(null);
+          });
+      };
+
+      video.src = endereco;
+    });
+  }
+
+  // O arquivo a guardar: o comprimido, se ficou menor.
+  function versaoMenor(arquivo, aoProgredir) {
+    var compressao = /^video\//.test(arquivo.type)
+      ? comprimirVideo(arquivo, aoProgredir)
+      : comprimirImagem(arquivo);
+
+    return compressao
+      .catch(function () {
+        return null;
+      })
+      .then(function (comprimido) {
+        if (comprimido && comprimido.conteudo.size < arquivo.size) {
+          return comprimido;
+        }
+
+        return { conteudo: arquivo, nome: arquivo.name };
+      });
+  }
+
+  // Mostra o andamento no botão de anexar da linha.
+  function avisarAnexo(teste, texto) {
+    var botao = document.querySelector(
+      'tr.qa-manual-row[data-id="' + teste.id + '"] .qa-evidencia-anexar'
+    );
+
+    if (botao) {
+      botao.disabled = true;
+      botao.textContent = texto;
+    }
+  }
+
+  // Um arquivo de cada vez (vídeo regravado em paralelo disputaria a
+  // reprodução); cada um entra no teste assim que fica pronto.
+  function anexarArquivos(teste, arquivos) {
+    var limite = LIMITE_EVIDENCIA_MB * 1024 * 1024;
+    var deFora = [];
+    var fila = Promise.resolve();
+
+    arquivos.forEach(function (arquivo, indice) {
+      fila = fila.then(function () {
+        var posicao =
+          arquivos.length > 1 ? ' (' + (indice + 1) + '/' + arquivos.length + ')' : '';
+
+        avisarAnexo(teste, 'Comprimindo' + posicao + '...');
+
+        return versaoMenor(arquivo, function (fracao) {
+          avisarAnexo(
+            teste,
+            'Comprimindo vídeo' + posicao + ' ' + Math.round(fracao * 100) + '%'
+          );
+        }).then(function (final) {
+          if (final.conteudo.size > limite) {
+            deFora.push(arquivo.name);
+            return;
+          }
+
+          var id = 'e' + Date.now() + '-' + indice;
+
+          return lerComoDataUrl(final.conteudo)
+            .then(function (dados) {
+              return guardarArquivo(id, dados);
+            })
+            .then(function () {
+              teste.evidencias = (teste.evidencias || []).concat({
+                id: id,
+                nome: final.nome,
+                tipo: final.conteudo.type || arquivo.type,
+              });
+              gravarTestesManuais();
+            });
+        });
+      });
     });
 
-    Promise.all(
-      aceitos.map(function (arquivo, indice) {
-        var id = 'e' + Date.now() + '-' + indice;
-
-        return lerComoDataUrl(arquivo)
-          .then(function (dados) {
-            return guardarArquivo(id, dados);
-          })
-          .then(function () {
-            return { id: id, nome: arquivo.name, tipo: arquivo.type };
-          });
-      })
-    )
-      .then(function (novas) {
-        teste.evidencias = (teste.evidencias || []).concat(novas);
-        gravarTestesManuais();
-        redesenharTestesManuais();
-      })
+    fila
       .catch(function () {
         window.alert(
           'Não foi possível guardar o arquivo neste navegador ' +
             '(sem espaço ou navegação privada).'
         );
+      })
+      .then(function () {
+        redesenharTestesManuais();
+
+        if (deFora.length) {
+          window.alert(
+            'Ficaram de fora (acima de ' +
+              LIMITE_EVIDENCIA_MB +
+              ' MB mesmo comprimidos): ' +
+              deFora.join(', ')
+          );
+        }
       });
   }
 
