@@ -64,47 +64,16 @@ body > p:first-of-type {
     font-size: 17px !important;
 }
 
-.qa-dashboard-title p,
-.qa-dashboard-status small {
+.qa-dashboard-title p {
     font-size: 8px !important;
-}
-
-/* Largura para a descrição mais longa do status em uma linha. */
-
-.qa-dashboard-status {
-    min-width: 80mm !important;
-    padding: 2.5mm 3mm !important;
 }
 
 /* O WeasyPrint desenha duas vezes (uma "sombra" deslocada) o fundo e a
    borda de um <span> que é item de flex/grid. Como bloco, desenha uma
    vez só. */
 
-.qa-dashboard .qa-status,
-.qa-flow-badge,
 .qa-flow-meta-item {
     display: block !important;
-}
-
-/* O status fica em bloco comum (não flex) para o rótulo ter a largura
-   do próprio texto. */
-
-.qa-dashboard-status > div {
-    display: block !important;
-}
-
-.qa-dashboard .qa-status {
-    display: inline-block !important;
-    margin-bottom: 1mm !important;
-    white-space: nowrap !important;
-}
-
-/* A descrição em duas linhas encostava na borda da caixa do status. */
-
-.qa-dashboard-status small {
-    display: block !important;
-    max-width: none !important;
-    white-space: nowrap !important;
 }
 
 /* O gap do grid do resumo não é respeitado: o ícone encostava no texto. */

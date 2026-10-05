@@ -93,8 +93,9 @@ def test_dashboard_mostra_ressalvas_e_aprovados_sobre_executados():
         }
     )
 
-    assert "APROVADO COM RESSALVAS" in html
-    assert "INSTÁVEL" not in html
+    # Sem etiqueta de status (CRÍTICO, APROVADO...): só a cor do resumo.
+    assert "APROVADO COM RESSALVAS" not in html
+    assert 'class="qa-execution-alert caveat"' in html
     assert "15 de 15 executados" in html
     # O fluxo conta os pulados no total: 7 aprovados de 10 testes.
     assert "<strong>7/10</strong>" in html
@@ -232,25 +233,49 @@ def test_demorados_abaixo_de_um_segundo():
     assert "&lt;1s" in html or "<1s" in html
 
 
-def _rotulo_do_fluxo(**dados) -> str:
+def _cor_do_fluxo(**dados) -> str:
+    """Classe de cor da barra do fluxo (a etiqueta de status saiu)."""
+    import re
+
     from utils.report_dashboard import build_fluxo_html_card
 
     html = build_fluxo_html_card("privacidade", dados)
 
-    return next(
-        rotulo
-        for rotulo in ("CRÍTICO", "FALHOU", "APROVADO", "SEM EXECUÇÃO")
-        if rotulo in html
-    )
+    assert "CRÍTICO" not in html and "FALHOU" not in html
+
+    return re.search(r'class="qa-flow-progress (\w+)"', html)[1]
 
 
-def test_fluxo_com_falha_fora_do_smoke_e_falhou_e_nao_critico():
+def test_fluxo_com_falha_fora_do_smoke_nao_e_critico():
     # Caso real: Privacidade (regression), 1 teste, falhou -> 0%.
-    assert _rotulo_do_fluxo(fail=1) == "FALHOU"
+    assert _cor_do_fluxo(fail=1) == "unstable"
 
 
 def test_fluxo_com_falha_do_smoke_e_critico():
-    assert _rotulo_do_fluxo(ok=1, fail=1, critico=1) == "CRÍTICO"
+    assert _cor_do_fluxo(ok=1, fail=1, critico=1) == "failed"
+
+
+@pytest.mark.parametrize(
+    ("falhas", "erros", "esperado"),
+    [
+        (1, 0, "1 falha funcional detectada."),
+        (2, 0, "2 falhas funcionais detectadas."),
+        (0, 1, "1 erro técnico detectado."),
+        (0, 3, "3 erros técnicos detectados."),
+        (1, 1, "1 falha funcional e 1 erro técnico detectados."),
+    ],
+)
+def test_resumo_concorda_com_falha_e_erro(falhas, erros, esperado):
+    html = build_dashboard_html(
+        {
+            "total": 10,
+            "passed": 10 - falhas - erros,
+            "failed": falhas,
+            "error": erros,
+        }
+    )
+
+    assert esperado in html
 
 
 def test_resumo_diz_se_algum_teste_do_smoke_falhou():

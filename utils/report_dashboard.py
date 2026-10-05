@@ -286,10 +286,16 @@ def _build_summary_text(
         )
         problems.append(f"{error} {error_label}")
 
-    resumo = (
-        f"{' e '.join(problems)} "
-        f"{'detectado' if len(problems) == 1 else 'detectados'}."
-    )
+    # Concordância: "falha" é feminina, "erro" é masculino; os dois
+    # juntos ficam no masculino plural.
+    if failed and error:
+        detectado = "detectados"
+    elif failed:
+        detectado = _pluralize(failed, "detectada", "detectadas")
+    else:
+        detectado = _pluralize(error, "detectado", "detectados")
+
+    resumo = f"{' e '.join(problems)} {detectado}."
 
     if not criticas:
         return f"{resumo} Nenhum teste do smoke falhou."
@@ -378,7 +384,9 @@ def build_fluxo_html_card(
     success_rate = metrics["success_rate"]
     duration = metrics["duration"]
 
-    status_class, status_label, _ = _get_status_meta(
+    # Só a cor da barra do fluxo: a etiqueta de status (CRÍTICO,
+    # APROVADO...) saiu do dashboard.
+    status_class, _, _ = _get_status_meta(
         success_rate,
         total=total,
         failed=failed,
@@ -387,10 +395,6 @@ def build_fluxo_html_card(
         criticas=_to_int(dados.get("critico")),
         critico_pela_taxa=False,
     )
-
-    # Num fluxo, "instável" é sempre falha fora do smoke: diz o que houve.
-    if status_class == "unstable":
-        status_label = "FALHOU"
 
     duration_html = ""
 
@@ -410,9 +414,6 @@ def build_fluxo_html_card(
                         {_safe_text(fluxo.upper())}
                     </span>
 
-                    <span class="qa-flow-badge {status_class}">
-                        {status_label}
-                    </span>
                 </div>
 
                 <div class="qa-flow-summary">
@@ -916,19 +917,6 @@ def build_dashboard_html(
                         Baixar HTML
                     </button>
 
-                    <div class="qa-dashboard-status">
-                        <span class="qa-status-dot {status_class}"></span>
-
-                        <div>
-                            <span class="qa-status {status_class}">
-                                {status_label}
-                            </span>
-
-                            <small>
-                                {_safe_text(status_description)}
-                            </small>
-                        </div>
-                    </div>
                 </div>
             </header>
 

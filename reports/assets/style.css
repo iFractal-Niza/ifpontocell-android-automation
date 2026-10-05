@@ -334,29 +334,6 @@ span.skipped {
     font-weight: 700 !important;
   }
 
-  .qa-status {
-    background: #f3f3f3 !important;
-    color: #111111 !important;
-    border: 1px solid #cfcfcf !important;
-    font-weight: 700 !important;
-  }
-
-  .qa-status.healthy {
-    background: #e6f1f1 !important;
-    border-color: #bfd3d4 !important;
-  }
-
-  .qa-status.unstable,
-  .qa-status.caveat {
-    background: #f6efde !important;
-    border-color: #dbc9a1 !important;
-  }
-
-  .qa-status.failed {
-    background: #f4e5e3 !important;
-    border-color: #d9b7b2 !important;
-  }
-
   .qa-kpi-card,
   .qa-flow-row,
   .qa-execution-alert {
@@ -391,31 +368,9 @@ span.skipped {
   }
 
   .qa-kpi-value,
-  .qa-kpi-label,
-  .qa-flow-badge {
+  .qa-kpi-label {
     color: #111111 !important;
     opacity: 1 !important;
-  }
-
-  .qa-flow-badge {
-    background: #efefef !important;
-    border: 1px solid #cfcfcf !important;
-  }
-
-  .qa-flow-badge.healthy {
-    background: #e6f1f1 !important;
-    border-color: #bfd3d4 !important;
-  }
-
-  .qa-flow-badge.unstable,
-  .qa-flow-badge.caveat {
-    background: #f6efde !important;
-    border-color: #dbc9a1 !important;
-  }
-
-  .qa-flow-badge.failed {
-    background: #f4e5e3 !important;
-    border-color: #d9b7b2 !important;
   }
 
   .qa-flow-meta-item {
@@ -625,102 +580,6 @@ body {
   background: var(--surface-tint);
   color: var(--text-muted);
   cursor: default;
-}
-
-.qa-dashboard-status {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 210px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--surface-tint);
-}
-
-.qa-dashboard-status>div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.qa-dashboard-status small {
-  max-width: 230px;
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.35;
-}
-
-.qa-status-dot {
-  flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
-  margin-top: 5px;
-  border-radius: 50%;
-}
-
-.qa-status-dot.healthy {
-  background: var(--green);
-}
-
-.qa-status-dot.unstable {
-  background: var(--orange);
-}
-
-.qa-status-dot.caveat {
-  background: var(--amber);
-}
-
-.qa-status-dot.failed {
-  background: var(--red);
-}
-
-.qa-status-dot.neutral {
-  background: var(--text-muted);
-}
-
-.qa-dashboard .qa-status {
-  display: inline-flex;
-  width: fit-content;
-  margin: 0;
-  padding: 3px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  box-shadow: none;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.6px;
-}
-
-.qa-dashboard .qa-status.healthy {
-  border-color: var(--green-line);
-  background: var(--green-soft);
-  color: var(--green) !important;
-}
-
-.qa-dashboard .qa-status.unstable {
-  border-color: var(--orange-line);
-  background: var(--orange-soft);
-  color: var(--orange) !important;
-}
-
-.qa-dashboard .qa-status.caveat {
-  border-color: var(--amber-line);
-  background: var(--amber-soft);
-  color: var(--amber) !important;
-}
-
-.qa-dashboard .qa-status.failed {
-  border-color: var(--red-line);
-  background: var(--red-soft);
-  color: var(--red) !important;
-}
-
-.qa-dashboard .qa-status.neutral {
-  border-color: var(--border);
-  background: var(--bg-elevated);
-  color: var(--text-muted) !important;
 }
 
 /******************************
@@ -1462,39 +1321,6 @@ body {
   white-space: nowrap;
 }
 
-.qa-flow-badge {
-  flex: 0 0 auto;
-  padding: 3px 7px;
-  border-radius: var(--radius-pill);
-  font-size: 9px;
-  font-weight: 800;
-}
-
-.qa-flow-badge.healthy {
-  background: var(--green-soft);
-  color: var(--green);
-}
-
-.qa-flow-badge.unstable {
-  background: var(--orange-soft);
-  color: var(--orange);
-}
-
-.qa-flow-badge.caveat {
-  background: var(--amber-soft);
-  color: var(--amber);
-}
-
-.qa-flow-badge.failed {
-  background: var(--red-soft);
-  color: var(--red);
-}
-
-.qa-flow-badge.neutral {
-  background: var(--bg-elevated);
-  color: var(--text-muted);
-}
-
 .qa-flow-summary {
   display: flex;
   align-items: baseline;
@@ -1803,10 +1629,6 @@ body {
   .qa-dashboard-lateral {
     flex-direction: column;
     align-items: flex-start;
-    width: 100%;
-  }
-
-  .qa-dashboard-status {
     width: 100%;
   }
 

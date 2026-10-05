@@ -663,16 +663,11 @@
   // O dashboard vem pronto do Python (utils/report_dashboard.py) só com a
   // automação; os totais dela ficam em data-qa-totais. Aqui entram os
   // testes manuais e as melhorias com Status (sem Status, não contam), e
-  // taxa, cards, status e resumo são refeitos com as mesmas regras de
+  // taxa, cards, cor do status e resumo são refeitos com as regras de
   // calcular_taxa_sucesso, _get_status_meta e _build_summary_text. Falha
   // manual não é do smoke: não conta como crítica (só pela taxa).
-  var ROTULOS_STATUS = {
-    neutral: 'SEM EXECUÇÃO',
-    failed: 'CRÍTICO',
-    unstable: 'INSTÁVEL',
-    caveat: 'APROVADO COM RESSALVAS',
-    healthy: 'APROVADO',
-  };
+  // Classes de cor do status (sem etiqueta: CRÍTICO, APROVADO... saíram).
+  var CLASSES_STATUS = ['neutral', 'failed', 'unstable', 'caveat', 'healthy'];
 
   function plural(quantidade, singular, varios) {
     return quantidade === 1 ? singular : varios;
@@ -687,30 +682,19 @@
   }
 
   function statusDaExecucao(t, taxa) {
-    if (t.total === 0) {
-      return ['neutral', 'Nenhum teste foi executado.'];
-    }
-
-    if (t.skipped >= t.total) {
-      return ['neutral', 'Todos os testes foram pulados.'];
+    if (t.total === 0 || t.skipped >= t.total) {
+      return 'neutral';
     }
 
     if (t.criticas > 0 || taxa < t.instavel) {
-      return ['failed', 'A execução exige análise imediata.'];
+      return 'failed';
     }
 
     if (t.failed > 0 || t.error > 0 || taxa < t.saudavel) {
-      return ['unstable', 'A execução possui resultados que exigem atenção.'];
+      return 'unstable';
     }
 
-    if (t.skipped > 0) {
-      return [
-        'caveat',
-        'Nenhuma falha; há testes que não foram executados.',
-      ];
-    }
-
-    return ['healthy', 'A execução foi concluída sem falhas.'];
+    return t.skipped > 0 ? 'caveat' : 'healthy';
   }
 
   function resumoDaExecucao(t) {
@@ -744,11 +728,16 @@
       );
     }
 
-    var resumo =
-      problemas.join(' e ') +
-      ' ' +
-      (problemas.length === 1 ? 'detectado' : 'detectados') +
-      '.';
+    // Concordância: "falha" é feminina, "erro" é masculino; os dois
+    // juntos ficam no masculino plural.
+    var detectado =
+      t.failed && t.error
+        ? 'detectados'
+        : t.failed
+          ? plural(t.failed, 'detectada', 'detectadas')
+          : plural(t.error, 'detectado', 'detectados');
+
+    var resumo = problemas.join(' e ') + ' ' + detectado + '.';
 
     if (!t.criticas) {
       return resumo + ' Nenhum teste do smoke falhou.';
@@ -764,7 +753,7 @@
       return;
     }
 
-    Object.keys(ROTULOS_STATUS).forEach(function (classe) {
+    CLASSES_STATUS.forEach(function (classe) {
       elemento.classList.remove(classe);
     });
     elemento.classList.add(status);
@@ -856,7 +845,7 @@
           ? t.passed + ' de ' + executados + ' executados'
           : 'Sem resultados'
       ),
-      status[0]
+      status
     );
     preencherCard(
       'total',
@@ -867,24 +856,8 @@
     preencherCard('falhou', t.failed, '', t.failed > 0);
     preencherCard('pulados', t.skipped, '', t.skipped > 0);
 
-    trocarClasseDeStatus(
-      document.querySelector('.qa-dashboard-status .qa-status-dot'),
-      status[0]
-    );
-
-    var rotulo = document.querySelector('.qa-dashboard-status .qa-status');
-    trocarClasseDeStatus(rotulo, status[0]);
-    if (rotulo) {
-      rotulo.textContent = ROTULOS_STATUS[status[0]];
-    }
-
-    var descricao = document.querySelector('.qa-dashboard-status small');
-    if (descricao) {
-      descricao.textContent = status[1];
-    }
-
     var alerta = document.querySelector('.qa-execution-alert');
-    trocarClasseDeStatus(alerta, status[0]);
+    trocarClasseDeStatus(alerta, status);
 
     if (alerta) {
       alerta.querySelector('.qa-execution-alert-content strong').textContent =
