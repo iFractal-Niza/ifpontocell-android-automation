@@ -235,6 +235,8 @@ Nos testes manuais e nas melhorias, o Status também tem **Corrigido** (retestad
 
 O bloco **Melhorias** (botão **+ Adicionar melhoria**), abaixo dos testes manuais, registra sugestões encontradas nos testes, com as mesmas colunas dos testes manuais (Melhoria no lugar de Teste): implementada, a melhoria também é testada e pode falhar. Começa sem Status; com Status, entra nos totais do dashboard. Mesmo funcionamento dos testes manuais (anexos comprimidos, salvo no navegador, levado na cópia do **Baixar HTML**).
 
+**Guardar o que foi preenchido:** classificações, testes manuais, melhorias e anexos ficam só no navegador, ligados ao caminho do arquivo; somem se o report for movido ou apagado (o projeto guarda só os últimos) ou se o navegador limpar os dados. Enquanto houver algo não baixado, aparece **Alterações não baixadas** ao lado do **Baixar HTML**: a cópia baixada é o que guarda tudo. Ao abrir, o report apaga anexos que nenhum report referencia, e o rodapé oferece **Limpar dados de outros reports** (com o espaço ocupado e confirmação).
+
 ---
 
 ## Qualidade de código

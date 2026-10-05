@@ -582,6 +582,25 @@ body {
   cursor: default;
 }
 
+/* Aviso ao lado do "Baixar HTML" enquanto há algo não baixado.
+   !important: o pytest-html força a cor de tudo em .summary__data. */
+.qa-pendente {
+  color: var(--amber) !important;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* A bolinha e um espaço (escapes: o CSS vai como ASCII; o espaço logo
+   após um escape seria engolido por ele). */
+.qa-pendente::before {
+  content: "\0025CF\0000A0";
+}
+
+.qa-pendente[hidden] {
+  display: none;
+}
+
 /******************************
  * RESUMO EXECUTIVO
  ******************************/
@@ -712,15 +731,30 @@ body {
   display: none;
 }
 
-.qa-kpi-grupo > summary::before {
-  content: "▸";
-  color: var(--teal);
-  font-size: 12px;
-  transition: transform 0.15s ease;
+.qa-kpi-grupo > summary {
+  align-items: center;
 }
 
-.qa-kpi-grupo[open] > summary::before {
-  transform: rotate(90deg);
+/* Botão à direita da barra: "Expandir ▾" / "Recolher ▴". */
+.qa-kpi-grupo > summary::after {
+  content: "Expandir \0025BE";
+  margin-left: auto;
+  padding: 3px 12px;
+  border: 1px solid var(--teal-line);
+  border-radius: var(--radius-pill);
+  background: var(--teal-soft);
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.qa-kpi-grupo > summary:hover::after {
+  border-color: var(--teal);
+}
+
+.qa-kpi-grupo[open] > summary::after {
+  content: "Recolher \0025B4";
 }
 
 .qa-kpi-grupo-titulo {
@@ -1057,22 +1091,22 @@ body {
 }
 
 .qa-classificacao[data-valor='Melhoria implementada'],
-.qa-classificacao[data-valor='Correção realizada'] {
+.qa-classificacao[data-valor='Corre\0000E7\0000E3o realizada'] {
   border-color: var(--green-line);
   background: var(--green-soft);
   color: var(--green);
   font-weight: 700;
 }
 
-.qa-classificacao[data-valor='Melhoria não implementada'],
-.qa-classificacao[data-valor='Correção não realizada'] {
+.qa-classificacao[data-valor='Melhoria n\0000E3o implementada'],
+.qa-classificacao[data-valor='Corre\0000E7\0000E3o n\0000E3o realizada'] {
   border-color: var(--red-line);
   background: var(--red-soft);
   color: var(--red);
   font-weight: 700;
 }
 
-.qa-classificacao[data-valor='Crítico'] {
+.qa-classificacao[data-valor='Cr\0000EDtico'] {
   border-color: var(--red-line);
   background: var(--red-soft);
   color: var(--red);
@@ -1221,7 +1255,7 @@ body {
   color: var(--green);
 }
 
-.qa-manual-resultado[data-valor='Não corrigido'] {
+.qa-manual-resultado[data-valor='N\0000E3o corrigido'] {
   color: var(--red);
 }
 
@@ -1517,8 +1551,10 @@ body {
   background: linear-gradient(90deg, var(--green), var(--teal));
 }
 
+/* Num fluxo, "instável" é sempre falha ou erro (a taxa só cai abaixo
+   de 100% com eles): vermelho, como a falha do smoke. */
 .qa-flow-progress.unstable {
-  background: var(--orange);
+  background: var(--red);
 }
 
 .qa-flow-progress.caveat {
@@ -1710,6 +1746,23 @@ body {
 .qa-footer-description {
   color: var(--text-muted);
   font-size: 10px;
+}
+
+/* Rodapé: limpar dados de outros reports guardados no navegador. */
+.qa-limpar-dados {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 10px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.qa-limpar-dados:hover {
+  color: var(--red) !important;
 }
 
 /******************************

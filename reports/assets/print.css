@@ -451,6 +451,8 @@ a {
 
 /* Botões de baixar e de teste manual não têm uso no PDF. */
 .qa-baixar-html,
+.qa-pendente,
+.qa-limpar-dados,
 .qa-manuais-acoes {
     display: none !important;
 }

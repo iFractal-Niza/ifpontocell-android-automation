@@ -51,3 +51,21 @@ def test_celula_sem_titulo_fica_como_estava():
     original = '<td class="col-testId">tests/app/test_h.py::test_x</td>'
 
     assert montar_celula_teste(original, "") == original
+
+
+def test_css_da_pagina_e_ascii_fora_dos_comentarios():
+    # O plugin converte o não ASCII do CSS em referências HTML (&#237;),
+    # que dentro de <style> não são interpretadas: um "Crítico" num
+    # seletor ou um "▸" num content quebrariam. Use escapes do CSS
+    # (\0000ED, \0025B8).
+    import re
+    from pathlib import Path
+
+    for nome in ("style.css", "print.css"):
+        css = (Path(PROJECT_ROOT) / "reports" / "assets" / nome).read_text(
+            encoding="utf-8"
+        )
+        sem_comentarios = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+        fora_do_ascii = sorted({c for c in sem_comentarios if ord(c) > 127})
+
+        assert fora_do_ascii == [], f"{nome}: {fora_do_ascii}"

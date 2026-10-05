@@ -95,10 +95,12 @@ def test_classificacao_e_salva_e_volta_ao_ordenar_e_recarregar(
 
     pagina.recarregar()
     assert _valor(pagina, categoria) == "Crítico"
-    # A cor da categoria acompanha o valor.
-    assert pagina.page.locator(categoria).get_attribute("data-valor") == (
-        "Crítico"
+    # A cor da categoria acompanha o valor (o seletor do CSS tem acento:
+    # precisa sobreviver à conversão do CSS para ASCII do plugin).
+    cor = pagina.page.locator(categoria).evaluate(
+        "e => getComputedStyle(e).color"
     )
+    assert cor == "rgb(212, 32, 32)"
 
 
 # === Totais e fluxos: iguais ao Python ===
@@ -303,3 +305,78 @@ def test_copia_e_somente_leitura_e_leva_tudo(abrir, report_padrao, tmp_path):
 
     copia.locator(".qa-evidencia-abrir").click()
     assert copia.locator(".qa-lightbox img").count() == 1
+
+
+# === Proteção contra perda ===
+def test_aviso_de_alteracoes_nao_baixadas(abrir, report_padrao, tmp_path):
+    pagina = abrir(report_padrao)
+    aviso = pagina.page.locator(".qa-pendente")
+    assert not aviso.is_visible()
+
+    pagina.page.locator(
+        "#results-table select[data-campo=tipo]"
+    ).select_option("Layout")
+    assert aviso.is_visible()
+
+    pagina.recarregar()
+    assert aviso.is_visible()
+
+    _baixar(pagina, tmp_path)
+    assert not aviso.is_visible()
+
+    pagina.recarregar()
+    assert not aviso.is_visible()
+
+
+_ANEXOS_NO_BANCO = """() => new Promise(resolver => {
+  const pedido = indexedDB.open('qa-report-evidencias', 1);
+  pedido.onsuccess = () => {
+    const leitura = pedido.result.transaction('arquivos')
+      .objectStore('arquivos').getAllKeys();
+    leitura.onsuccess = () => resolver(leitura.result);
+  };
+})"""
+
+_ANEXO_SOLTO = """() => new Promise(resolver => {
+  const pedido = indexedDB.open('qa-report-evidencias', 1);
+  pedido.onsuccess = () => {
+    const gravacao = pedido.result.transaction('arquivos', 'readwrite')
+      .objectStore('arquivos').put('data:text/plain,x', 'orfao');
+    gravacao.onsuccess = () => resolver();
+  };
+})"""
+
+
+def test_limpa_anexo_orfao_e_dados_de_outros_reports(
+    abrir, report_padrao, outro_report, tmp_path
+):
+    pagina = abrir(report_padrao)
+    linha = pagina.adicionar(ct="CT1", status="Falhou")
+    arquivo = tmp_path / "tela.png"
+    arquivo.write_bytes(base64.b64decode(_PNG))
+
+    with pagina.page.expect_file_chooser() as escolha:
+        linha.locator(".qa-evidencia-anexar").click()
+    escolha.value.set_files(str(arquivo))
+    pagina.page.wait_for_selector(".qa-evidencia-abrir")
+    pagina.page.evaluate(_ANEXO_SOLTO)
+
+    # Neste report não há dados de outros: sem o link no rodapé.
+    assert pagina.page.locator(".qa-limpar-dados").count() == 0
+
+    outro = pagina.abrir_outro(outro_report)
+    outro.page.wait_for_selector(".qa-limpar-dados")
+    anexos = outro.page.evaluate(_ANEXOS_NO_BANCO)
+
+    # O anexo sem dono saiu ao abrir; o do primeiro report ficou.
+    assert "orfao" not in anexos
+    assert len(anexos) == 1
+
+    outro.page.click(".qa-limpar-dados")
+    assert outro.page.locator(".qa-limpar-dados").count() == 0
+    assert outro.page.evaluate(_ANEXOS_NO_BANCO) == []
+
+    pagina.recarregar()
+    assert (
+        pagina.page.locator(".qa-bloco-manuais tr.qa-manual-row").count() == 0
+    )

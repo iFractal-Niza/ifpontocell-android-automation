@@ -407,6 +407,8 @@
   }
 
   function gravarClassificacao(lista) {
+    marcarPendente(true);
+
     try {
       if (lista.value) {
         localStorage.setItem(chaveClassificacao(lista), lista.value);
@@ -555,6 +557,7 @@
           }),
           nomeDaCopia()
         );
+        marcarPendente(false);
       })
       .catch(function () {
         window.alert(
@@ -598,7 +601,243 @@
       }
 
       botao.addEventListener('click', baixarHtml);
+
+      var pendente = criar('span', 'qa-pendente', 'Alterações não baixadas');
+      pendente.title =
+        'Classificações, testes manuais e melhorias ficam só neste ' +
+        'navegador, ligados a este arquivo: baixe o HTML para guardar ou ' +
+        'enviar.';
+      botao.insertAdjacentElement('afterend', pendente);
     });
+
+    marcarPendente(lerPendente());
+  }
+
+  // === Proteção contra perda ===
+  // O que é preenchido à mão fica no navegador, ligado ao caminho deste
+  // arquivo: some se o report for movido, apagado (o pytest_report guarda
+  // só os últimos) ou se o navegador limpar os dados. O aviso lembra de
+  // baixar a cópia; volta a aparecer a cada mudança.
+  var CHAVE_PENDENTE = 'qa-pendente:' + location.pathname;
+
+  function lerPendente() {
+    try {
+      return localStorage.getItem(CHAVE_PENDENTE) === '1';
+    } catch (erro) {
+      return false;
+    }
+  }
+
+  function marcarPendente(pendente) {
+    if (CLASSIFICACAO_FIXA) {
+      return;
+    }
+
+    try {
+      if (pendente) {
+        localStorage.setItem(CHAVE_PENDENTE, '1');
+      } else {
+        localStorage.removeItem(CHAVE_PENDENTE);
+      }
+    } catch (erro) {
+      // Sem armazenamento: o aviso só vale nesta aba.
+    }
+
+    document.querySelectorAll('.qa-pendente').forEach(function (aviso) {
+      aviso.hidden = !pendente;
+    });
+  }
+
+  // Dados de todos os reports neste navegador, por caminho do arquivo.
+  var PREFIXOS_DE_DADOS = [
+    'qa-classificacao:',
+    'qa-manuais:',
+    'qa-melhorias:',
+    'qa-pendente:',
+  ];
+
+  function caminhoDaChave(chave) {
+    if (chave.indexOf('qa-classificacao:') === 0) {
+      var achado = /^qa-classificacao:(.*?\.html?):/i.exec(chave);
+      return achado ? achado[1] : null;
+    }
+
+    for (var i = 1; i < PREFIXOS_DE_DADOS.length; i += 1) {
+      if (chave.indexOf(PREFIXOS_DE_DADOS[i]) === 0) {
+        return chave.slice(PREFIXOS_DE_DADOS[i].length);
+      }
+    }
+
+    return null;
+  }
+
+  function dadosNoNavegador() {
+    var porCaminho = {};
+
+    try {
+      for (var i = 0; i < localStorage.length; i += 1) {
+        var chave = localStorage.key(i);
+        var caminho = chave ? caminhoDaChave(chave) : null;
+
+        if (caminho === null) {
+          continue;
+        }
+
+        var dados = (porCaminho[caminho] = porCaminho[caminho] || {
+          chaves: [],
+          anexos: [],
+          tamanho: 0,
+        });
+        var valor = localStorage.getItem(chave) || '';
+
+        dados.chaves.push(chave);
+        dados.tamanho += chave.length + valor.length;
+
+        if (/^qa-(manuais|melhorias):/.test(chave)) {
+          try {
+            JSON.parse(valor).forEach(function (item) {
+              (item.evidencias || []).forEach(function (evidencia) {
+                dados.anexos.push(evidencia.id);
+              });
+            });
+          } catch (erro) {
+            // Lista ilegível: sem anexos a considerar.
+          }
+        }
+      }
+    } catch (erro) {
+      // Sem armazenamento.
+    }
+
+    return porCaminho;
+  }
+
+  function chavesDosArquivos() {
+    return operarArquivo('readonly', function (arquivos) {
+      return arquivos.getAllKeys();
+    });
+  }
+
+  function tamanhoDoArquivo(id) {
+    return lerArquivo(id).then(function (dados) {
+      return dados ? dados.length : 0;
+    });
+  }
+
+  // Ao abrir: apaga anexos que nenhum report referencia (sobras de uma
+  // gravação interrompida, por exemplo) e oferece, no rodapé, limpar os
+  // dados dos outros reports.
+  function cuidarDoArmazenamento() {
+    if (CLASSIFICACAO_FIXA || !window.indexedDB) {
+      return;
+    }
+
+    var porCaminho = dadosNoNavegador();
+    var referenciados = {};
+
+    Object.keys(porCaminho).forEach(function (caminho) {
+      porCaminho[caminho].anexos.forEach(function (id) {
+        referenciados[id] = true;
+      });
+    });
+
+    chavesDosArquivos()
+      .then(function (ids) {
+        ids.forEach(function (id) {
+          if (!referenciados[id]) {
+            apagarArquivo(id);
+          }
+        });
+      })
+      .catch(function () {
+        // Sem banco: nada a limpar.
+      });
+
+    var outros = Object.keys(porCaminho).filter(function (caminho) {
+      return caminho !== location.pathname;
+    });
+
+    if (!outros.length) {
+      return;
+    }
+
+    var anexos = [];
+    var tamanho = 0;
+
+    outros.forEach(function (caminho) {
+      anexos = anexos.concat(porCaminho[caminho].anexos);
+      tamanho += porCaminho[caminho].tamanho;
+    });
+
+    Promise.all(anexos.map(tamanhoDoArquivo))
+      .catch(function () {
+        return [];
+      })
+      .then(function (tamanhos) {
+        tamanhos.forEach(function (bytes) {
+          tamanho += bytes;
+        });
+        oferecerLimpeza(outros, porCaminho, anexos, tamanho);
+      });
+  }
+
+  function formatarTamanho(bytes) {
+    var mb = bytes / (1024 * 1024);
+
+    return mb >= 1
+      ? mb.toFixed(1).replace('.', ',') + ' MB'
+      : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+  }
+
+  function oferecerLimpeza(outros, porCaminho, anexos, tamanho) {
+    var rodape = document.querySelector('.qa-footer-description');
+
+    if (!rodape || document.querySelector('.qa-limpar-dados')) {
+      return;
+    }
+
+    var botao = criar(
+      'button',
+      'qa-limpar-dados',
+      'Limpar dados de outros reports (' + formatarTamanho(tamanho) + ')'
+    );
+
+    botao.type = 'button';
+    botao.title =
+      outros.length +
+      plural(outros.length, ' outro report tem', ' outros reports têm') +
+      ' dados salvos neste navegador.';
+
+    botao.addEventListener('click', function () {
+      var confirmado = window.confirm(
+        'Apagar deste navegador os dados de ' +
+          outros.length +
+          plural(outros.length, ' outro report', ' outros reports') +
+          ' (' +
+          formatarTamanho(tamanho) +
+          '): classificações, testes manuais, melhorias e anexos? ' +
+          'Este report não é afetado. Baixe antes o HTML de algum que ' +
+          'ainda precise.'
+      );
+
+      if (!confirmado) {
+        return;
+      }
+
+      outros.forEach(function (caminho) {
+        porCaminho[caminho].chaves.forEach(function (chave) {
+          try {
+            localStorage.removeItem(chave);
+          } catch (erro) {
+            // Sem armazenamento: nada a apagar.
+          }
+        });
+      });
+      anexos.forEach(apagarArquivo);
+      botao.remove();
+    });
+
+    rodape.insertAdjacentElement('beforebegin', botao);
   }
 
   // === Testes manuais ===
@@ -670,6 +909,7 @@
   // Grava as duas listas (testes manuais e melhorias) e atualiza os
   // totais do dashboard.
   function gravarTestesManuais() {
+    marcarPendente(true);
     gravarLista(CHAVE_MANUAIS, testesManuais);
     gravarLista(CHAVE_MELHORIAS, melhorias);
     atualizarTotais();
@@ -1209,8 +1449,8 @@
     trocarClasseDeStatus(progresso, classe);
   }
 
-  // Mesma estrutura do build_fluxo_html_card (sem Duração: o teste
-  // manual não tem).
+  // Mesma estrutura do build_fluxo_html_card. Duração fica "—" (o teste
+  // manual não tem), só para alinhar com os outros cards.
   function cardDeFluxo(nome) {
     var card = criar('article', 'qa-flow-row');
     var principal = criar('div', 'qa-flow-main');
@@ -1238,6 +1478,11 @@
       bloco.appendChild(criar('strong'));
       meta.appendChild(bloco);
     });
+
+    var duracao = criar('span', 'qa-flow-meta-item');
+    duracao.appendChild(criar('span', '', 'Duração'));
+    duracao.appendChild(criar('strong', '', '—'));
+    meta.appendChild(duracao);
 
     barra.setAttribute('role', 'progressbar');
     barra.setAttribute('aria-label', 'Taxa de sucesso do fluxo ' + nome);
@@ -2652,6 +2897,7 @@
     prepararBotaoBaixar();
     aoMudarAPagina();
     atualizarTotais();
+    cuidarDoArmazenamento();
   }
 
   if (document.readyState === 'loading') {

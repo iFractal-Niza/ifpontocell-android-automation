@@ -134,6 +134,12 @@ def report_padrao(tmp_path_factory) -> Path:
     return montar_report(tmp_path_factory.mktemp("report"), STATS_PADRAO)
 
 
+@pytest.fixture(scope="session")
+def outro_report(tmp_path_factory) -> Path:
+    """Outro arquivo de report (outro caminho, dados salvos à parte)."""
+    return montar_report(tmp_path_factory.mktemp("outro"), STATS_PADRAO)
+
+
 # Nome próprio: a automação web tem o pytest-playwright, que já define a
 # fixture "playwright".
 @pytest.fixture(scope="session")
@@ -160,6 +166,10 @@ class Pagina:
         self.page.on("dialog", lambda dialogo: dialogo.accept())
         self.page.goto(caminho.as_uri())
         self.page.wait_for_selector("tr.collapsible")
+
+    def abrir_outro(self, caminho: Path) -> "Pagina":
+        """Outro report no mesmo navegador (mesmos dados salvos)."""
+        return Pagina(self.contexto, caminho)
 
     def recarregar(self):
         self.page.reload()
