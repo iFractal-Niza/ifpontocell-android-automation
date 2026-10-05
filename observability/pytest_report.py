@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from pytest_html import extras
 
-from observability import execution_metrics, pastas
+from observability import execution_metrics, pastas, testes_manuais
 from observability.contexto_execucao import coletar_contexto
 from observability.dashboard import (
     build_results_summary_html,
@@ -883,6 +883,7 @@ def pytest_html_results_summary(
     prefix,
     summary,
     postfix,
+    session=None,
 ) -> None:
     """
     Injeta o CSS e o dashboard customizado
@@ -901,6 +902,14 @@ def pytest_html_results_summary(
         fim=datetime.now(),
         usa_app=execution_metrics.execucao_usa_app(),
     )
+
+    # make evidencias: os testes manuais previstos vão para a página.
+    if session is not None and session.config.getoption(
+        testes_manuais.OPCAO, default=False
+    ):
+        execution_metrics.DASHBOARD_STATS["testes_manuais_previstos"] = (
+            testes_manuais.carregar()
+        )
 
     inline_css, html_block = build_results_summary_html(
         PROJECT_ROOT,

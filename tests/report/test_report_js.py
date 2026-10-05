@@ -220,7 +220,7 @@ def test_teste_manual_volta_ao_recarregar(abrir, report_padrao):
 
 def test_blocos_de_cards_contam_por_origem(abrir, report_padrao):
     pagina = abrir(report_padrao)
-    grupos = ".qa-kpi-grupo:not([hidden])"
+    grupos = ".qa-kpi-grupo:not(.qa-ficha):not([hidden])"
     assert pagina.page.locator(grupos).count() == 0
 
     pagina.adicionar(status="Corrigido")
@@ -252,7 +252,9 @@ def test_blocos_de_cards_contam_por_origem(abrir, report_padrao):
         "melhoria-implementada": "1",
         "melhoria-nao-implementada": "0",
     }
-    assert pagina.page.locator(".qa-kpi-grupo-resumo").all_inner_texts() == [
+    assert pagina.page.locator(
+        ".qa-kpi-grupo:not(.qa-ficha) .qa-kpi-grupo-resumo"
+    ).all_inner_texts() == [
         "2 testes · 1 corrigido · 1 não corrigido",
         "1 melhoria · 1 implementada",
     ]
@@ -380,3 +382,82 @@ def test_limpa_anexo_orfao_e_dados_de_outros_reports(
     assert (
         pagina.page.locator(".qa-bloco-manuais tr.qa-manual-row").count() == 0
     )
+
+
+# === Ficha do teste ===
+def test_ficha_fica_recolhida_e_vai_na_copia(abrir, report_padrao, tmp_path):
+    pagina = abrir(report_padrao)
+    ficha = pagina.page.locator(".qa-ficha")
+
+    assert not ficha.evaluate("e => e.open")
+    assert ficha.locator(".qa-kpi-grupo-resumo").inner_text() == (
+        "Não preenchida"
+    )
+    assert not pagina.page.locator(".qa-apto").is_visible()
+
+    ficha.locator("summary").click()
+    ficha.locator("[data-ficha=demanda]").fill("0418/170034")
+    ficha.locator("[data-ficha=situacao]").select_option("Finalizado")
+    ficha.locator("[data-ficha=apto]").select_option("Não")
+    ficha.locator("[data-ficha=dataSolicitacao]").fill("2026-07-16")
+    ficha.locator("[data-ficha=link]").fill("https://homologacao.exemplo")
+
+    assert ficha.locator(".qa-kpi-grupo-resumo").inner_text() == (
+        "GMUD 0418/170034 · Finalizado · Apto: Não"
+    )
+    apto = pagina.page.locator(".qa-execution-alert .qa-apto")
+    assert apto.inner_text() == "Apto à produção: Não"
+    assert apto.evaluate("e => getComputedStyle(e).color") == (
+        "rgb(212, 32, 32)"
+    )
+    assert pagina.page.locator(".qa-pendente").is_visible()
+
+    pagina.recarregar()
+    assert _valor(pagina, "[data-ficha=demanda]") == "0418/170034"
+
+    copia = abrir(_baixar(pagina, tmp_path)).page
+    valores = copia.locator(".qa-ficha .qa-ficha-valor").all_text_contents()
+
+    assert copia.locator(".qa-ficha input, .qa-ficha select").count() == 0
+    assert "0418/170034" in valores
+    assert "16/07/2026" in valores
+    assert copia.locator(".qa-ficha a.qa-ficha-valor").get_attribute(
+        "href"
+    ) == ("https://homologacao.exemplo")
+    assert copia.locator(".qa-apto").inner_text() == "Apto à produção: Não"
+
+
+# === Testes manuais previstos (make evidencias) ===
+def test_previstos_entram_sem_status_e_uma_vez_so(
+    abrir, report_com_previstos, report_padrao
+):
+    pagina = abrir(report_com_previstos)
+    totais = pagina.page.evaluate(_LER_DASHBOARD)
+    linhas = pagina.page.locator(".qa-bloco-manuais tr.qa-manual-row")
+
+    assert linhas.count() == 2
+    assert linhas.first.locator(".qa-manual-teste").input_value() == (
+        "CT900 · Exporta o espelho"
+    )
+    assert linhas.first.locator(".qa-fluxo-botao").inner_text() == (
+        "Fluxo: Espelho"
+    )
+    assert linhas.first.locator("[data-chave=resultado]").input_value() == ""
+
+    # Sem Status, não mexem nos totais nem no aviso de pendência.
+    assert totais == abrir(report_padrao).page.evaluate(_LER_DASHBOARD)
+    assert not pagina.page.locator(".qa-pendente").is_visible()
+
+    # Apagado, não volta ao recarregar.
+    linhas.first.locator(".qa-manual-remover").click()
+    pagina.recarregar()
+    assert pagina.page.locator(
+        ".qa-bloco-manuais .qa-manual-teste"
+    ).evaluate_all("e => e.map(x => x.value)") == ["CT901 · Avisa sem rede"]
+
+    # Com Status, soma no fluxo do report de mesmo nome.
+    pagina.page.locator(
+        ".qa-bloco-manuais [data-chave=resultado]"
+    ).select_option("Passou")
+    jornada = pagina.page.locator(".qa-flow-row", has_text="JORNADA E2E")
+    assert jornada.locator(".qa-flow-summary strong").inner_text() == "2/3"

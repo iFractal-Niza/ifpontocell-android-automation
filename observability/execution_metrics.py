@@ -28,6 +28,9 @@ def _new_stats_dict() -> dict:
         # Pares (rótulo, valor) da identificação da execução; preenchido
         # pelo plugin ao gerar o report (observability.contexto_execucao).
         "contexto": [],
+        # Testes manuais previstos (observability.testes_manuais); só no
+        # make evidencias, preenchido pelo plugin ao gerar o report.
+        "testes_manuais_previstos": [],
         "por_fluxo": defaultdict(
             lambda: {
                 "ok": 0,

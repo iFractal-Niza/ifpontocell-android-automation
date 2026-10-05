@@ -135,6 +135,27 @@ def report_padrao(tmp_path_factory) -> Path:
 
 
 @pytest.fixture(scope="session")
+def report_com_previstos(tmp_path_factory) -> Path:
+    """Report de um make evidencias: com testes manuais previstos."""
+    stats = {
+        **STATS_PADRAO,
+        "testes_manuais_previstos": [
+            {
+                "ct": "CT900",
+                "descricao": "Exporta o espelho",
+                "fluxo": "Espelho",
+            },
+            {
+                "ct": "CT901",
+                "descricao": "Avisa sem rede",
+                "fluxo": "Jornada E2E",
+            },
+        ],
+    }
+    return montar_report(tmp_path_factory.mktemp("previstos"), stats)
+
+
+@pytest.fixture(scope="session")
 def outro_report(tmp_path_factory) -> Path:
     """Outro arquivo de report (outro caminho, dados salvos à parte)."""
     return montar_report(tmp_path_factory.mktemp("outro"), STATS_PADRAO)

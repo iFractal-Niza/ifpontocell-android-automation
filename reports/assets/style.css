@@ -627,7 +627,7 @@ body {
  ******************************/
 .qa-execution-alert {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   margin-bottom: 14px;
@@ -724,6 +724,90 @@ body {
    cortar com "...". */
 .qa-kpi-card[data-qa-kpi='total'] .qa-kpi-detail {
   white-space: normal;
+}
+
+/* Ficha do teste (report.js): recolhida abaixo dos cards; campos em
+   grade, escopo e link em largura total. */
+.qa-ficha-campos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 16px;
+  padding: 0 14px 14px;
+}
+
+.qa-ficha-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.qa-ficha-campo--largo {
+  grid-column: 1 / -1;
+}
+
+.qa-ficha-campo .qa-manual-campo {
+  max-width: none;
+}
+
+.qa-ficha-escopo {
+  resize: vertical;
+}
+
+.qa-ficha-valor {
+  color: var(--text-primary) !important;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.qa-ficha-valor.qa-obs-fixa {
+  display: block;
+  font-weight: 400;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+a.qa-ficha-valor {
+  color: var(--teal) !important;
+}
+
+.qa-ficha-vazio {
+  color: var(--text-muted) !important;
+}
+
+/* Apto à produção no Resumo executivo (preenchido na ficha).
+   !important: o pytest-html força a cor de tudo em .summary__data. */
+.qa-apto {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-tint);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.qa-apto[hidden] {
+  display: none;
+}
+
+.qa-apto[data-valor='Sim'] {
+  border-color: var(--green-line);
+  background: var(--green-soft);
+  color: var(--green) !important;
+}
+
+.qa-apto[data-valor='N\0000E3o'] {
+  border-color: var(--red-line);
+  background: var(--red-soft);
+  color: var(--red) !important;
+}
+
+.qa-apto[data-valor='Com ressalvas'] {
+  border-color: var(--amber-line);
+  background: var(--amber-soft);
+  color: var(--amber) !important;
 }
 
 /* Blocos recolhíveis "Testes manuais" e "Melhorias" (report.js):
@@ -1663,6 +1747,10 @@ body {
 }
 
 @media (max-width: 760px) {
+  .qa-ficha-campos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   body {
     padding: 12px !important;
   }

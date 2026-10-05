@@ -157,7 +157,7 @@ DEBUG_TARGET = $(if $(test),$(test),$(FULL_SUITE))
         check-venv check-config check-test-data check-app check-devices \
         check-appium check-mobile \
         doctor impact appium appium-servers lint format \
-        run debug unit test-report smoke regression \
+        run evidencias debug unit test-report smoke regression \
         ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto status ponto registro-geo jornada holerite informe humor ass-espelho sobre dados-pessoais privacidade alterar-pin alterar-senha-sistema zerar-dados \
         api \
         clear report report-pdf renumerar-ct \
@@ -183,6 +183,7 @@ help:
 	@echo ""
 	@echo "=== Execução ==="
 	@echo "  make run                   Roda suíte completa em ordem lógica (inclui os que consomem massa)"
+	@echo "  make evidencias            Suíte completa com vídeo de todos e os testes manuais no report, para preencher"
 	@echo "  make debug                 Roda suíte completa em modo debug"
 	@echo "  make debug test=arquivo    Roda arquivo ou teste específico em modo debug"
 	@echo "  make ct id=CT010           Roda casos de teste pelo ID (vários: id=CT010,CT011)"
@@ -447,6 +448,17 @@ endef
 # dois fechamentos pendentes antes de rodar. Sem massa, eles só pulam.
 run: check-mobile
 	$(call run_pytest_with_report,$(FULL_SUITE),$(PYTEST_FLAGS_CLEAN) --consumir-massa $(PYTEST_FLAGS))
+
+# Rodada de evidências: a suíte completa (como o make run), com vídeo de
+# todos os testes e os de observability/testes_manuais.yaml já no bloco
+# "Testes manuais" do report, sem Status, para o tester preencher. Abre o
+# report no fim, passando ou não (VIDEO=0 tira os vídeos).
+evidencias: check-mobile
+	@LOG_LEVEL="$(LOG_LEVEL)" \
+	$(PYTEST) $(FULL_SUITE) $(PYTEST_FLAGS_CLEAN) --consumir-massa --video=todos --testes-manuais $(PYTEST_FLAGS); \
+	status=$$?; \
+	$(MAKE) report; \
+	exit $$status
 
 debug: check-mobile
 	$(call run_pytest_with_report,$(DEBUG_TARGET),$(PYTEST_FLAGS_DEBUG) $(PYTEST_FLAGS))

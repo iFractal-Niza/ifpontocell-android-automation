@@ -1,0 +1,20 @@
+# Testes que continuam manuais no app.
+#
+# No `make evidencias`, o report já abre com eles no bloco "Testes
+# manuais" (CT, descrição e fluxo); o tester preenche Status, Categoria,
+# Obs. Tester e o resto. Sem Status, não entram nos totais.
+#
+# - ct: único, no formato CT000, sem repetir um CT dos testes automatizados
+#   (o make unit confere);
+# - descricao: o que o teste valida;
+# - fluxo: o card de "Qualidade por fluxo" em que ele soma (mesmo nome de
+#   um fluxo do report, como "Registro de ponto", soma no card dele; um
+#   nome novo cria um card).
+#
+# Exemplo:
+#
+# - ct: CT900
+#   descricao: Exporta o espelho de ponto em PDF
+#   fluxo: Espelho de ponto
+
+[]

@@ -13,6 +13,7 @@ from config.settings import ConfiguracaoInvalida
 pytest_plugins = [
     "observability.pytest_report",
     "observability.video",
+    "observability.testes_manuais",
     "tests.fixtures.devices",
     "tests.fixtures.sessoes",
     "tests.fixtures.jornada",

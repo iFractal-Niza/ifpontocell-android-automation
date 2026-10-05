@@ -200,6 +200,7 @@ Dois terminais, um servidor Appium: `make smoke` e `make smoke DEVICE=real`. Cad
 make unit                 # unitários (~1s, sem emulador)
 make test-report          # o report no navegador (report.js; Chromium e WebKit, ~15s)
 make run                  # suíte completa em ordem lógica
+make evidencias           # suíte completa, vídeo de todos e os testes manuais no report
 make smoke                # testes smoke
 make regression
 make primeiro-acesso      # onboarding > login > unlock
@@ -233,7 +234,11 @@ Os testes manuais ficam num bloco próprio, **Testes manuais**, abaixo do bloco 
 
 Nos testes manuais e nas melhorias, o Status também tem **Corrigido** (retestado e aprovado; conta como aprovado) e **Não corrigido** (conta como falha). Abaixo dos cards principais, dois blocos recolhíveis (fechados por padrão; o navegador lembra quais ficaram abertos), com um resumo na barra: **Testes manuais** (Passou, Falhou, Corrigido, Não corrigido e, da coluna **Status apont.** dos testes, Correção realizada e não realizada) e **Melhorias** (Qtd melhorias, Corrigido, Não corrigido e, do **Status apont.** nas três tabelas, Melhoria implementada e não implementada). Cada bloco só aparece com algo a mostrar.
 
+**Rodada de evidências** (`make evidencias`): a suíte completa, com vídeo de todos os testes (`VIDEO=0` tira) e os testes que continuam manuais já no bloco **Testes manuais** do report, que abre no fim. A lista fica em `observability/testes_manuais.yaml` (CT, descrição e fluxo, todos obrigatórios; o `make unit` confere o formato e que o CT não repete um dos automatizados). Eles entram sem Status: preencha Status e o resto; só depois contam nos totais e no card do fluxo em **Qualidade por fluxo**.
+
 O bloco **Melhorias** (botão **+ Adicionar melhoria**), abaixo dos testes manuais, registra sugestões encontradas nos testes, com as mesmas colunas dos testes manuais (Melhoria no lugar de Teste): implementada, a melhoria também é testada e pode falhar. Começa sem Status; com Status, entra nos totais do dashboard. Mesmo funcionamento dos testes manuais (anexos comprimidos, salvo no navegador, levado na cópia do **Baixar HTML**).
+
+**Ficha do teste:** abaixo dos cards, recolhida (o report abre focado nos totais), com a identificação da entrega: título, GMUD/demanda, solicitante, responsável QA, data da solicitação, tipo de teste (Incremental, Total, Integração), situação, link do ambiente e escopo. O **Apto à produção** (Sim, Não, Com ressalvas), preenchido, aparece também no Resumo executivo. Salva no navegador e vai na cópia do **Baixar HTML**, só leitura; não entra no PDF.
 
 **Guardar o que foi preenchido:** classificações, testes manuais, melhorias e anexos ficam só no navegador, ligados ao caminho do arquivo; somem se o report for movido ou apagado (o projeto guarda só os últimos) ou se o navegador limpar os dados. Enquanto houver algo não baixado, aparece **Alterações não baixadas** ao lado do **Baixar HTML**: a cópia baixada é o que guarda tudo. Ao abrir, o report apaga anexos que nenhum report referencia, e o rodapé oferece **Limpar dados de outros reports** (com o espaço ocupado e confirmação).
 

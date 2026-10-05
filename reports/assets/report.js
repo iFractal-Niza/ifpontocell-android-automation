@@ -515,7 +515,7 @@
     copia
       .querySelectorAll(
         '#results-table > tbody, .qa-lightbox, .qa-bloco-manuais, ' +
-          '.qa-bloco-melhorias, .qa-titulo-automatizados'
+          '.qa-bloco-melhorias, .qa-titulo-automatizados, .qa-ficha, .qa-apto'
       )
       .forEach(function (elemento) {
         elemento.remove();
@@ -529,6 +529,8 @@
       paraScript(manuais) +
       ';\nwindow.QA_MELHORIAS_FIXAS = ' +
       paraScript(melhoriasFixas) +
+      ';\nwindow.QA_FICHA_FIXA = ' +
+      paraScript(ficha) +
       ';';
 
     var cabeca = copia.querySelector('head');
@@ -613,6 +615,268 @@
     marcarPendente(lerPendente());
   }
 
+  // === Testes manuais previstos (make evidencias) ===
+  // Os de observability/testes_manuais.yaml vêm em data-qa-previstos e
+  // entram no bloco "Testes manuais" uma vez por report, sem Status (só
+  // contam depois de preenchidos). Um que o tester apagou não volta.
+  var CHAVE_PREVISTOS = 'qa-previstos:' + location.pathname;
+
+  function incluirPrevistos() {
+    var painel = document.querySelector('.qa-dashboard[data-qa-previstos]');
+
+    if (CLASSIFICACAO_FIXA || !painel) {
+      return;
+    }
+
+    var previstos;
+    var incluidos;
+
+    try {
+      previstos = JSON.parse(painel.getAttribute('data-qa-previstos'));
+      incluidos = JSON.parse(localStorage.getItem(CHAVE_PREVISTOS) || '[]');
+    } catch (erro) {
+      return;
+    }
+
+    var novos = previstos.filter(function (previsto) {
+      return incluidos.indexOf(previsto.ct) === -1;
+    });
+
+    if (!novos.length) {
+      return;
+    }
+
+    novos.forEach(function (previsto) {
+      testesManuais.push({
+        id: 'p-' + previsto.ct,
+        resultado: '',
+        teste: previsto.ct + ' · ' + previsto.descricao,
+        fluxo: previsto.fluxo || '',
+        categoria: '',
+        tipo: '',
+        apontamento: '',
+        obs: '',
+        evidencias: [],
+      });
+      incluidos.push(previsto.ct);
+    });
+
+    gravarLista(CHAVE_MANUAIS, testesManuais);
+
+    try {
+      localStorage.setItem(CHAVE_PREVISTOS, JSON.stringify(incluidos));
+    } catch (erro) {
+      // Sem armazenamento: voltariam ao recarregar, o que é inofensivo.
+    }
+
+    redesenharTestesManuais();
+  }
+
+  // === Ficha do teste ===
+  // Identificação da entrega (GMUD/demanda, solicitante, escopo...) e o
+  // veredito do QA (Apto à produção), preenchidos à mão. Fica recolhida
+  // abaixo dos cards, para o report abrir focado nos totais; o Apto à
+  // produção, preenchido, aparece também no Resumo executivo. Salva no
+  // navegador como os testes manuais; a cópia do "Baixar HTML" a leva
+  // gravada, só leitura.
+  var CHAVE_FICHA = 'qa-ficha:' + location.pathname;
+  var CAMPOS_DA_FICHA = [
+    ['titulo', 'Título', 'texto', 'Ex.: Teste ifPontoCell - Versão 2.7.4'],
+    ['demanda', 'GMUD/Demanda', 'texto', 'Ex.: 0418/170034'],
+    ['solicitante', 'Solicitante', 'texto', ''],
+    ['responsavel', 'Responsável QA', 'texto', ''],
+    ['dataSolicitacao', 'Data da solicitação', 'data', ''],
+    ['tipo', 'Tipo de teste', ['Incremental', 'Total', 'Integração']],
+    ['situacao', 'Situação', ['Em andamento', 'Finalizado']],
+    ['apto', 'Apto à produção', ['Sim', 'Não', 'Com ressalvas']],
+    ['link', 'Link do ambiente', 'link', 'https://...'],
+    ['escopo', 'Escopo', 'escopo', 'O que entrou na versão (ajustes, melhorias...)'],
+  ];
+  var ficha = lerFicha();
+
+  function lerFicha() {
+    if (CLASSIFICACAO_FIXA) {
+      return window.QA_FICHA_FIXA || {};
+    }
+
+    try {
+      return JSON.parse(localStorage.getItem(CHAVE_FICHA) || '{}');
+    } catch (erro) {
+      return {};
+    }
+  }
+
+  function gravarFicha() {
+    var preenchida = Object.keys(ficha).some(function (chave) {
+      return ficha[chave];
+    });
+
+    try {
+      if (preenchida) {
+        localStorage.setItem(CHAVE_FICHA, JSON.stringify(ficha));
+      } else {
+        localStorage.removeItem(CHAVE_FICHA);
+      }
+    } catch (erro) {
+      // Sem armazenamento: vale só nesta aba.
+    }
+
+    marcarPendente(true);
+    atualizarResumoDaFicha();
+  }
+
+  function dataBrasileira(valor) {
+    var partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(valor || '');
+
+    return partes ? partes[3] + '/' + partes[2] + '/' + partes[1] : valor;
+  }
+
+  // Na cópia, o link só vira link se for http(s).
+  function valorFixo(campo, valor) {
+    if (!valor) {
+      return criar('span', 'qa-ficha-vazio', '—');
+    }
+
+    if (campo[2] === 'data') {
+      return criar('span', 'qa-ficha-valor', dataBrasileira(valor));
+    }
+
+    if (campo[2] === 'link' && /^https?:\/\//i.test(valor)) {
+      var link = criar('a', 'qa-ficha-valor', valor);
+
+      link.href = valor;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      return link;
+    }
+
+    var classe = 'qa-ficha-valor' + (campo[2] === 'escopo' ? ' qa-obs-fixa' : '');
+    var texto = criar('span', classe, valor);
+
+    texto.setAttribute('data-valor', valor);
+    return texto;
+  }
+
+  function campoDaFicha(campo) {
+    var valor = ficha[campo[0]] || '';
+    var editor;
+
+    if (Array.isArray(campo[2])) {
+      editor = campoLista(campo[0], campo[2], valor, 'qa-manual-campo', 'Selecionar');
+    } else if (campo[2] === 'escopo') {
+      editor = criar('textarea', 'qa-manual-campo qa-ficha-escopo');
+      editor.rows = 5;
+      editor.value = valor;
+      editor.placeholder = campo[3];
+    } else {
+      editor = criar('input', 'qa-manual-campo');
+      editor.type = campo[2] === 'data' ? 'date' : 'text';
+      editor.value = valor;
+      editor.placeholder = campo[3] || '';
+    }
+
+    editor.setAttribute('data-ficha', campo[0]);
+    return editor;
+  }
+
+  function garantirFicha() {
+    if (document.querySelector('.qa-ficha')) {
+      return;
+    }
+
+    var anterior =
+      document.querySelector('.qa-kpi-grupo[data-grupo="melhorias"]') ||
+      document.querySelector('.qa-kpi-grid');
+
+    if (!anterior) {
+      return;
+    }
+
+    var bloco = criar('details', 'qa-kpi-grupo qa-ficha');
+    var barra = criar('summary');
+    var campos = criar('div', 'qa-ficha-campos');
+
+    bloco.setAttribute('data-grupo', 'ficha');
+    barra.appendChild(criar('span', 'qa-kpi-grupo-titulo', 'Ficha do teste'));
+    barra.appendChild(criar('span', 'qa-kpi-grupo-resumo'));
+    bloco.appendChild(barra);
+
+    CAMPOS_DA_FICHA.forEach(function (campo) {
+      var item = criar(
+        'label',
+        'qa-ficha-campo' +
+          (campo[2] === 'escopo' || campo[2] === 'link' ? ' qa-ficha-campo--largo' : '')
+      );
+
+      item.appendChild(criar('span', 'qa-context-label', campo[1]));
+      item.appendChild(
+        CLASSIFICACAO_FIXA ? valorFixo(campo, ficha[campo[0]]) : campoDaFicha(campo)
+      );
+      campos.appendChild(item);
+    });
+
+    bloco.appendChild(campos);
+    bloco.open = gruposAbertos().indexOf('ficha') !== -1;
+    bloco.addEventListener('toggle', function () {
+      lembrarGrupo('ficha', bloco.open);
+    });
+    anterior.insertAdjacentElement('afterend', bloco);
+
+    atualizarResumoDaFicha();
+  }
+
+  // Barra da ficha e o Apto à produção no Resumo executivo.
+  function atualizarResumoDaFicha() {
+    var resumo = document.querySelector('.qa-ficha .qa-kpi-grupo-resumo');
+    var partes = [];
+
+    if (ficha.demanda) {
+      partes.push('GMUD ' + ficha.demanda);
+    }
+    if (ficha.situacao) {
+      partes.push(ficha.situacao);
+    }
+    if (ficha.apto) {
+      partes.push('Apto: ' + ficha.apto);
+    }
+
+    if (resumo) {
+      resumo.textContent = partes.length ? partes.join(' · ') : 'Não preenchida';
+    }
+
+    var alerta = document.querySelector('.qa-execution-alert');
+    var apto = document.querySelector('.qa-apto');
+
+    if (!alerta) {
+      return;
+    }
+
+    if (!apto) {
+      apto = criar('span', 'qa-apto');
+      alerta.appendChild(apto);
+    }
+
+    apto.hidden = !ficha.apto;
+    apto.textContent = 'Apto à produção: ' + (ficha.apto || '');
+    apto.setAttribute('data-valor', ficha.apto || '');
+  }
+
+  function atualizarFicha(evento) {
+    var campo = evento.target;
+    var chave = campo.getAttribute && campo.getAttribute('data-ficha');
+
+    if (!chave) {
+      return;
+    }
+
+    ficha[chave] = campo.value;
+    campo.setAttribute('data-valor', campo.value);
+    gravarFicha();
+  }
+
+  document.addEventListener('input', atualizarFicha);
+  document.addEventListener('change', atualizarFicha);
+
   // === Proteção contra perda ===
   // O que é preenchido à mão fica no navegador, ligado ao caminho deste
   // arquivo: some se o report for movido, apagado (o pytest_report guarda
@@ -654,6 +918,8 @@
     'qa-manuais:',
     'qa-melhorias:',
     'qa-pendente:',
+    'qa-ficha:',
+    'qa-previstos:',
   ];
 
   function caminhoDaChave(chave) {
@@ -1871,7 +2137,7 @@
               RESULTADOS_MANUAIS,
               teste.resultado,
               'qa-manual-campo qa-manual-resultado',
-              eMelhoria ? 'Selecionar' : ''
+              eMelhoria || !teste.resultado ? 'Selecionar' : ''
             )
       );
     } else if (tipo === 'testId') {
@@ -2895,8 +3161,10 @@
     traduzirColunas();
     prepararBotaoTema();
     prepararBotaoBaixar();
+    incluirPrevistos();
     aoMudarAPagina();
     atualizarTotais();
+    garantirFicha();
     cuidarDoArmazenamento();
   }
 

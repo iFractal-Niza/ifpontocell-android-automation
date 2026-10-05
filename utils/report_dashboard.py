@@ -816,6 +816,15 @@ def build_dashboard_html(
         )
     )
 
+    # Testes manuais previstos (make evidencias): o report.js os inclui no
+    # bloco "Testes manuais", sem Status, para o tester preencher.
+    previstos = dashboard_stats.get("testes_manuais_previstos") or []
+    atributo_previstos = (
+        f' data-qa-previstos="{html.escape(json.dumps(previstos))}"'
+        if previstos
+        else ""
+    )
+
     flows_html = _build_flows_html(fluxos)
     ressalvas_html = _build_ressalvas_html(dashboard_stats.get("pulados"))
     demorados_html = _build_demorados_html(dashboard_stats.get("duracoes"))
@@ -823,7 +832,10 @@ def build_dashboard_html(
 
     return f"""
         {_SCRIPT_TEMA_INICIAL}
-        <div class="qa-dashboard" data-qa-totais="{totais_automacao}">
+        <div
+            class="qa-dashboard"
+            data-qa-totais="{totais_automacao}"{atributo_previstos}
+        >
             <header class="qa-dashboard-header">
                 <div class="qa-dashboard-title">
                     <span class="qa-dashboard-eyebrow">
