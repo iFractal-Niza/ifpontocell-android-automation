@@ -78,7 +78,6 @@ FULL_SUITE := \
 
 # Relatórios (REPORTS vem do DEVICE, em "Aparelho")
 SCREENSHOTS = $(REPORTS)/screenshots
-EXPORT_REPORT_PDF := scripts/export_report_pdf.py
 
 # === Arquivos locais (não versionados) ===
 #
@@ -160,7 +159,7 @@ DEBUG_TARGET = $(if $(test),$(test),$(FULL_SUITE))
         run evidencias debug unit test-report smoke regression \
         ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto status ponto registro-geo jornada holerite informe humor ass-espelho sobre dados-pessoais privacidade alterar-pin alterar-senha-sistema zerar-dados \
         api \
-        clear report report-pdf renumerar-ct \
+        clear report renumerar-ct \
         git-status commit push update-dev update-feature start-feature \
         merge-dev merge-main merge-branch delete-branch
 
@@ -222,7 +221,6 @@ help:
 	@echo "=== Reports ==="
 	@echo "  make clear                 Limpa reports, vídeos e caches (todos os aparelhos; DEVICE=… só um)"
 	@echo "  make report                Abre o último report HTML"
-	@echo "  make report-pdf            Exporta o último report HTML para PDF"
 	@echo "  make renumerar-ct          Mostra a renumeração dos CTs na ordem da suíte (aplicar=1 aplica)"
 	@echo ""
 	@echo "=== Git ==="
@@ -605,13 +603,6 @@ report:
 # Renumera os CTs na ordem da suíte. Sem aplicar=1, só mostra o mapa.
 renumerar-ct: check-venv
 	@$(PYTHON) scripts/renumerar_ct.py $(if $(aplicar),--aplicar,)
-
-report-pdf: check-venv
-	@test -f "$(EXPORT_REPORT_PDF)" \
-		|| ( echo "Script de exportação não encontrado: $(EXPORT_REPORT_PDF)"; \
-		     echo "Crie o script antes de executar 'make report-pdf'."; \
-		     exit 1 )
-	@$(PYTHON) "$(EXPORT_REPORT_PDF)"
 
 # === Git ===
 git-status:

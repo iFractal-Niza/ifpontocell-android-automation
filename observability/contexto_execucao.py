@@ -1,7 +1,7 @@
 """
 Identificação da execução exibida no cabeçalho do dashboard: quando
 rodou, quanto durou, em qual ambiente, em qual dispositivo e qual versão
-do app. Sem isso, um report (ou PDF) enviado a alguém não diz o que foi
+do app. Sem isso, um report enviado a alguém não diz o que foi
 testado nem onde.
 
 Nada aqui pode derrubar a geração do report: o que não puder ser lido é

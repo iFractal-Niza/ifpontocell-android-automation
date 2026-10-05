@@ -266,3 +266,16 @@ mais limpo sem ela. Saíram a seção, o `observability/historico.py`, o
 `history.json` e o `make limpar-historico`, como na automação iOS. Um
 `history.json` antigo que sobre na pasta do report não é mais lido (o
 `make clear` o apaga).
+
+---
+
+## Export do report em PDF removido
+
+**Data:** 2026-10-05
+
+Saíram o `make report-pdf`, o `scripts/export_report_pdf.py`, o
+`reports/assets/print.css` e o WeasyPrint. O PDF não tinha o que passou a
+existir só na página (testes manuais, melhorias, classificação, ficha do
+teste) e não era usado: para compartilhar, vale a cópia do **Baixar
+HTML**. Para papel, o imprimir do navegador (Cmd+P) segue funcionando.
+

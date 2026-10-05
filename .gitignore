@@ -30,8 +30,8 @@ ONDE_PAREI.md
 .pytest_cache/
 .cache/
 # reports/ é gerado a cada execução, mas reports/assets/ guarda os
-# arquivos versionados embutidos no report: estilos do HTML e do PDF
-# (style.css, print.css) e o script da página (report.js).
+# arquivos versionados embutidos no report: o estilo (style.css) e o
+# script da página (report.js).
 reports/*
 !reports/assets/
 

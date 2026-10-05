@@ -1133,8 +1133,8 @@
   // Testes feitos fora da automação, acrescentados à mão (botão "+"),
   // num bloco próprio abaixo da tabela dos automatizados, com as mesmas
   // colunas. Salvos no navegador como a classificação; a cópia do
-  // "Baixar HTML" os leva gravados, só leitura. Não entram no dashboard
-  // nem no PDF.
+  // "Baixar HTML" os leva gravados, só leitura. Com Status, entram nos
+  // totais do dashboard.
   //
   // O bloco "Melhorias" (sugestões encontradas nos testes) segue o mesmo
   // modelo e as mesmas colunas (Melhoria no lugar de Teste): implementada,

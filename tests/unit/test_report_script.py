@@ -61,7 +61,7 @@ def test_css_da_pagina_e_ascii_fora_dos_comentarios():
     import re
     from pathlib import Path
 
-    for nome in ("style.css", "print.css"):
+    for nome in ("style.css",):
         css = (Path(PROJECT_ROOT) / "reports" / "assets" / nome).read_text(
             encoding="utf-8"
         )

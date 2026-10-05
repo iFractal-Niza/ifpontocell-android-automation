@@ -22,7 +22,6 @@ urllib3==2.7.0
 typing_extensions==4.15.0
 
 # === Exportação de relatórios ===
-WeasyPrint==69.0
 
 # === Qualidade de código ===
 # Configuração em pyproject.toml. Uso: make lint / make format.

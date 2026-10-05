@@ -324,29 +324,3 @@ def test_nodeid_e_escapado_no_atributo():
     )
 
     assert 'data-teste="t.py::test_x[&quot;a&quot;]"' in celula
-
-
-def test_pdf_tira_as_colunas_de_classificacao():
-    from scripts.export_report_pdf import _sem_classificacao
-
-    linha = _linha_original()
-    pytest_html_results_table_row(_report(failed=True), linha)
-    cabecalho = ["<th>Result</th>", "<th>Test</th>"]
-    pytest_html_results_table_header(cabecalho)
-
-    sem = linha[:2] + linha[5:]
-    assert _sem_classificacao("".join(linha)) == "".join(sem)
-    assert _sem_classificacao("".join(cabecalho)) == (
-        "<th>Test</th><th>Status</th>"
-    )
-
-
-def test_pdf_traduz_o_status():
-    from scripts.export_report_pdf import _traduzir_status
-
-    assert _traduzir_status(
-        '<td class="col-testId">x</td><td class="col-result">Failed</td>'
-    ) == ('<td class="col-testId">x</td><td class="col-result">Falhou</td>')
-    assert _traduzir_status('<td class="col-result">Novo</td>') == (
-        '<td class="col-result">Novo</td>'
-    )

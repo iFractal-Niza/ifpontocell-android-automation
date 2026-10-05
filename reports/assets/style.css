@@ -1,7 +1,7 @@
 /******************************
  * TOKENS E TEMAS
  *
- * Seguem os temas do sistema (ifGestor): Light (padrão, e o do PDF) e
+ * Seguem os temas do sistema (ifGestor): Light (padrão) e
  * Dark, alternados pelo botão do cabeçalho (report.js grava a escolha
  * e aplica data-theme="dark" no <html>). O turquesa é o da marca.
  * As cores de status (verde, âmbar, laranja, vermelho) têm significado
@@ -279,9 +279,7 @@ span.skipped {
 }
 
 /******************************
- * PRINT (só afeta impressão literal do navegador — Cmd+P.
- * Não roda em "make report-pdf", que força media_type="screen"
- * no WeasyPrint. Ver reports/assets/print.css para a exportação.)
+ * PRINT (impressão do navegador, Cmd+P)
  ******************************/
 @media print {
 
