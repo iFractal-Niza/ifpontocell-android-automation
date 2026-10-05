@@ -657,7 +657,6 @@
     gravarLista(CHAVE_MANUAIS, testesManuais);
     gravarLista(CHAVE_MELHORIAS, melhorias);
     atualizarTotais();
-    atualizarResumosDosGrupos();
   }
 
   // === Totais do dashboard com os testes manuais e as melhorias ===
@@ -1227,7 +1226,7 @@
       gravarTestesManuais();
     }
 
-    // Mudou de fluxo: a linha muda de grupo. Redesenha depois que o foco
+    // Mudou de fluxo: a linha muda de lugar. Redesenha depois que o foco
     // chegou ao próximo campo e o devolve a ele.
     if (item && chaveDeFluxo(item.fluxo) !== chaveDeFluxo(anterior)) {
       setTimeout(redesenharMantendoFoco, 0);
@@ -1244,112 +1243,40 @@
     campo.hidden = true;
   });
 
-  // === Grupos por fluxo nos blocos manuais ===
-  // Uma linha de grupo por fluxo (ordem em que aparece; "Sem fluxo" no
-  // fim) com a contagem. Sem nenhum item com fluxo, não há grupos.
-  function gruposPorFluxo(lista) {
-    var grupos = [];
+  // === Ordem por fluxo nos blocos manuais ===
+  // Itens do mesmo fluxo juntos (na ordem em que o fluxo aparece; sem
+  // fluxo no fim), com uma borda mais forte na troca de fluxo. Sem
+  // título de grupo: o fluxo já está em cada linha e a contagem, em
+  // Qualidade por fluxo.
+  function desenharGrupos(corpo, lista, colunas, eMelhoria) {
+    var ordem = [];
     var porChave = {};
 
     lista.forEach(function (item) {
       var chave = chaveDeFluxo(item.fluxo);
 
       if (!porChave[chave]) {
-        porChave[chave] = {
-          chave: chave,
-          nome: chave ? item.fluxo.trim() : 'Sem fluxo',
-          itens: [],
-        };
-        grupos.push(porChave[chave]);
+        porChave[chave] = [];
+        ordem.push(chave);
       }
 
-      porChave[chave].itens.push(item);
+      porChave[chave].push(item);
     });
 
-    grupos.sort(function (a, b) {
-      return (a.chave ? 0 : 1) - (b.chave ? 0 : 1);
+    ordem.sort(function (a, b) {
+      return (a ? 0 : 1) - (b ? 0 : 1);
     });
 
-    return grupos;
-  }
+    ordem.forEach(function (chave, posicao) {
+      porChave[chave].forEach(function (item, indice) {
+        var linha = linhaManual(item, colunas, eMelhoria);
 
-  function resumoDoGrupo(itens, eMelhoria) {
-    var partes = [
-      itens.length +
-        (eMelhoria
-          ? plural(itens.length, ' melhoria', ' melhorias')
-          : plural(itens.length, ' teste', ' testes')),
-    ];
+        if (posicao > 0 && indice === 0) {
+          linha.classList.add('qa-inicio-de-fluxo');
+        }
 
-    [
-      ['Passou', 'passou', 'passaram'],
-      ['Falhou', 'falhou', 'falharam'],
-      ['Pulado', 'pulado', 'pulados'],
-    ].forEach(function (status) {
-      var quantidade = itens.filter(function (item) {
-        return item.resultado === status[0];
-      }).length;
-
-      if (quantidade) {
-        partes.push(quantidade + ' ' + plural(quantidade, status[1], status[2]));
-      }
-    });
-
-    return partes.join(' · ');
-  }
-
-  function desenharGrupos(corpo, lista, colunas, eMelhoria) {
-    var grupos = gruposPorFluxo(lista);
-    var agrupar = grupos.some(function (grupo) {
-      return grupo.chave;
-    });
-
-    grupos.forEach(function (grupo) {
-      if (agrupar) {
-        var linha = criar('tr', 'qa-grupo-fluxo');
-        var celula = criar('td');
-
-        celula.colSpan = colunas.length;
-        celula.appendChild(
-          criar(
-            'span',
-            grupo.chave ? 'qa-grupo-nome' : 'qa-grupo-nome qa-grupo-nome--sem',
-            grupo.chave ? grupo.nome.toUpperCase() : grupo.nome
-          )
-        );
-        celula.appendChild(
-          criar('span', 'qa-grupo-resumo', resumoDoGrupo(grupo.itens, eMelhoria))
-        );
-        linha.setAttribute('data-grupo', grupo.chave);
-        linha.appendChild(celula);
         corpo.appendChild(linha);
-      }
-
-      grupo.itens.forEach(function (item) {
-        corpo.appendChild(linhaManual(item, colunas, eMelhoria));
       });
-    });
-  }
-
-  // Contagens dos grupos sem redesenhar (o Status mudou numa lista).
-  function atualizarResumosDosGrupos() {
-    [
-      ['.qa-bloco-manuais', testesManuais, false],
-      ['.qa-melhorias-tabela', melhorias, true],
-    ].forEach(function (bloco) {
-      document
-        .querySelectorAll(bloco[0] + ' tr.qa-grupo-fluxo')
-        .forEach(function (linha) {
-          var chave = linha.getAttribute('data-grupo');
-          var itens = bloco[1].filter(function (item) {
-            return chaveDeFluxo(item.fluxo) === chave;
-          });
-
-          linha.querySelector('.qa-grupo-resumo').textContent = resumoDoGrupo(
-            itens,
-            bloco[2]
-          );
-        });
     });
   }
 
