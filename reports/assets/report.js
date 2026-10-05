@@ -657,6 +657,7 @@
     gravarLista(CHAVE_MANUAIS, testesManuais);
     gravarLista(CHAVE_MELHORIAS, melhorias);
     atualizarTotais();
+    atualizarResumosDosGrupos();
   }
 
   // === Totais do dashboard com os testes manuais e as melhorias ===
@@ -1157,6 +1158,7 @@
     botao.title = origem + ': fluxo em Qualidade por fluxo';
     botao.classList.toggle('qa-fluxo-botao--preenchido', !!(valor || '').trim());
     campo.setAttribute('list', 'qa-fluxos-sugeridos');
+    campo.setAttribute('data-fluxo-inicial', valor || '');
     campo.hidden = true;
 
     caixa.appendChild(botao);
@@ -1179,11 +1181,56 @@
     campo.focus();
   });
 
+  // Grafia do fluxo: a do card do report (como aparece) ou a do primeiro
+  // outro item com o mesmo nome; "teste ricadio" vira "Teste Ricadio".
+  function grafiaDoFluxo(nome, item) {
+    var chave = chaveDeFluxo(nome);
+
+    if (!chave) {
+      return '';
+    }
+
+    var cards = document.querySelectorAll('.qa-flow-row[data-qa-fluxo]');
+
+    for (var i = 0; i < cards.length; i += 1) {
+      try {
+        var base = JSON.parse(cards[i].getAttribute('data-qa-fluxo'));
+
+        if (chaveDeFluxo(base.nome) === chave) {
+          return base.nome.toUpperCase();
+        }
+      } catch (erro) {
+        // Card sem dados: segue para o próximo.
+      }
+    }
+
+    var outro = testesManuais.concat(melhorias).filter(function (outroItem) {
+      return outroItem !== item && chaveDeFluxo(outroItem.fluxo) === chave;
+    })[0];
+
+    return outro ? outro.fluxo.trim() : nome.trim();
+  }
+
   document.addEventListener('focusout', function (evento) {
     var campo = evento.target;
 
     if (!campo.classList || !campo.classList.contains('qa-manual-fluxo')) {
       return;
+    }
+
+    var item = testeManualDa(campo);
+    var anterior = campo.getAttribute('data-fluxo-inicial') || '';
+
+    if (item) {
+      item.fluxo = grafiaDoFluxo(campo.value, item);
+      campo.value = item.fluxo;
+      gravarTestesManuais();
+    }
+
+    // Mudou de fluxo: a linha muda de grupo. Redesenha depois que o foco
+    // chegou ao próximo campo e o devolve a ele.
+    if (item && chaveDeFluxo(item.fluxo) !== chaveDeFluxo(anterior)) {
+      setTimeout(redesenharMantendoFoco, 0);
     }
 
     var botao = campo.parentNode.querySelector('.qa-fluxo-botao');
@@ -1196,6 +1243,136 @@
     botao.hidden = false;
     campo.hidden = true;
   });
+
+  // === Grupos por fluxo nos blocos manuais ===
+  // Uma linha de grupo por fluxo (ordem em que aparece; "Sem fluxo" no
+  // fim) com a contagem. Sem nenhum item com fluxo, não há grupos.
+  function gruposPorFluxo(lista) {
+    var grupos = [];
+    var porChave = {};
+
+    lista.forEach(function (item) {
+      var chave = chaveDeFluxo(item.fluxo);
+
+      if (!porChave[chave]) {
+        porChave[chave] = {
+          chave: chave,
+          nome: chave ? item.fluxo.trim() : 'Sem fluxo',
+          itens: [],
+        };
+        grupos.push(porChave[chave]);
+      }
+
+      porChave[chave].itens.push(item);
+    });
+
+    grupos.sort(function (a, b) {
+      return (a.chave ? 0 : 1) - (b.chave ? 0 : 1);
+    });
+
+    return grupos;
+  }
+
+  function resumoDoGrupo(itens, eMelhoria) {
+    var partes = [
+      itens.length +
+        (eMelhoria
+          ? plural(itens.length, ' melhoria', ' melhorias')
+          : plural(itens.length, ' teste', ' testes')),
+    ];
+
+    [
+      ['Passou', 'passou', 'passaram'],
+      ['Falhou', 'falhou', 'falharam'],
+      ['Pulado', 'pulado', 'pulados'],
+    ].forEach(function (status) {
+      var quantidade = itens.filter(function (item) {
+        return item.resultado === status[0];
+      }).length;
+
+      if (quantidade) {
+        partes.push(quantidade + ' ' + plural(quantidade, status[1], status[2]));
+      }
+    });
+
+    return partes.join(' · ');
+  }
+
+  function desenharGrupos(corpo, lista, colunas, eMelhoria) {
+    var grupos = gruposPorFluxo(lista);
+    var agrupar = grupos.some(function (grupo) {
+      return grupo.chave;
+    });
+
+    grupos.forEach(function (grupo) {
+      if (agrupar) {
+        var linha = criar('tr', 'qa-grupo-fluxo');
+        var celula = criar('td');
+
+        celula.colSpan = colunas.length;
+        celula.appendChild(
+          criar(
+            'span',
+            grupo.chave ? 'qa-grupo-nome' : 'qa-grupo-nome qa-grupo-nome--sem',
+            grupo.chave ? grupo.nome.toUpperCase() : grupo.nome
+          )
+        );
+        celula.appendChild(
+          criar('span', 'qa-grupo-resumo', resumoDoGrupo(grupo.itens, eMelhoria))
+        );
+        linha.setAttribute('data-grupo', grupo.chave);
+        linha.appendChild(celula);
+        corpo.appendChild(linha);
+      }
+
+      grupo.itens.forEach(function (item) {
+        corpo.appendChild(linhaManual(item, colunas, eMelhoria));
+      });
+    });
+  }
+
+  // Contagens dos grupos sem redesenhar (o Status mudou numa lista).
+  function atualizarResumosDosGrupos() {
+    [
+      ['.qa-bloco-manuais', testesManuais, false],
+      ['.qa-melhorias-tabela', melhorias, true],
+    ].forEach(function (bloco) {
+      document
+        .querySelectorAll(bloco[0] + ' tr.qa-grupo-fluxo')
+        .forEach(function (linha) {
+          var chave = linha.getAttribute('data-grupo');
+          var itens = bloco[1].filter(function (item) {
+            return chaveDeFluxo(item.fluxo) === chave;
+          });
+
+          linha.querySelector('.qa-grupo-resumo').textContent = resumoDoGrupo(
+            itens,
+            bloco[2]
+          );
+        });
+    });
+  }
+
+  // Redesenha os blocos e devolve o foco ao campo que o tinha (mesma
+  // linha e mesmo campo).
+  function redesenharMantendoFoco() {
+    var ativo = document.activeElement;
+    var linha = ativo && ativo.closest ? ativo.closest('tr.qa-manual-row') : null;
+    var id = linha ? linha.getAttribute('data-id') : '';
+    var chave = ativo && ativo.getAttribute ? ativo.getAttribute('data-chave') : '';
+
+    redesenharTestesManuais();
+
+    if (id && chave) {
+      var alvo = document.querySelector(
+        'tr.qa-manual-row[data-id="' + id + '"] [data-chave="' + chave + '"]'
+      );
+
+      if (alvo && !alvo.hidden) {
+        alvo.focus();
+      }
+    }
+  }
 
   // Observação do tester: várias linhas.
   function campoObservacao(valor) {
@@ -1374,9 +1551,7 @@
       cabecalho.appendChild(linhaDoCabecalho);
       tabela.appendChild(cabecalho);
 
-      testesManuais.forEach(function (teste) {
-        corpo.appendChild(linhaManual(teste, colunas));
-      });
+      desenharGrupos(corpo, testesManuais, colunas, false);
       tabela.appendChild(corpo);
       bloco.appendChild(tabela);
     } else {
@@ -1466,9 +1641,7 @@
       cabecalho.appendChild(linhaDoCabecalho);
       tabela.appendChild(cabecalho);
 
-      melhorias.forEach(function (melhoria) {
-        corpo.appendChild(linhaManual(melhoria, colunas, true));
-      });
+      desenharGrupos(corpo, melhorias, colunas, true);
       tabela.appendChild(corpo);
       bloco.appendChild(tabela);
     } else {
