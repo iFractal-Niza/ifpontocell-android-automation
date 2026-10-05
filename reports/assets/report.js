@@ -456,6 +456,7 @@
     ) {
       gravarClassificacao(lista);
       marcarClassificacao(lista);
+      atualizarCardsManuais();
     }
   });
 
@@ -888,28 +889,46 @@
   // === Cards dos blocos manuais: Corrigido, Não corrigido, Melhorias ===
   // Segunda linha de cards, alinhada à primeira; só aparece com algum
   // teste manual ou melhoria. Mesma estrutura do _build_kpi_card.
+  // Melhoria implementada / não implementada contam a coluna Status
+  // apont. nas três tabelas (automatizados, manuais e melhorias).
   var CARDS_MANUAIS = [
     ['corrigido', 'passed', 'Corrigido', 'Retestados e aprovados'],
     ['nao-corrigido', 'failed', 'Não corrigido', 'O problema continua'],
     ['melhorias', 'success', 'Qtd melhorias', 'Melhorias registradas'],
+    [
+      'melhoria-implementada',
+      'passed',
+      'Melhoria implementada',
+      'Status apont.',
+    ],
+    [
+      'melhoria-nao-implementada',
+      'failed',
+      'Melhoria não implementada',
+      'Status apont.',
+    ],
   ];
 
+  // Cria a linha (e os cards que faltarem: uma cópia baixada antes pode
+  // ter só parte deles).
   function garantirCardsManuais() {
     var linha = document.querySelector('.qa-kpi-grid--manuais');
-
-    if (linha) {
-      return linha;
-    }
-
     var principal = document.querySelector('.qa-kpi-grid');
 
-    if (!principal) {
-      return null;
+    if (!linha) {
+      if (!principal) {
+        return null;
+      }
+
+      linha = criar('section', 'qa-kpi-grid qa-kpi-grid--manuais');
+      principal.insertAdjacentElement('afterend', linha);
     }
 
-    linha = criar('section', 'qa-kpi-grid qa-kpi-grid--manuais');
-
     CARDS_MANUAIS.forEach(function (definicao) {
+      if (linha.querySelector('[data-qa-kpi="' + definicao[0] + '"]')) {
+        return;
+      }
+
       var card = criar('div', 'qa-kpi-card ' + definicao[1]);
 
       card.setAttribute('data-qa-kpi', definicao[0]);
@@ -919,9 +938,26 @@
       linha.appendChild(card);
     });
 
-    principal.insertAdjacentElement('afterend', linha);
-
     return linha;
+  }
+
+  // Valores da coluna Status apont. nas três tabelas. Automatizados: o
+  // que foi escolhido (ou, na cópia, o que veio gravado nela).
+  function apontamentos() {
+    var escolhas = CLASSIFICACAO_FIXA || classificacoesEscolhidas();
+    var valores = Object.keys(escolhas)
+      .filter(function (chave) {
+        return /:apontamento$/.test(chave);
+      })
+      .map(function (chave) {
+        return escolhas[chave];
+      });
+
+    return valores.concat(
+      testesManuais.concat(melhorias).map(function (item) {
+        return item.apontamento;
+      })
+    );
   }
 
   function atualizarCardsManuais() {
@@ -939,8 +975,24 @@
     };
     var corrigidos = contar('Corrigido');
     var naoCorrigidos = contar('Não corrigido');
+    var apontados = apontamentos();
+    var contarApontamento = function (valor) {
+      return apontados.filter(function (apontado) {
+        return apontado === valor;
+      }).length;
+    };
+    var implementadas = contarApontamento('Melhoria implementada');
+    var naoImplementadas = contarApontamento('Melhoria não implementada');
 
-    linha.hidden = !itens.length;
+    linha.hidden = !itens.length && !implementadas && !naoImplementadas;
+
+    preencherCard('melhoria-implementada', implementadas, '', implementadas > 0);
+    preencherCard(
+      'melhoria-nao-implementada',
+      naoImplementadas,
+      '',
+      naoImplementadas > 0
+    );
 
     preencherCard('corrigido', corrigidos, '', corrigidos > 0);
     preencherCard('nao-corrigido', naoCorrigidos, '', naoCorrigidos > 0);
