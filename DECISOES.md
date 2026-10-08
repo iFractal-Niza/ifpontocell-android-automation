@@ -288,9 +288,9 @@ HTML**. Para papel, o imprimir do navegador (Cmd+P) segue funcionando.
 O report (assets, dashboard, colunas da tabela, testes manuais
 previstos) era copiado entre as automações iOS, Android e web, e cada
 mudança virava três commits; os arquivos já começavam a divergir. Foi
-para o pacote **ifponto-qa-report** (repositório próprio), instalado
+para o pacote **ifponto-observability** (repositório próprio), instalado
 pelo `requirements.txt` numa versão fixa (`@v1.0.0`) e registrado como
-plugin no `conftest.py` (`qa_report.tabela`, `qa_report.testes_manuais`).
+plugin no `conftest.py` (`qa_observability.tabela`, `qa_observability.testes_manuais`).
 Aqui fica o que é da plataforma: captura das evidências (driver do
 Appium), vídeo, identificação da execução, métricas e o
 `testes_manuais.yaml`. Os testes do report no navegador (antes
@@ -306,9 +306,24 @@ trocadas duas vezes).
 As métricas do dashboard, o catálogo de CTs (leitura, validação,
 renumeração), as evidências sob demanda e a pasta do report eram
 iguais nas três automações, a não ser por o mapa de fluxos, a ordem da suíte e o print (driver do Appium ou page do Playwright). Foram para o pacote
-(`v1.1.0`: `qa_report.execution_metrics`, `casos_teste`, `evidencias`,
+(`v1.1.0`: `qa_observability.execution_metrics`, `casos_teste`, `evidencias`,
 `pastas`), e o que muda fica no `observability/automacao.py`, que o
-pacote importa sozinho: as pastas com CT (`tests/app`, `tests/api`), a ordem da suíte (a `APP_SUITE` do Makefile e depois `tests/api`), o nome dos fluxos (`fluxo_por_arquivo`) e o print pelo `driver.save_screenshot`. O `qa_report.evidencias` também é
+pacote importa sozinho: as pastas com CT (`tests/app`, `tests/api`), a ordem da suíte (a `APP_SUITE` do Makefile e depois `tests/api`), o nome dos fluxos (`fluxo_por_arquivo`) e o print pelo `driver.save_screenshot`. O `qa_observability.evidencias` também é
 plugin: registra o CT de cada teste, que vai na frente do nome do print
 das evidências. Os testes daqui conferem só a configuração (fluxos, CTs
 únicos, ordem da suíte, print); o resto é testado no pacote.
+
+
+## O plugin do report também no pacote
+
+**Data:** 2026-10-07
+
+O `observability/pytest_report.py` era igual no iOS e no Android (só o
+título mudava) e, na web, igual no esqueleto: nome e pasta do report,
+limpeza dos antigos, aviso de pulados, métricas de cada etapa, título com
+o CT, erro resumido, evidências, a página e o resumo no terminal. Isso
+virou o plugin `qa_observability.relatorio` (pacote `v1.2.0`). Aqui ficou só
+o que é do Appium: achar o driver nas fixtures, o print e a árvore da tela (XML) na falha e o vídeo embutido, em `observability/anexos.py`, ligado pela configuração
+(`observability/automacao.py`: `sessao_de`, `na_falha`, `na_etapa`,
+`contexto`, título e nota). O `make unit` desliga o report com
+`-p no:qa_observability.relatorio`. Os plugins do pacote vêm primeiro no `conftest.py`: o `observability.video` importa o `qa_observability.relatorio` (para achar o driver), e um plugin já importado não teria o assert reescrito pelo pytest. O `video.py` calcula a pasta dos vídeos na hora, não no import.

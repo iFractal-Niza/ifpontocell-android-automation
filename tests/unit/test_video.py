@@ -12,7 +12,7 @@ from unittest.mock import Mock
 import pytest
 from selenium.common.exceptions import WebDriverException
 
-from observability import pytest_report, video
+from observability import anexos, video
 from observability.video import Gravador, guardar_video, nome_do_video
 
 VIDEO = b"\x00\x00\x00 ftypmp4-falso"
@@ -69,7 +69,7 @@ def test_video_e_embutido_no_report_com_legenda(tmp_path):
     arquivo.write_bytes(VIDEO)
     report_extras = []
 
-    assert pytest_report.anexar_video(report_extras, str(arquivo))
+    assert anexos.anexar_video(report_extras, str(arquivo))
     assert report_extras[0]["format_type"] == "video"
     assert report_extras[0]["content"] == VIDEO_B64
     assert report_extras[0]["name"] == "Vídeo do teste"

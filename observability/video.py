@@ -29,7 +29,8 @@ import tempfile
 from datetime import datetime
 
 import pytest
-from qa_report import pastas
+from qa_observability import pastas
+from qa_observability.relatorio import obter_sessao
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.remote.webdriver import WebDriver
 
@@ -44,7 +45,10 @@ FALHAS = "falhas"
 NAO = "nao"
 MODOS = (FALHAS, TODOS, NAO)
 
-VIDEOS_DIR = os.path.join(pastas.reports_dir(), "videos")
+
+def pasta_dos_videos() -> str:
+    return os.path.join(pastas.reports_dir(), "videos")
+
 
 # Marcado na primeira vez em que nenhum meio de gravação funciona: os
 # testes seguintes da execução nem tentam.
@@ -225,10 +229,7 @@ def pytest_runtest_call(item):
         yield
         return
 
-    # Import aqui: o plugin do report também importa este módulo.
-    from observability.pytest_report import obter_driver_ativo
-
-    driver = obter_driver_ativo(item)
+    driver = obter_sessao(item)
     # Só um driver de verdade: os unitários usam drivers falsos (Mock), e
     # gravar neles mexeria nas chamadas que eles conferem.
     gravador = Gravador(driver) if isinstance(driver, WebDriver) else None
@@ -256,8 +257,9 @@ def pytest_runtest_call(item):
 
     video = comprimir_video(video)
 
-    ensure_dir(VIDEOS_DIR)
-    caminho = os.path.join(VIDEOS_DIR, nome_do_video(item, datetime.now()))
+    pasta = pasta_dos_videos()
+    ensure_dir(pasta)
+    caminho = os.path.join(pasta, nome_do_video(item, datetime.now()))
 
     with open(caminho, "wb") as arquivo:
         arquivo.write(video)

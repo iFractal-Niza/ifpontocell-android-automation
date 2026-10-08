@@ -15,8 +15,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from qa_report.automacao import atual  # noqa: E402
-from qa_report.casos_teste import (  # noqa: E402
+from qa_observability.automacao import atual  # noqa: E402
+from qa_observability.casos_teste import (  # noqa: E402
     aplicar_renumeracao,
     casos_na_ordem_da_suite,
     ler_casos,

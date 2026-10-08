@@ -479,7 +479,7 @@ falhas: check-mobile
 # um HTML por execução e descarta os mais antigos, o que empurraria para
 # fora os reports das execuções reais.
 unit: check-venv
-	@$(PYTEST) $(UNIT_TESTS) -q -p no:observability.pytest_report $(PYTEST_FLAGS)
+	@$(PYTEST) $(UNIT_TESTS) -q -p no:qa_observability.relatorio $(PYTEST_FLAGS)
 
 # === Testes por marker ===
 # Inclui os que consomem massa (assinatura do espelho); merge-dev e

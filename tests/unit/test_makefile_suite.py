@@ -5,7 +5,7 @@ controlada. Teste de tela novo fora da lista só roda pelo alvo próprio:
 esta checagem reprova o commit até ele ser incluído.
 """
 
-from qa_report.casos_teste import arquivos_da_suite
+from qa_observability.casos_teste import arquivos_da_suite
 
 from observability.automacao import RAIZ
 

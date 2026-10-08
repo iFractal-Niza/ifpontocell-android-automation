@@ -34,7 +34,7 @@ fi
 
 # Testes unitários (~1s, sem simulador). Mesmo comando do 'make unit'.
 if ! venv/bin/python -m pytest tests/unit -q --no-header \
-     -p no:observability.pytest_report; then
+     -p no:qa_observability.relatorio; then
   echo ""
   echo "pre-commit: testes unitários falharam. Rode 'make unit' para ver."
   echo "Para commitar mesmo assim: git commit --no-verify"

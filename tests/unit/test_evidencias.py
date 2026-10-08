@@ -1,12 +1,12 @@
 """
 Print das evidências pelo driver do Appium (observability.automacao).
-O registro das evidências é do pacote ifponto-qa-report (testado lá).
+O registro das evidências é do pacote ifponto-observability (testado lá).
 """
 
 from unittest.mock import Mock
 
 import pytest
-from qa_report import evidencias
+from qa_observability import evidencias
 from selenium.common.exceptions import WebDriverException
 
 NODEID = "tests/app/test_x.py::test_y"

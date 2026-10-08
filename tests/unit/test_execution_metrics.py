@@ -1,12 +1,12 @@
 """
 Configuração desta automação para as métricas (observability.automacao):
 o fluxo de cada arquivo no dashboard e o que conta como uso do app. As
-métricas em si são do pacote ifponto-qa-report (testadas lá).
+métricas em si são do pacote ifponto-observability (testadas lá).
 """
 
 import pytest
-from qa_report import execution_metrics
-from qa_report.execution_metrics import extract_fluxo
+from qa_observability import execution_metrics
+from qa_observability.execution_metrics import extract_fluxo
 
 
 @pytest.fixture(autouse=True)

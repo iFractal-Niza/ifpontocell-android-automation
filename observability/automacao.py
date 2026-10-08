@@ -1,21 +1,26 @@
 """
-Configuração desta automação para o pacote ifponto-qa-report: pastas dos
-testes com CT, ordem da suíte, nome dos fluxos no dashboard e o print
-das evidências. O pacote importa este módulo sozinho (qa_report.automacao).
+Configuração desta automação para o pacote ifponto-observability: pastas dos
+testes com CT, ordem da suíte, nome dos fluxos no dashboard, o print
+das evidências e o que o report anexa (observability.anexos). O pacote
+importa este módulo sozinho (qa_observability.automacao).
 """
 
+from datetime import datetime
 from pathlib import Path
 
-from qa_report.automacao import Automacao, configurar
-from qa_report.casos_teste import suite_alfabetica, suite_do_makefile
+from qa_observability import execution_metrics
+from qa_observability.automacao import Automacao, configurar
+from qa_observability.casos_teste import suite_alfabetica, suite_do_makefile
 
+from observability import anexos
+from observability.contexto_execucao import coletar_contexto
 from utils.file_utils import build_screenshot_path
 from utils.logger import get_logger
 
 RAIZ = Path(__file__).resolve().parent.parent
 
 # Os logs do pacote saem no mesmo formato dos da automação.
-get_logger("qa_report")
+get_logger("qa_observability")
 
 
 def ordem_da_suite(raiz: Path) -> list[Path]:
@@ -25,6 +30,15 @@ def ordem_da_suite(raiz: Path) -> list[Path]:
 
 def tirar_print(driver, caminho: str) -> bool:
     return driver.save_screenshot(caminho)
+
+
+def contexto(inicio: datetime, fim: datetime) -> list[tuple[str, str]]:
+    """Identificação da execução (aparelho e versão só se usou o app)."""
+    return coletar_contexto(
+        inicio=inicio,
+        fim=fim,
+        usa_app=execution_metrics.execucao_usa_o_sistema(),
+    )
 
 
 configurar(
@@ -53,5 +67,15 @@ configurar(
             "test_zerar_dados": "zerar dados",
         },
         fluxo_por_pasta={"api": "api", "unit": "unitários"},
+        titulo="Android Automation",
+        nota_preparacao=(
+            "O tempo inclui a preparação de cada teste (ex.: abrir o app "
+            "ou refazer o primeiro acesso)."
+        ),
+        sessao_de=anexos.driver_de,
+        fixtures_da_sessao=anexos.FIXTURES_DO_DRIVER,
+        na_falha=anexos.na_falha,
+        na_etapa=anexos.na_etapa,
+        contexto=contexto,
     )
 )

@@ -1,7 +1,7 @@
 from functools import cached_property
 from time import monotonic, sleep
 
-from qa_report.evidencias import capturar_evidencia
+from qa_observability.evidencias import capturar_evidencia
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,

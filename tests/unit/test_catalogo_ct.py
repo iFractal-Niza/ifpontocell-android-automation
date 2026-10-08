@@ -1,10 +1,11 @@
 """
 Garantia de que todo teste de tela/API desta automação tem um CT único,
 e a ordem da suíte da configuração (observability.automacao). O catálogo
-em si é do pacote ifponto-qa-report (qa_report.casos_teste, testado lá).
+em si é do pacote ifponto-observability (qa_observability.casos_teste,
+testado lá).
 """
 
-from qa_report.casos_teste import (
+from qa_observability.casos_teste import (
     casos_na_ordem_da_suite,
     ler_casos,
     validar_casos,

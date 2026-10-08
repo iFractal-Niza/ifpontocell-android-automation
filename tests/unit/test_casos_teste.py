@@ -6,8 +6,8 @@ ID no título do report.
 from types import SimpleNamespace
 
 import pytest
+from qa_observability.relatorio import titulo_do_item
 
-from observability.pytest_report import titulo_do_item
 from tests.fixtures.casos_teste import id_do_item, separar_por_ct
 
 
