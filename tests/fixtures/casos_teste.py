@@ -2,7 +2,7 @@
 Execução por ID de caso de teste: --ct CT011 (ou --ct CT011,CT012).
 
 Os IDs vêm do @pytest.mark.ct("CT011") de cada teste; o catálogo e a
-checagem de IDs únicos ficam em observability.casos_teste.
+checagem de IDs únicos ficam em qa_report.casos_teste.
 """
 
 import pytest

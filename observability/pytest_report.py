@@ -5,13 +5,12 @@ from datetime import datetime
 
 import pytest
 from pytest_html import extras
-from qa_report import testes_manuais
+from qa_report import execution_metrics, pastas, testes_manuais
+from qa_report.evidencias import retirar_evidencias
 from qa_report.pagina import injetar
 from qa_report.tabela import ATRIBUTO_TITULO
 
-from observability import execution_metrics, pastas
 from observability.contexto_execucao import coletar_contexto
-from observability.evidencias import retirar_evidencias
 from observability.video import ATRIBUTO_VIDEO
 from utils.file_utils import (
     build_screenshot_path,
@@ -28,8 +27,8 @@ logger = get_logger("pytest_report")
 # === Diretórios e arquivos ===
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# A pasta pode ser por aparelho (DEVICE=... no make): observability.pastas.
-REPORTS_DIR = pastas.REPORTS_DIR
+# A pasta pode ser por aparelho (DEVICE=... no make): qa_report.pastas.
+REPORTS_DIR = pastas.reports_dir()
 
 SCREENSHOTS_DIR = os.path.join(
     REPORTS_DIR,
@@ -47,7 +46,7 @@ _DRIVER_FIXTURES = (
     "home_para_marcacao",
 )
 
-# Marker com o ID do caso de teste (ver observability.casos_teste).
+# Marker com o ID do caso de teste (ver qa_report.casos_teste).
 MARKER_CT = "ct"
 
 # Início da execução, para a data e a duração do cabeçalho do dashboard.
@@ -639,7 +638,7 @@ def pytest_html_results_summary(
     execution_metrics.DASHBOARD_STATS["contexto"] = coletar_contexto(
         inicio=_inicio_execucao,
         fim=datetime.now(),
-        usa_app=execution_metrics.execucao_usa_app(),
+        usa_app=execution_metrics.execucao_usa_o_sistema(),
     )
 
     # make evidencias: os testes manuais previstos vão para a página.

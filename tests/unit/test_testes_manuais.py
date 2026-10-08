@@ -8,14 +8,15 @@ leitura e o dashboard são do pacote ifponto-qa-report (testados lá).
 from types import SimpleNamespace
 
 import pytest
-from qa_report import testes_manuais
+from qa_report import execution_metrics, testes_manuais
+from qa_report.casos_teste import ler_casos
 
-from observability import execution_metrics, pytest_report
-from observability.casos_teste import PROJECT_ROOT, ler_casos
+from observability import pytest_report
+from observability.automacao import RAIZ
 
 
 def test_arquivo_do_projeto_e_valido_e_sem_ct_dos_automatizados():
-    arquivo = testes_manuais.arquivo_da_automacao(PROJECT_ROOT)
+    arquivo = testes_manuais.arquivo_da_automacao(RAIZ)
     manuais = {teste["ct"] for teste in testes_manuais.carregar(arquivo)}
     automatizados = {caso.id for caso in ler_casos() if caso.id}
 

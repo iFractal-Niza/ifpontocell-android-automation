@@ -298,3 +298,17 @@ Appium), vídeo, identificação da execução, métricas e o
 `pytest_report.py` voltar a ter gancho de tabela (as colunas seriam
 trocadas duas vezes).
 
+
+## Métricas, CTs e evidências também no pacote
+
+**Data:** 2026-10-07
+
+As métricas do dashboard, o catálogo de CTs (leitura, validação,
+renumeração), as evidências sob demanda e a pasta do report eram
+iguais nas três automações, a não ser por o mapa de fluxos, a ordem da suíte e o print (driver do Appium ou page do Playwright). Foram para o pacote
+(`v1.1.0`: `qa_report.execution_metrics`, `casos_teste`, `evidencias`,
+`pastas`), e o que muda fica no `observability/automacao.py`, que o
+pacote importa sozinho: as pastas com CT (`tests/app`, `tests/api`), a ordem da suíte (a `APP_SUITE` do Makefile e depois `tests/api`), o nome dos fluxos (`fluxo_por_arquivo`) e o print pelo `driver.save_screenshot`. O `qa_report.evidencias` também é
+plugin: registra o CT de cada teste, que vai na frente do nome do print
+das evidências. Os testes daqui conferem só a configuração (fluxos, CTs
+únicos, ordem da suíte, print); o resto é testado no pacote.

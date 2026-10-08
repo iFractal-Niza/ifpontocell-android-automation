@@ -29,10 +29,10 @@ import tempfile
 from datetime import datetime
 
 import pytest
+from qa_report import pastas
 from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.remote.webdriver import WebDriver
 
-from observability import pastas
 from utils.helpers import ensure_dir
 from utils.logger import get_logger
 
@@ -44,7 +44,7 @@ FALHAS = "falhas"
 NAO = "nao"
 MODOS = (FALHAS, TODOS, NAO)
 
-VIDEOS_DIR = os.path.join(pastas.REPORTS_DIR, "videos")
+VIDEOS_DIR = os.path.join(pastas.reports_dir(), "videos")
 
 # Marcado na primeira vez em que nenhum meio de gravação funciona: os
 # testes seguintes da execução nem tentam.

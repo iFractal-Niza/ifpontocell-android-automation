@@ -15,6 +15,7 @@ pytest_plugins = [
     "observability.video",
     "qa_report.tabela",
     "qa_report.testes_manuais",
+    "qa_report.evidencias",
     "tests.fixtures.devices",
     "tests.fixtures.sessoes",
     "tests.fixtures.jornada",

@@ -15,15 +15,14 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from observability.casos_teste import (  # noqa: E402
+from qa_report.automacao import atual  # noqa: E402
+from qa_report.casos_teste import (  # noqa: E402
     aplicar_renumeracao,
     casos_na_ordem_da_suite,
     ler_casos,
     mapa_de_renumeracao,
     validar_casos,
 )
-
-PASTAS_DOS_TESTES = ("tests/app", "tests/api")
 
 
 def main(argumentos: list[str]) -> int:
@@ -61,7 +60,7 @@ def main(argumentos: list[str]) -> int:
 
     arquivos = [
         arquivo
-        for pasta in PASTAS_DOS_TESTES
+        for pasta in atual().pastas_com_ct
         for arquivo in sorted((PROJECT_ROOT / pasta).glob("test_*.py"))
     ]
     alterados = aplicar_renumeracao(mudancas, arquivos)

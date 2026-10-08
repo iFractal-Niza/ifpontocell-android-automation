@@ -27,8 +27,8 @@ assinatura não reprova por causa disso.
 """
 
 import pytest
+from qa_report.evidencias import capturar_evidencia
 
-from observability.evidencias import capturar_evidencia
 from pages.ass_espelho.assinatura_espelho_page import AssinaturaEspelhoPage
 from pages.autenticacao.unlock_page import UnlockPage
 from pages.home_page import HomePage

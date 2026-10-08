@@ -3,8 +3,8 @@ Apoio aos testes das listas de documentos (Holerite, Informe...).
 """
 
 import pytest
+from qa_report.evidencias import capturar_evidencia
 
-from observability.evidencias import capturar_evidencia
 from pages.compartilhado.lista_documentos_page import ListaDocumentosPage
 
 

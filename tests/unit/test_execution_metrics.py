@@ -1,29 +1,16 @@
 """
-Métricas do dashboard (observability.execution_metrics): fluxo por
-arquivo, título legível, motivo do pulo e lista de ressalvas.
+Configuração desta automação para as métricas (observability.automacao):
+o fluxo de cada arquivo no dashboard e o que conta como uso do app. As
+métricas em si são do pacote ifponto-qa-report (testadas lá).
 """
 
-from types import SimpleNamespace
-
 import pytest
-
-from observability import execution_metrics
-from observability.execution_metrics import (
-    extract_fluxo,
-    extract_skip_reason,
-    extract_titulo,
-)
+from qa_report import execution_metrics
+from qa_report.execution_metrics import extract_fluxo
 
 
 @pytest.fixture(autouse=True)
-def metricas_isoladas(monkeypatch):
-    monkeypatch.setattr(
-        execution_metrics,
-        "logger",
-        SimpleNamespace(
-            debug=lambda *a, **k: None,
-        ),
-    )
+def metricas_isoladas():
     execution_metrics.reset_dashboard_stats()
     yield
     execution_metrics.reset_dashboard_stats()
@@ -33,7 +20,6 @@ def metricas_isoladas(monkeypatch):
     ("nodeid", "fluxo"),
     [
         ("tests/app/test_login.py::test_senha_invalida", "login"),
-        ("tests/app/test_holerite.py::test_x", "holerite"),
         ("tests/app/test_ass_espelho.py::test_x", "assinatura do espelho"),
         ("tests/app/test_registro_sem_foto.py::test_x", "registro de ponto"),
         # O nome do teste não decide: "home" aqui é da jornada e2e.
@@ -45,95 +31,21 @@ def metricas_isoladas(monkeypatch):
         ("tests/unit/test_periodo.py::test_x", "unitários"),
         # Tela nova, fora do mapa: ganha a própria linha.
         ("tests/app/test_espelho_ponto.py::test_x", "espelho ponto"),
-        ("", "outros"),
     ],
 )
 def test_fluxo_vem_do_arquivo(nodeid, fluxo):
     assert extract_fluxo(nodeid) == fluxo
 
 
-def test_titulo_e_o_primeiro_paragrafo_do_docstring():
-    docstring = """
-    Abre o holerite da segunda competência mais recente,
-    sem salvar.
-
-    Fronteira: Home -> menu -> Holerite.
-    """
-
-    assert extract_titulo("tests/app/test_h.py::test_x", docstring) == (
-        "Abre o holerite da segunda competência mais recente, sem salvar"
-    )
-
-
-def test_titulo_sem_docstring_usa_o_nome_da_funcao():
-    assert (
-        extract_titulo("tests/app/test_login.py::test_senha_invalida")
-        == "Senha invalida"
-    )
-
-
-def test_titulo_mantem_o_parametro():
-    assert (
-        extract_titulo("t.py::test_status[caso-1]", "Confere o status.")
-        == "Confere o status [caso-1]"
-    )
-
-
-def test_motivo_do_skip_sem_o_prefixo_do_pytest():
-    report = SimpleNamespace(longrepr=("arq.py", 10, "Skipped: sem massa"))
-
-    assert extract_skip_reason(report) == "sem massa"
-
-
-def test_motivo_de_falha_esperada():
-    report = SimpleNamespace(wasxfail="bug 123", longrepr=None)
-
-    assert extract_skip_reason(report) == "Falha esperada: bug 123"
-
-
-def test_motivo_ausente():
-    assert extract_skip_reason(SimpleNamespace(longrepr=None)) == (
-        "Motivo não informado."
-    )
-
-
-def test_pulado_entra_nas_ressalvas_com_fluxo_titulo_e_motivo():
-    nodeid = "tests/app/test_informe_rendimentos.py::test_segundo"
-
-    execution_metrics.update_dashboard_stats(
-        nodeid,
-        "skipped",
-        motivo="um documento só",
-        titulo="Abre o segundo informe",
-    )
-
-    assert execution_metrics.DASHBOARD_STATS["pulados"] == [
-        {
-            "nodeid": nodeid,
-            "titulo": "Abre o segundo informe",
-            "fluxo": "informe de rendimentos",
-            "motivo": "um documento só",
-        }
-    ]
-
-
-def test_aprovado_nao_entra_nas_ressalvas():
-    execution_metrics.update_dashboard_stats(
-        "tests/app/test_login.py::t", "passed"
-    )
-
-    assert execution_metrics.DASHBOARD_STATS["pulados"] == []
-
-
-def test_execucao_so_de_api_nao_usa_app():
+def test_execucao_so_de_api_nao_usa_o_app():
     execution_metrics.update_dashboard_stats(
         "tests/api/test_a.py::t", "passed"
     )
 
-    assert execution_metrics.execucao_usa_app() is False
+    assert execution_metrics.execucao_usa_o_sistema() is False
 
 
-def test_execucao_com_teste_de_tela_usa_app():
+def test_execucao_com_teste_de_tela_usa_o_app():
     execution_metrics.update_dashboard_stats(
         "tests/api/test_a.py::t", "passed"
     )
@@ -141,35 +53,4 @@ def test_execucao_com_teste_de_tela_usa_app():
         "tests/app/test_login.py::t", "passed"
     )
 
-    assert execution_metrics.execucao_usa_app() is True
-
-
-def test_duracao_soma_as_fases_do_teste_e_do_fluxo():
-    nodeid = "tests/app/test_holerite.py::test_holerite"
-
-    execution_metrics.registrar_duracao(nodeid, 2.5, titulo="CT014 · A")
-    execution_metrics.registrar_duracao(nodeid, 10.0)
-    execution_metrics.registrar_duracao(nodeid, 0.5)
-
-    stats = execution_metrics.DASHBOARD_STATS
-    assert stats["duracoes"][nodeid] == {
-        "titulo": "CT014 · A",
-        "fluxo": "holerite",
-        "segundos": 13.0,
-    }
-    assert stats["por_fluxo"]["holerite"]["duration"] == 13.0
-
-
-def test_falha_do_smoke_conta_como_critica_uma_vez_por_teste():
-    nodeid = "tests/app/test_login.py::test_credenciais_validas"
-
-    execution_metrics.update_dashboard_stats(nodeid, "failed", smoke=True)
-    execution_metrics.update_dashboard_stats(nodeid, "error", smoke=True)
-    execution_metrics.update_dashboard_stats(
-        "tests/app/test_privacidade.py::test_x", "failed"
-    )
-
-    stats = execution_metrics.DASHBOARD_STATS
-    assert stats["criticas"] == 1
-    assert stats["por_fluxo"]["login"]["critico"] == 1
-    assert stats["por_fluxo"]["privacidade"]["critico"] == 0
+    assert execution_metrics.execucao_usa_o_sistema() is True

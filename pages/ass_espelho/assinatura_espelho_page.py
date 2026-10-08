@@ -1,12 +1,12 @@
 from functools import cached_property
 from time import monotonic, sleep
 
+from qa_report.evidencias import capturar_evidencia
 from selenium.common.exceptions import (
     NoSuchElementException,
     StaleElementReferenceException,
 )
 
-from observability.evidencias import capturar_evidencia
 from pages.alertas import AlertaAppMixin
 from pages.android_locators import (
     android_id_prefixo,

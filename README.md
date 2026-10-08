@@ -77,7 +77,7 @@ ifpontocell-android-automation/
 │   ├── localizacao.py                   # localização simulada (set_location)
 │   └── privacy_services.py
 │
-├── observability/                       # evidências, vídeo, CTs e testes manuais (o report é o pacote ifponto-qa-report)
+├── observability/                       # vídeo, testes manuais e a configuração do pacote ifponto-qa-report (automacao.py)
 │
 ├── pages/
 │   ├── android_locators.py              # android_id / android_text / ...
@@ -231,7 +231,7 @@ Os testes manuais ficam num bloco próprio, **Testes manuais**, abaixo do bloco 
 
 Nos testes manuais e nas melhorias, o Status também tem **Corrigido** (retestado e aprovado; conta como aprovado) e **Não corrigido** (conta como falha). Abaixo dos cards principais, dois blocos recolhíveis (fechados por padrão; o navegador lembra quais ficaram abertos), com um resumo na barra: **Testes manuais** (Passou, Falhou, Corrigido, Não corrigido e, da coluna **Status apont.** dos testes, Correção realizada e não realizada) e **Melhorias** (Qtd melhorias, Corrigido, Não corrigido e, do **Status apont.** nas três tabelas, Melhoria implementada e não implementada). Cada bloco só aparece com algo a mostrar.
 
-O report HTML (dashboard, colunas, classificação, testes manuais, melhorias, ficha do teste e o **Baixar HTML**) vem do pacote **ifponto-qa-report**, o mesmo das automações iOS e web, instalado pelo `requirements.txt` numa versão fixa. Aqui ficam a captura das evidências, o vídeo, a identificação da execução, as métricas e o `observability/testes_manuais.yaml`. Mudança no report se faz no pacote e chega aqui ao subir a versão no `requirements.txt` (para testar antes: `venv/bin/pip install -e ../ifponto-qa-report`).
+O report HTML (dashboard, colunas, classificação, testes manuais, melhorias, ficha do teste e o **Baixar HTML**) vem do pacote **ifponto-qa-report**, o mesmo das automações iOS e web, instalado pelo `requirements.txt` numa versão fixa. As métricas, o catálogo de CTs e as evidências sob demanda também são do pacote. Aqui ficam o vídeo, a identificação da execução, o `observability/testes_manuais.yaml` e o `observability/automacao.py`: o que muda entre as automações (pastas dos CTs, ordem da suíte, nome dos fluxos no dashboard e o print pelo driver do Appium). Mudança no report se faz no pacote e chega aqui ao subir a versão no `requirements.txt` (para testar antes: `venv/bin/pip install -e ../ifponto-qa-report`).
 
 **Rodada de evidências** (`make evidencias`): a suíte completa, com vídeo de todos os testes (`VIDEO=0` tira) e os testes que continuam manuais já no bloco **Testes manuais** do report, que abre no fim. A lista fica em `observability/testes_manuais.yaml` (CT, descrição e fluxo, todos obrigatórios; o `make unit` confere o formato e que o CT não repete um dos automatizados). Eles entram sem Status: preencha Status e o resto; só depois contam nos totais e no card do fluxo em **Qualidade por fluxo**.
 

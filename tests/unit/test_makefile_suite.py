@@ -5,14 +5,15 @@ controlada. Teste de tela novo fora da lista só roda pelo alvo próprio:
 esta checagem reprova o commit até ele ser incluído.
 """
 
-from observability.casos_teste import PROJECT_ROOT, arquivos_da_suite
+from qa_report.casos_teste import arquivos_da_suite
+
+from observability.automacao import RAIZ
 
 
 def test_todo_teste_de_tela_esta_na_suite_completa():
     na_suite = {arquivo.name for arquivo in arquivos_da_suite()}
     existentes = {
-        arquivo.name
-        for arquivo in (PROJECT_ROOT / "tests" / "app").glob("test_*.py")
+        arquivo.name for arquivo in (RAIZ / "tests" / "app").glob("test_*.py")
     }
 
     faltando = sorted(existentes - na_suite)
