@@ -1,7 +1,7 @@
 """
 Configuração desta automação para o pacote ifponto-observability: pastas dos
 testes com CT, ordem da suíte, nome dos fluxos no dashboard, o print
-das evidências e o que o report anexa (observability.anexos). O pacote
+das evidências e o que o report anexa (qa_observability.appium). O pacote
 importa este módulo sozinho (qa_observability.automacao).
 """
 
@@ -9,10 +9,10 @@ from datetime import datetime
 from pathlib import Path
 
 from qa_observability import execution_metrics
+from qa_observability.appium import anexos
 from qa_observability.automacao import Automacao, configurar
 from qa_observability.casos_teste import suite_alfabetica, suite_do_makefile
 
-from observability import anexos
 from observability.contexto_execucao import coletar_contexto
 from utils.file_utils import build_screenshot_path
 from utils.logger import get_logger
@@ -21,6 +21,16 @@ RAIZ = Path(__file__).resolve().parent.parent
 
 # Os logs do pacote saem no mesmo formato dos da automação.
 get_logger("qa_observability")
+
+
+# Fixtures com o driver, em ordem de preferência (qualquer outra fixture
+# com driver também serve: qa_observability.relatorio.obter_sessao).
+FIXTURES_DO_DRIVER = (
+    "driver",
+    "driver_e2e",
+    "driver_registro_ponto",
+    "home_para_marcacao",
+)
 
 
 def ordem_da_suite(raiz: Path) -> list[Path]:
@@ -73,7 +83,7 @@ configurar(
             "ou refazer o primeiro acesso)."
         ),
         sessao_de=anexos.driver_de,
-        fixtures_da_sessao=anexos.FIXTURES_DO_DRIVER,
+        fixtures_da_sessao=FIXTURES_DO_DRIVER,
         na_falha=anexos.na_falha,
         na_etapa=anexos.na_etapa,
         contexto=contexto,

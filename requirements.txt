@@ -9,7 +9,7 @@ pytest-metadata==3.1.1
 
 # Report HTML comum às automações (iOS, Android, web): dashboard,
 # colunas, testes manuais. Versão fixa: atualizar nas três juntas.
-ifponto-observability @ git+https://github.com/iFractal-Niza/ifponto-observability.git@v1.3.0
+ifponto-observability @ git+https://github.com/iFractal-Niza/ifponto-observability.git@v1.4.0
 
 
 # === HTTP e API ===

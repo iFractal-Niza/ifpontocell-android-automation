@@ -327,3 +327,18 @@ o que é do Appium: achar o driver nas fixtures, o print e a árvore da tela (XM
 (`observability/automacao.py`: `sessao_de`, `na_falha`, `na_etapa`,
 `contexto`, título e nota). O `make unit` desliga o report com
 `-p no:qa_observability.relatorio`. Os plugins do pacote vêm primeiro no `conftest.py`: o `observability.video` importa o `qa_observability.relatorio` (para achar o driver), e um plugin já importado não teria o assert reescrito pelo pytest. O `video.py` calcula a pasta dos vídeos na hora, não no import.
+
+
+## Anexos e vídeo do Appium no pacote
+
+**Data:** 2026-10-07
+
+O `observability/anexos.py` era igual no iOS e no Android, e o
+`observability/video.py` só mudava na gravação (o iOS tenta o XCTest
+antes do Appium). Os dois foram para o pacote, em `qa_observability.appium`
+(`v1.4.0`): os anexos ligados pela configuração (`sessao_de`, `na_falha`,
+`na_etapa`) e o vídeo como plugin (`qa_observability.appium.video`). O
+XCTest é tentado pelo `platformName` do driver: só no iOS. Aqui ficaram a
+lista de fixtures com o driver (`observability/automacao.py`), a
+identificação da execução e o `testes_manuais.yaml`, que é de cada
+automação.

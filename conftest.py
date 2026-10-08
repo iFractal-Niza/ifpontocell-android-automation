@@ -11,14 +11,14 @@ from config.env_loader import carregar_env
 from config.settings import ConfiguracaoInvalida
 
 pytest_plugins = [
-    # Os do pacote primeiro: observability.video importa o
-    # qa_observability.relatorio, e plugin já importado não tem o assert
-    # reescrito pelo pytest.
+    # Os do pacote primeiro: o vídeo (qa_observability.appium.video)
+    # importa o qa_observability.relatorio, e plugin já importado não tem
+    # o assert reescrito pelo pytest.
     "qa_observability.tabela",
     "qa_observability.testes_manuais",
     "qa_observability.evidencias",
     "qa_observability.relatorio",
-    "observability.video",
+    "qa_observability.appium.video",
     "tests.fixtures.devices",
     "tests.fixtures.sessoes",
     "tests.fixtures.jornada",
