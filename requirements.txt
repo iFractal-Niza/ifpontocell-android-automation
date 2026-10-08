@@ -7,9 +7,10 @@ pytest==9.1.1
 pytest-html==4.2.0
 pytest-metadata==3.1.1
 
-# Testes do report no navegador (make test-report). A versão define a dos
-# navegadores: a mesma da automação web, que reaproveita os já baixados.
-playwright==1.63.0
+# Report HTML comum às automações (iOS, Android, web): dashboard,
+# colunas, testes manuais. Versão fixa: atualizar nas três juntas.
+ifponto-qa-report @ git+https://github.com/iFractal-Niza/ifponto-qa-report.git@v1.0.0
+
 
 # === HTTP e API ===
 requests==2.34.2

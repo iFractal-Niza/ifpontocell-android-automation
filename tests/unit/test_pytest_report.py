@@ -3,18 +3,11 @@ Descoberta do driver para o screenshot de falha
 (observability.pytest_report.obter_driver_ativo).
 """
 
-import re
-from pathlib import Path
 from types import SimpleNamespace
 
 from observability.pytest_report import (
-    corrigir_troca_de_video,
     marcar_pulados,
-    montar_celula_classificacao,
     obter_driver_ativo,
-    pytest_html_results_table_header,
-    pytest_html_results_table_row,
-    pytest_unconfigure,
 )
 
 
@@ -203,124 +196,16 @@ def test_sem_pulados_apaga_o_aviso(tmp_path):
     assert not arquivo.exists()
 
 
-# === Correção da troca de vídeo no app.js do pytest-html ===
-def _app_js_da_lib():
-    import pytest_html
+# === Tabela pelo plugin do pacote (qa_report.tabela) ===
+def test_colunas_da_tabela_ficam_so_com_o_plugin_do_pacote():
+    # Gancho de tabela também aqui trocaria Teste e Status duas vezes.
+    import conftest
+    from observability import pytest_report
 
-    return (
-        Path(pytest_html.__file__).parent / "resources" / "app.js"
-    ).read_text(encoding="utf-8")
+    for gancho in (
+        "pytest_html_results_table_header",
+        "pytest_html_results_table_row",
+    ):
+        assert not hasattr(pytest_report, gancho)
 
-
-def test_troca_de_video_ganha_load_no_app_js_da_lib():
-    # Usa o app.js instalado: se uma versão nova da lib mudar o trecho,
-    # o teste avisa.
-    corrigido = corrigir_troca_de_video(_app_js_da_lib())
-
-    assert re.search(
-        r"sourceEl\.src = media\.path\n\n.*\n.*\n\s*videoEl\.load\(\)\n",
-        corrigido,
-    )
-
-
-def test_correcao_da_troca_de_video_nao_duplica():
-    uma_vez = corrigir_troca_de_video(_app_js_da_lib())
-
-    assert corrigir_troca_de_video(uma_vez) == uma_vez
-    assert uma_vez.count("videoEl.load()") == 1
-
-
-def test_unconfigure_corrige_o_html_gravado(tmp_path):
-    relatorio = tmp_path / "report.html"
-    relatorio.write_text(
-        "<script>\n    sourceEl.src = media.path\n</script>",
-        encoding="utf-8",
-    )
-
-    pytest_unconfigure(
-        SimpleNamespace(option=SimpleNamespace(htmlpath=str(relatorio)))
-    )
-
-    assert "    videoEl.load()\n" in relatorio.read_text(encoding="utf-8")
-
-
-# === Classificação do erro (Categoria e Tipo) ===
-def _report(failed: bool, nodeid="t.py::test_x"):
-    return SimpleNamespace(nodeid=nodeid, failed=failed)
-
-
-def _linha_original():
-    return [
-        '<td class="col-result">Failed</td>',
-        '<td class="col-testId">t.py::test_x</td>',
-        '<td class="col-duration">1s</td>',
-        '<td class="col-links"></td>',
-    ]
-
-
-def test_colunas_de_classificacao_entram_apos_teste():
-    cabecalho = [
-        "<th>Result</th>",
-        "<th>Test</th>",
-        "<th>D</th>",
-        "<th>L</th>",
-    ]
-
-    pytest_html_results_table_header(cabecalho)
-
-    # Teste, Status (era Result), Categoria, Tipo, Status apont.,
-    # Duração, Evidências.
-    assert cabecalho[:2] == ["<th>Test</th>", "<th>Status</th>"]
-    assert "Categoria do erro" in cabecalho[2]
-    assert "Tipo de erro" in cabecalho[3]
-    assert "Status apont." in cabecalho[4]
-    assert cabecalho[5:] == ["<th>D</th>", "<th>L</th>"]
-    # As opções vão no cabeçalho, para as linhas de teste manual.
-    assert "&quot;Cr\\u00edtico&quot;" in cabecalho[2]
-    assert "&quot;Marca\\u00e7\\u00e3o de Ponto&quot;" in cabecalho[3]
-
-
-def test_linha_com_falha_ganha_as_listas():
-    linha = _linha_original()
-
-    pytest_html_results_table_row(_report(failed=True), linha)
-
-    assert len(linha) == 7
-    assert 'data-campo="categoria"' in linha[2]
-    assert 'data-campo="tipo"' in linha[3]
-    assert 'data-campo="apontamento"' in linha[4]
-    assert 'value="Correção não realizada"' in linha[4]
-    for opcao in ("Baixo", "Moderado", "Crítico"):
-        assert f'value="{opcao}"' in linha[2]
-    assert 'value="Marcação de Ponto"' in linha[3]
-    assert 'data-teste="t.py::test_x"' in linha[2]
-    # Uma linha só: o pytest-html lê a célula com regex sem quebra.
-    assert "\n" not in linha[2] + linha[3]
-
-
-def test_linha_poe_o_teste_antes_do_status():
-    linha = _linha_original()
-
-    pytest_html_results_table_row(_report(failed=True), linha)
-
-    assert linha[0] == '<td class="col-testId">t.py::test_x</td>'
-    assert linha[1] == '<td class="col-result">Failed</td>'
-    assert linha[5:] == _linha_original()[2:]
-
-
-def test_linha_sem_falha_fica_com_traco():
-    linha = _linha_original()
-
-    pytest_html_results_table_row(_report(failed=False), linha)
-
-    assert len(linha) == 7
-    assert "<select" not in linha[2] + linha[3] + linha[4]
-    assert "—" in linha[2]
-
-
-def test_nodeid_e_escapado_no_atributo():
-    celula = montar_celula_classificacao(
-        "tipo", "Tipo de erro", ("Outro",), 't.py::test_x["a"]', True
-    )
-
-    assert 'data-teste="t.py::test_x[&quot;a&quot;]"' in celula
+    assert "qa_report.tabela" in conftest.pytest_plugins

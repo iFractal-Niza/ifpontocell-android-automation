@@ -29,11 +29,7 @@ ONDE_PAREI.md
 # === Pytest e relatórios ===
 .pytest_cache/
 .cache/
-# reports/ é gerado a cada execução, mas reports/assets/ guarda os
-# arquivos versionados embutidos no report: o estilo (style.css) e o
-# script da página (report.js).
-reports/*
-!reports/assets/
+reports/
 
 # === Logs ===
 *.log

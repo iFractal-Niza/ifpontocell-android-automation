@@ -156,7 +156,7 @@ DEBUG_TARGET = $(if $(test),$(test),$(FULL_SUITE))
         check-venv check-config check-test-data check-app check-devices \
         check-appium check-mobile \
         doctor impact appium appium-servers lint format \
-        run evidencias debug unit test-report smoke regression \
+        run evidencias debug unit smoke regression \
         ct falhas onboarding login unlock primeiro-acesso e2e e2e-debug registro-ponto status ponto registro-geo jornada holerite informe humor ass-espelho sobre dados-pessoais privacidade alterar-pin alterar-senha-sistema zerar-dados \
         api \
         clear report renumerar-ct \
@@ -192,7 +192,6 @@ help:
 	@echo ""
 	@echo "=== Testes ==="
 	@echo "  make unit                  Roda os testes unitários (sem emulador, ~1s)"
-	@echo "  make test-report           Testa o report no navegador (report.js, ~45s)"
 	@echo "  make smoke                 Roda testes smoke em ordem lógica"
 	@echo "  make regression            Roda testes regression em ordem lógica"
 	@echo "  make onboarding            Roda testes de onboarding"
@@ -482,13 +481,6 @@ falhas: check-mobile
 unit: check-venv
 	@$(PYTEST) $(UNIT_TESTS) -q -p no:observability.pytest_report $(PYTEST_FLAGS)
 
-# O report no navegador (Playwright: Chromium e WebKit, o motor do Safari):
-# monta um report de exemplo e confere o report.js. Fora do make unit e do
-# pre-commit porque abre navegador; rodar ao mexer em reports/assets ou no
-# dashboard. Sem emulador, sem Appium.
-test-report: check-venv
-	@$(PYTEST) $(TESTS)/report -q -p no:observability.pytest_report
-
 # === Testes por marker ===
 # Inclui os que consomem massa (assinatura do espelho); merge-dev e
 # merge-main dependem deste alvo. Sem massa, eles pulam e o merge segue.
@@ -576,7 +568,7 @@ api: check-venv check-config check-test-data
 
 # === Relatórios ===
 # Sem DEVICE: limpa tudo (todos os aparelhos). Com DEVICE=…: só ele.
-# Fica a reports/assets (visual do report, versionado) e o appium.log
+# Fica o appium.log
 # (o make appium pode estar escrevendo nele).
 clear:
 ifeq ($(origin DEVICE),command line)

@@ -77,7 +77,7 @@ ifpontocell-android-automation/
 │   ├── localizacao.py                   # localização simulada (set_location)
 │   └── privacy_services.py
 │
-├── observability/                       # report, dashboard, vídeo, CTs
+├── observability/                       # evidências, vídeo, CTs e testes manuais (o report é o pacote ifponto-qa-report)
 │
 ├── pages/
 │   ├── android_locators.py              # android_id / android_text / ...
@@ -102,7 +102,6 @@ ifpontocell-android-automation/
 │   ├── app/                             # os testes de tela (CT001–CT037, como no iOS)
 │   ├── fixtures/                        # fixtures por assunto (plugins do conftest)
 │   ├── support/                         # flows, assertions, profile_resolver
-│   ├── report/                          # o report no navegador (make test-report)
 │   └── unit/                            # unitários (make unit, sem emulador)
 │
 └── utils/                               # logger, períodos, ponto, textos, report
@@ -198,7 +197,6 @@ Dois terminais, um servidor Appium: `make smoke` e `make smoke DEVICE=real`. Cad
 
 ```bash
 make unit                 # unitários (~1s, sem emulador)
-make test-report          # o report no navegador (report.js; Chromium, WebKit e Chrome, ~45s)
 make run                  # suíte completa em ordem lógica
 make evidencias           # suíte completa, vídeo de todos e os testes manuais no report
 make smoke                # testes smoke
@@ -232,6 +230,8 @@ Nas linhas de falha, as colunas **Categoria do erro** (Baixo, Moderado, Crítico
 Os testes manuais ficam num bloco próprio, **Testes manuais**, abaixo do bloco **Testes automatizados**, com as mesmas colunas. O botão **+ Adicionar teste manual** inclui uma linha para um teste feito fora da automação: resultado, CT e descrição, categoria, tipo, status do apontamento e **Obs. Tester** (observação livre, no lugar da Duração; **Ver** abre a observação inteira), editáveis na própria linha (a lixeira, na ponta da coluna Evidências, tira a linha). **+ Anexar evidências** aceita vários arquivos de uma vez (imagens, vídeos ou PDF), que abrem ao clicar no nome. Ao anexar, o navegador comprime: imagem até 1280×1600 em JPEG 80%; vídeo regravado em 720 px de largura, com o áudio (leva a duração do vídeo; o botão mostra o andamento; se o navegador não deixar capturar o som, o vídeo fica sem compressão). Se não ficar menor, vai o original; o limite é 50 MB por arquivo, já comprimido. As linhas ficam salvas no navegador (os arquivos, no IndexedDB) e vão na cópia do **Baixar HTML**, só leitura, com os arquivos embutidos. Os que têm Status entram nos totais do dashboard (taxa de sucesso, cards, status e resumo, recalculados na página com as mesmas regras); com **Fluxo** preenchido (o **+ Fluxo** discreto abaixo do CT abre o campo, com sugestões dos fluxos do report), somam também no card de mesmo nome em **Qualidade por fluxo**, ou criam um card novo. Com algum fluxo informado, as linhas ficam ordenadas por fluxo (as do mesmo fluxo juntas, separadas por uma borda; as sem fluxo no fim), e o nome adota a grafia de um fluxo já existente ("teste ricadio" vira "Teste Ricadio").
 
 Nos testes manuais e nas melhorias, o Status também tem **Corrigido** (retestado e aprovado; conta como aprovado) e **Não corrigido** (conta como falha). Abaixo dos cards principais, dois blocos recolhíveis (fechados por padrão; o navegador lembra quais ficaram abertos), com um resumo na barra: **Testes manuais** (Passou, Falhou, Corrigido, Não corrigido e, da coluna **Status apont.** dos testes, Correção realizada e não realizada) e **Melhorias** (Qtd melhorias, Corrigido, Não corrigido e, do **Status apont.** nas três tabelas, Melhoria implementada e não implementada). Cada bloco só aparece com algo a mostrar.
+
+O report HTML (dashboard, colunas, classificação, testes manuais, melhorias, ficha do teste e o **Baixar HTML**) vem do pacote **ifponto-qa-report**, o mesmo das automações iOS e web, instalado pelo `requirements.txt` numa versão fixa. Aqui ficam a captura das evidências, o vídeo, a identificação da execução, as métricas e o `observability/testes_manuais.yaml`. Mudança no report se faz no pacote e chega aqui ao subir a versão no `requirements.txt` (para testar antes: `venv/bin/pip install -e ../ifponto-qa-report`).
 
 **Rodada de evidências** (`make evidencias`): a suíte completa, com vídeo de todos os testes (`VIDEO=0` tira) e os testes que continuam manuais já no bloco **Testes manuais** do report, que abre no fim. A lista fica em `observability/testes_manuais.yaml` (CT, descrição e fluxo, todos obrigatórios; o `make unit` confere o formato e que o CT não repete um dos automatizados). Eles entram sem Status: preencha Status e o resto; só depois contam nos totais e no card do fluxo em **Qualidade por fluxo**.
 

@@ -1,7 +1,8 @@
 from collections import defaultdict
 
+from qa_report.dashboard import calcular_taxa_sucesso
+
 from utils.logger import get_logger
-from utils.report_dashboard import calcular_taxa_sucesso
 
 logger = get_logger("execution_metrics")
 

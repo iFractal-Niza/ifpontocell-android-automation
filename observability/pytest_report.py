@@ -1,19 +1,16 @@
 import base64
 import html
-import json
 import os
-import re
 from datetime import datetime
 
 import pytest
 from pytest_html import extras
+from qa_report import testes_manuais
+from qa_report.pagina import injetar
+from qa_report.tabela import ATRIBUTO_TITULO
 
-from observability import execution_metrics, pastas, testes_manuais
+from observability import execution_metrics, pastas
 from observability.contexto_execucao import coletar_contexto
-from observability.dashboard import (
-    build_results_summary_html,
-    load_inline_js,
-)
 from observability.evidencias import retirar_evidencias
 from observability.video import ATRIBUTO_VIDEO
 from utils.file_utils import (
@@ -49,10 +46,6 @@ _DRIVER_FIXTURES = (
     "driver_registro_ponto",
     "home_para_marcacao",
 )
-
-# Atributo do report com o título legível do teste (primeira frase do
-# docstring), gravado no makereport e usado na tabela e nas ressalvas.
-ATRIBUTO_TITULO = "titulo_legivel"
 
 # Marker com o ID do caso de teste (ver observability.casos_teste).
 MARKER_CT = "ct"
@@ -236,66 +229,6 @@ def marcar_pulados(quantidade: int, arquivo: str = ARQUIVO_PULADOS) -> None:
 
 def pytest_sessionfinish(session, exitstatus) -> None:
     marcar_pulados(execution_metrics.DASHBOARD_STATS.get("skipped", 0))
-
-
-# === Correção do JS do pytest-html ===
-# O app.js da lib só troca o src do <source> ao abrir outra mídia, sem
-# chamar load(); o navegador continua no vídeo anterior. Importante para
-# vídeos embutidos como data:video/mp4;base64,...
-_TROCA_SRC_VIDEO = re.compile(r"^([ \t]*)sourceEl\.src = media\.path\n", re.M)
-
-_RECARGA_VIDEO = (
-    "\n"
-    "{indent}// Força o navegador a recarregar o <source> quando a mídia"
-    " é trocada.\n"
-    "{indent}// Importante para vídeos embutidos como"
-    " data:video/mp4;base64,...\n"
-    "{indent}videoEl.load()\n"
-)
-
-
-def corrigir_troca_de_video(conteudo: str) -> str:
-    """Insere videoEl.load() após a troca do src do vídeo no app.js."""
-    if "videoEl.load()" in conteudo:
-        return conteudo
-
-    return _TROCA_SRC_VIDEO.sub(
-        lambda m: m.group(0) + _RECARGA_VIDEO.format(indent=m.group(1)),
-        conteudo,
-        count=1,
-    )
-
-
-def pytest_unconfigure(config) -> None:
-    """
-    Aplica corrigir_troca_de_video no HTML final.
-
-    Roda depois do pytest_sessionfinish do pytest-html, que é quando o
-    arquivo do relatório termina de ser gravado.
-    """
-    caminho = getattr(config.option, "htmlpath", None)
-    if not caminho or not os.path.exists(caminho):
-        return
-
-    try:
-        with open(caminho, encoding="utf-8") as entrada:
-            conteudo = entrada.read()
-
-        corrigido = corrigir_troca_de_video(conteudo)
-        if corrigido == conteudo:
-            if "videoEl.load()" not in conteudo:
-                logger.warning(
-                    "Trecho de troca de vídeo do pytest-html não encontrado.",
-                    extra={"event": "report_video_patch_not_found"},
-                )
-            return
-
-        with open(caminho, "w", encoding="utf-8") as saida:
-            saida.write(corrigido)
-    except OSError:
-        logger.warning(
-            "Não foi possível corrigir a troca de vídeo do relatório."
-        )
 
 
 def pytest_configure(
@@ -683,201 +616,7 @@ def anexar_video(report_extras: list, caminho: str) -> bool:
     return True
 
 
-# === Coluna Teste ===
-def montar_celula_teste(
-    celula_original: str,
-    titulo: str,
-) -> str:
-    """
-    Célula da coluna Teste com o título legível em destaque e o caminho
-    técnico (nodeid) abaixo.
-
-    Fica em uma linha só: o pytest-html extrai o conteúdo da célula com
-    uma regex que não atravessa quebras de linha.
-    """
-    encontrado = re.search(r"<td[^>]*>(.*?)</td>", celula_original)
-
-    if not titulo or encontrado is None:
-        return celula_original
-
-    return (
-        '<td class="col-testId">'
-        f'<div class="qa-test-title">{html.escape(titulo)}</div>'
-        f'<div class="qa-test-path">{encontrado.group(1)}</div>'
-        "</td>"
-    )
-
-
-# === Classificação do erro (Categoria e Tipo) ===
-# Preenchida por quem analisa o report, nas linhas de falha: listas
-# editáveis, salvas no navegador (report.js). Ficam logo após a coluna
-# Teste.
-CATEGORIAS_DE_ERRO = ("Baixo", "Moderado", "Crítico")
-
-TIPOS_DE_ERRO = (
-    "Texto / Digitação",
-    "Ordenação",
-    "Layout",
-    "Travamento / Crash",
-    "Elemento não exibido",
-    "Filtragem",
-    "Regra de Negócio",
-    "Marcação de Ponto",
-    "Cálculo",
-    "Outro",
-)
-
-# Andamento do apontamento (o erro ou a melhoria apontada ao time).
-STATUS_DE_APONTAMENTO = (
-    "Melhoria implementada",
-    "Melhoria não implementada",
-    "Correção realizada",
-    "Correção não realizada",
-)
-
-COLUNAS_DE_CLASSIFICACAO = (
-    ("categoria", "Categoria do erro", CATEGORIAS_DE_ERRO),
-    ("tipo", "Tipo de erro", TIPOS_DE_ERRO),
-    ("apontamento", "Status apont.", STATUS_DE_APONTAMENTO),
-)
-
-# Ordem da tabela: Teste, Status, Categoria do erro, Tipo de erro,
-# Status apont., Duração, Evidências. O pytest-html entrega Result,
-# Test, Duration, Links: Teste e Status trocam de lugar e a
-# classificação entra depois.
-POSICAO_CLASSIFICACAO = 2
-
-
-def _teste_antes_do_status(cells: list) -> None:
-    cells[0], cells[1] = cells[1], cells[0]
-
-
-def montar_celula_classificacao(
-    campo: str,
-    titulo: str,
-    opcoes: tuple[str, ...],
-    nodeid: str,
-    com_erro: bool,
-) -> str:
-    """
-    Célula com a lista de opções, só nas linhas com erro; nas outras,
-    um traço. Em uma linha só, como a célula do teste.
-    """
-    if not com_erro:
-        return '<td class="col-classificacao qa-sem-erro">—</td>'
-
-    itens = '<option value="">Selecionar</option>' + "".join(
-        f'<option value="{html.escape(opcao)}">{html.escape(opcao)}</option>'
-        for opcao in opcoes
-    )
-
-    return (
-        '<td class="col-classificacao">'
-        f'<select class="qa-classificacao" data-campo="{campo}" '
-        f'data-teste="{html.escape(nodeid)}" '
-        f'aria-label="{html.escape(titulo)}">{itens}</select>'
-        "</td>"
-    )
-
-
-@pytest.hookimpl(optionalhook=True)
-def pytest_html_results_table_header(cells) -> None:
-    """
-    Cabeçalho: Teste antes de Status (a coluna Result, renomeada) e as
-    colunas de classificação. Estas levam as opções (data-opcoes) para o
-    report.js montar as listas dos testes manuais, que existem mesmo
-    quando nenhum teste falhou.
-    """
-    if len(cells) < 2:
-        return
-
-    cells[0] = str(cells[0]).replace(">Result</th>", ">Status</th>")
-    _teste_antes_do_status(cells)
-
-    for deslocamento, (campo, titulo, opcoes) in enumerate(
-        COLUNAS_DE_CLASSIFICACAO
-    ):
-        cells.insert(
-            POSICAO_CLASSIFICACAO + deslocamento,
-            f'<th class="col-classificacao" data-campo="{campo}" '
-            f'data-opcoes="{html.escape(json.dumps(list(opcoes)))}">'
-            f"{html.escape(titulo)}</th>",
-        )
-
-
-@pytest.hookimpl(optionalhook=True)
-def pytest_html_results_table_row(
-    report,
-    cells,
-) -> None:
-    """
-    Troca o nodeid da coluna Teste pelo título legível do teste, põe o
-    Teste antes do Status e acrescenta as colunas de classificação.
-    """
-    if len(cells) < 2:
-        return
-
-    cells[1] = montar_celula_teste(
-        str(cells[1]),
-        getattr(report, ATRIBUTO_TITULO, ""),
-    )
-    _teste_antes_do_status(cells)
-
-    for deslocamento, (campo, titulo, opcoes) in enumerate(
-        COLUNAS_DE_CLASSIFICACAO
-    ):
-        cells.insert(
-            POSICAO_CLASSIFICACAO + deslocamento,
-            montar_celula_classificacao(
-                campo, titulo, opcoes, report.nodeid, report.failed
-            ),
-        )
-
-
 # === Dashboard HTML ===
-def _codificar_ascii_seguro(
-    texto: str,
-) -> str:
-    """
-    Converte caracteres não-ASCII em referências HTML numéricas
-    (ex.: "ç" -> "&#231;").
-
-    O pytest-html corrompe acentuação especificamente no conteúdo
-    injetado via prefix.append() (confirmado comparando com o log de
-    teste, que passa por json.dumps e chega correto no mesmo
-    relatório). Referências numéricas são ASCII puro, então
-    sobrevivem a esse pipeline independente de qual encoding a lib
-    usa internamente para escrever o arquivo final.
-
-    Seguro para o bloco de dashboard (contexto HTML, onde a
-    referência é interpretada). Também aplicado ao CSS: os acentos
-    ali existem só em comentários /* */, nunca em valor de
-    propriedade, então a referência não interpretada fica inerte —
-    só evita a mesma corrupção nos comentários.
-    """
-    return texto.encode(
-        "ascii",
-        "xmlcharrefreplace",
-    ).decode("ascii")
-
-
-def _codificar_js_ascii_seguro(
-    texto: str,
-) -> str:
-    """
-    Converte caracteres não-ASCII em escapes do JavaScript
-    (ex.: "ç" -> "\\u00e7").
-
-    Mesmo motivo do _codificar_ascii_seguro, mas dentro de <script> a
-    referência HTML não é interpretada; o escape \\uXXXX é. Os textos
-    do script usam só caracteres do plano básico (acentos do português).
-    """
-    return "".join(
-        caractere if ord(caractere) < 128 else f"\\u{ord(caractere):04x}"
-        for caractere in texto
-    )
-
-
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_results_summary(
     prefix,
@@ -886,8 +625,8 @@ def pytest_html_results_summary(
     session=None,
 ) -> None:
     """
-    Injeta o CSS e o dashboard customizado
-    no relatório HTML.
+    Põe a página do report (CSS, dashboard e script, do pacote
+    ifponto-qa-report) no HTML, com os números desta execução.
     """
     logger.debug(
         "Enviando métricas para o dashboard HTML",
@@ -908,43 +647,21 @@ def pytest_html_results_summary(
         testes_manuais.OPCAO, default=False
     ):
         execution_metrics.DASHBOARD_STATS["testes_manuais_previstos"] = (
-            testes_manuais.carregar()
+            testes_manuais.carregar(
+                testes_manuais.arquivo_da_automacao(PROJECT_ROOT)
+            )
         )
 
-    inline_css, html_block = build_results_summary_html(
-        PROJECT_ROOT,
+    injetar(
+        prefix,
+        postfix,
         execution_metrics.DASHBOARD_STATS,
+        titulo="Android Automation",
+        nota_preparacao=(
+            "O tempo inclui a preparação de cada teste (ex.: abrir o app "
+            "ou refazer o primeiro acesso)."
+        ),
     )
-
-    inline_css = _codificar_ascii_seguro(inline_css)
-    html_block = _codificar_ascii_seguro(html_block)
-
-    if inline_css:
-        prefix.append(f"<style>{inline_css}</style>")
-
-        logger.info(
-            "CSS customizado injetado no relatório HTML",
-            extra={
-                "event": "html_css_injected",
-                "stats": (execution_metrics.DASHBOARD_STATS),
-            },
-        )
-
-    else:
-        logger.warning(
-            "CSS customizado não encontrado",
-            extra={
-                "event": "html_css_not_found",
-            },
-        )
-
-    prefix.append(html_block)
-
-    # No postfix: o script precisa vir depois dos filtros no HTML.
-    inline_js = _codificar_js_ascii_seguro(load_inline_js(PROJECT_ROOT))
-
-    if inline_js:
-        postfix.append(f"<script>{inline_js}</script>")
 
 
 # === Resumo da execução ===

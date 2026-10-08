@@ -279,3 +279,22 @@ existir só na página (testes manuais, melhorias, classificação, ficha do
 teste) e não era usado: para compartilhar, vale a cópia do **Baixar
 HTML**. Para papel, o imprimir do navegador (Cmd+P) segue funcionando.
 
+---
+
+## Report num pacote comum às três automações
+
+**Data:** 2026-10-07
+
+O report (assets, dashboard, colunas da tabela, testes manuais
+previstos) era copiado entre as automações iOS, Android e web, e cada
+mudança virava três commits; os arquivos já começavam a divergir. Foi
+para o pacote **ifponto-qa-report** (repositório próprio), instalado
+pelo `requirements.txt` numa versão fixa (`@v1.0.0`) e registrado como
+plugin no `conftest.py` (`qa_report.tabela`, `qa_report.testes_manuais`).
+Aqui fica o que é da plataforma: captura das evidências (driver do
+Appium), vídeo, identificação da execução, métricas e o
+`testes_manuais.yaml`. Os testes do report no navegador (antes
+`make test-report`) estão no pacote. Um teste daqui falha se o
+`pytest_report.py` voltar a ter gancho de tabela (as colunas seriam
+trocadas duas vezes).
+
